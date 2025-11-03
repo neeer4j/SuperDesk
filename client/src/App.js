@@ -223,6 +223,7 @@ function App() {
       dataChannel.onopen = () => {
         console.log('Data channel opened (guest side)');
         setDataChannel(dataChannel);
+        alert('Connected! File transfer and remote control available.');
       };
       
       dataChannel.onclose = () => {
@@ -232,6 +233,7 @@ function App() {
       
       dataChannel.onerror = (error) => {
         console.error('Data channel error (guest side):', error);
+        alert('Data channel error: ' + error.message);
       };
       
       dataChannel.onmessage = handleDataChannelMessage;
@@ -296,6 +298,7 @@ function App() {
       dataChannel.onopen = () => {
         console.log('Data channel opened (host side)');
         setDataChannel(dataChannel);
+        alert('Data channel ready! File transfer and remote control available.');
       };
       dataChannel.onclose = () => {
         console.log('Data channel closed (host side)');
@@ -303,6 +306,7 @@ function App() {
       };
       dataChannel.onerror = (error) => {
         console.error('Data channel error (host side):', error);
+        alert('Data channel error: ' + error.message);
       };
       dataChannel.onmessage = handleDataChannelMessage;
 
@@ -584,8 +588,10 @@ function App() {
 
   // Remote Desktop Popup
   const openRemoteDesktop = () => {
-    if (!remoteStream) {
-      alert('No remote stream available. Wait for host to share screen.');
+    console.log('Opening remote desktop popup...', { remoteStream, sessionId, peerConnection });
+    
+    if (!sessionId) {
+      alert('No active session. Please join a session first.');
       return;
     }
 
@@ -606,6 +612,7 @@ function App() {
       return;
     }
 
+    console.log('Popup created successfully');
     setRemoteDesktopWindow(popup);
 
     // Create the popup content
@@ -849,11 +856,28 @@ function App() {
     const popupVideo = popup.document.getElementById('remoteVideo');
     const loadingOverlay = popup.document.getElementById('loadingOverlay');
     
-    if (popupVideo && remoteStream) {
-      popupVideo.srcObject = remoteStream;
-      popupVideo.onloadedmetadata = () => {
-        loadingOverlay.style.display = 'none';
-      };
+    if (popupVideo) {
+      if (remoteStream) {
+        console.log('Setting remote stream to popup video');
+        popupVideo.srcObject = remoteStream;
+        popupVideo.onloadedmetadata = () => {
+          console.log('Video metadata loaded in popup');
+          if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+          }
+        };
+      } else {
+        console.log('No remote stream available, showing waiting message');
+        if (loadingOverlay) {
+          loadingOverlay.innerHTML = `
+            <div>⏳ Waiting for Remote Stream...</div>
+            <div style="font-size: 14px; margin-top: 10px;">
+              Host needs to start screen sharing<br/>
+              Or request screen share from main window
+            </div>
+          `;
+        }
+      }
     }
 
     // Handle popup messages
@@ -939,8 +963,17 @@ function App() {
     const file = event.target.files[0];
     if (!file) return;
 
+    console.log('File upload started:', file.name, file.size, 'bytes');
+    console.log('Data channel status:', dataChannel ? 'Available' : 'Not Available');
+    console.log('Data channel state:', dataChannel?.readyState);
+
     if (file.size > 10 * 1024 * 1024) { // 10MB limit
       alert('File size must be less than 10MB');
+      return;
+    }
+
+    if (!dataChannel || dataChannel.readyState !== 'open') {
+      alert('Connection not ready for file transfer. Please ensure you are connected to a session.');
       return;
     }
 
@@ -1147,14 +1180,24 @@ function App() {
 
         <div className="media-controls">
           <div className="file-transfer">
+            {/* Data Channel Status */}
+            <div className="connection-status" style={{fontSize: '12px', marginBottom: '10px'}}>
+              Data Channel: {dataChannel ? 
+                (dataChannel.readyState === 'open' ? '✅ Ready' : `⏳ ${dataChannel.readyState}`) : 
+                '❌ Not Connected'}
+            </div>
+            
             <input 
               type="file" 
               ref={fileInputRef}
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
-            <button onClick={() => fileInputRef.current?.click()}>
-              Send File (Max 10MB)
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!dataChannel || dataChannel.readyState !== 'open'}
+            >
+              📁 Send File (Max 10MB)
             </button>
             {fileTransfer.active && (
               <div className="file-progress">
@@ -1177,10 +1220,31 @@ function App() {
             <button 
               onClick={openRemoteDesktop}
               className="open-desktop-btn"
-              disabled={!remoteStream}
+              disabled={!sessionId}
             >
-              {remoteStream ? '🖥️ Open Remote Desktop Viewer' : '⏳ Waiting for host screen...'}
+              {remoteStream ? '🖥️ Open Remote Desktop Viewer' : '🔍 Open Desktop Viewer (Debug)'}
             </button>
+            
+            {/* Debug Info */}
+            <div className="debug-info" style={{fontSize: '12px', color: '#999', margin: '10px 0'}}>
+              Remote Stream: {remoteStream ? '✅ Available' : '❌ Not Available'} | 
+              Session: {sessionId ? '✅ Connected' : '❌ Not Connected'} | 
+              Connection: {peerConnection ? '✅ Active' : '❌ None'}
+            </div>
+            
+            {!remoteStream && (
+              <div className="request-section" style={{marginTop: '15px'}}>
+                <p style={{margin: '5px 0', fontSize: '14px'}}>No screen stream detected. Request screen sharing:</p>
+                <button 
+                  onClick={requestScreenShare}
+                  className="request-screen-btn"
+                  disabled={screenShareRequested}
+                  style={{padding: '8px 16px', fontSize: '14px'}}
+                >
+                  {screenShareRequested ? '⏳ Request Sent...' : '📺 Request Screen Share'}
+                </button>
+              </div>
+            )}
             {remoteControlEnabled && (
               <div className="remote-status">
                 ✅ Remote control enabled - Click the button above to view and control the host's desktop
