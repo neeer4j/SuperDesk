@@ -1678,6 +1678,7 @@ function App() {
             )}
           </Paper>
         )}
+        {/* Vercel build fix */}
         </Container>
       </Box>
     </ThemeProvider>
