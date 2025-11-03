@@ -1336,6 +1336,44 @@ function App() {
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
+              {/* 🎉 FLOATING DESKTOP BUTTON - Shows when approved! */}
+              {joinRequestStatus === 'approved' && !isHost && (
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={openRemoteDesktop}
+                  startIcon={<DesktopWindows />}
+                  sx={{ 
+                    textTransform: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '1.1rem',
+                    py: 1.5,
+                    px: 3,
+                    backgroundColor: '#00e676',
+                    color: '#000',
+                    '&:hover': {
+                      backgroundColor: '#00c853',
+                    },
+                    animation: 'super-pulse 1s infinite',
+                    '@keyframes super-pulse': {
+                      '0%': { 
+                        transform: 'scale(1)',
+                        boxShadow: '0 0 10px rgba(0,230,118,0.7)'
+                      },
+                      '50%': { 
+                        transform: 'scale(1.1)',
+                        boxShadow: '0 0 30px rgba(0,230,118,1)'
+                      },
+                      '100%': { 
+                        transform: 'scale(1)',
+                        boxShadow: '0 0 10px rgba(0,230,118,0.7)'
+                      }
+                    }
+                  }}
+                >
+                  🖥️ OPEN DESKTOP NOW!
+                </Button>
+              )}
               <Button
                 color="inherit"
                 onClick={toggleTheme}
