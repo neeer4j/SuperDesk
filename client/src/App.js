@@ -1550,6 +1550,46 @@ function App() {
                 </CardActions>
               </Card>
             </Grid>
+
+            {/* HUGE Banner for Approved Guest */}
+            {joinRequestStatus === 'approved' && !isHost && (
+              <Grid item xs={12}>
+                <Paper 
+                  elevation={10} 
+                  sx={{ 
+                    p: 4, 
+                    textAlign: 'center',
+                    background: 'linear-gradient(135deg, #00c853 0%, #00e676 100%)',
+                    border: '4px solid #1b5e20',
+                    borderRadius: 3,
+                    animation: 'banner-pulse 2s infinite',
+                    '@keyframes banner-pulse': {
+                      '0%': { transform: 'scale(1)', boxShadow: '0 0 20px rgba(0,200,83,0.5)' },
+                      '50%': { transform: 'scale(1.02)', boxShadow: '0 0 40px rgba(0,200,83,0.8)' },
+                      '100%': { transform: 'scale(1)', boxShadow: '0 0 20px rgba(0,200,83,0.5)' },
+                    }
+                  }}
+                >
+                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'white', mb: 2, textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+                    ✅ CONNECTION APPROVED! ✅
+                  </Typography>
+                  <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 600 }}>
+                    Your request was accepted! Scroll down to the "Remote Desktop Access" section below.
+                  </Typography>
+                  <Alert 
+                    severity="success" 
+                    sx={{ 
+                      fontSize: '1.3rem', 
+                      fontWeight: 'bold',
+                      backgroundColor: 'rgba(255,255,255,0.95)',
+                      '& .MuiAlert-icon': { fontSize: '2rem' }
+                    }}
+                  >
+                    👇 Scroll down and click the green "OPEN REMOTE DESKTOP" button! 👇
+                  </Alert>
+                </Paper>
+              </Grid>
+            )}
           </Grid>
 
           {/* Session Management Controls */}
@@ -1694,37 +1734,86 @@ function App() {
             )}
           </Paper>
 
-        {/* Remote Desktop Access */}
+        {/* Remote Desktop Access - GUESTS */}
         {sessionId && !isHost && (
-          <Paper sx={{ mt: 3, p: 3 }}>
-            <Typography variant="h6" gutterBottom>
+          <Paper sx={{ mt: 3, p: 3, background: remoteStream ? 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)' : 'inherit', color: remoteStream ? 'white' : 'inherit' }}>
+            <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
               <DesktopWindows sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Remote Desktop Access
+              {remoteStream ? '🎉 DESKTOP READY!' : 'Remote Desktop Access'}
             </Typography>
+            
+            {remoteStream && (
+              <Alert severity="success" sx={{ mb: 3, fontSize: '1.1rem', backgroundColor: 'rgba(255,255,255,0.9)' }}>
+                <Typography variant="h6" gutterBottom>
+                  ✅ Connected to Host's Desktop!
+                </Typography>
+                <Typography variant="body1">
+                  Click the button below to view and control the host's screen
+                </Typography>
+              </Alert>
+            )}
+            
             <Button 
               onClick={openRemoteDesktop}
               variant="contained"
+              color={remoteStream ? 'secondary' : 'primary'}
               startIcon={<ScreenShare />}
               disabled={!sessionId}
               fullWidth
-              sx={{ mb: 2 }}
+              size="large"
+              sx={{ 
+                mb: 2, 
+                py: 2, 
+                fontSize: '1.2rem',
+                fontWeight: 'bold',
+                animation: remoteStream ? 'pulse 2s infinite' : 'none',
+                '@keyframes pulse': {
+                  '0%': { transform: 'scale(1)' },
+                  '50%': { transform: 'scale(1.05)' },
+                  '100%': { transform: 'scale(1)' }
+                }
+              }}
             >
-              {remoteStream ? 'Open Remote Desktop Viewer' : 'Open Desktop Viewer (Debug)'}
+              {remoteStream ? '🖥️ OPEN REMOTE DESKTOP NOW!' : 'Open Desktop Viewer'}
             </Button>
             
-            {/* Debug Info */}
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                Remote Stream: {remoteStream ? 'Available' : 'Not Available'} | 
-                Session: {sessionId ? 'Connected' : 'Not Connected'} | 
-                Connection: {peerConnection ? 'Active' : 'None'}
-              </Typography>
-            </Alert>
+            {/* Status Info */}
+            <Box sx={{ mt: 2, p: 2, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 1 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={4}>
+                  <Typography variant="body2" fontWeight="bold">Remote Stream:</Typography>
+                  <Chip 
+                    label={remoteStream ? 'Available ✅' : 'Not Available ❌'} 
+                    color={remoteStream ? 'success' : 'default'}
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={4}>
+                  <Typography variant="body2" fontWeight="bold">Session:</Typography>
+                  <Chip 
+                    label={sessionId ? 'Connected ✅' : 'Not Connected ❌'} 
+                    color={sessionId ? 'success' : 'default'}
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={4}>
+                  <Typography variant="body2" fontWeight="bold">WebRTC:</Typography>
+                  <Chip 
+                    label={peerConnection ? 'Active ✅' : 'None ❌'} 
+                    color={peerConnection ? 'success' : 'default'}
+                    size="small"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
             
             {!remoteStream && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  No screen stream detected. Request screen sharing:
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                <Typography variant="body2" gutterBottom fontWeight="bold">
+                  ⏳ Waiting for host's screen...
+                </Typography>
+                <Typography variant="body2">
+                  If you don't see the desktop after 10 seconds, try requesting screen share:
                 </Typography>
                 <Button 
                   onClick={requestScreenShare}
@@ -1732,15 +1821,17 @@ function App() {
                   startIcon={<VideoCall />}
                   disabled={screenShareRequested}
                   size="small"
+                  sx={{ mt: 1 }}
                 >
                   {screenShareRequested ? 'Request Sent...' : 'Request Screen Share'}
                 </Button>
-              </Box>
+              </Alert>
             )}
+            
             {remoteControlEnabled && (
-              <Alert severity="success" sx={{ mt: 2 }}>
+              <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
-                  Remote control enabled - Click the button above to view and control the host's desktop
+                  🎮 Remote control is enabled - You can interact with the host's desktop
                 </Typography>
               </Alert>
             )}
