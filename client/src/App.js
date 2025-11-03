@@ -1520,17 +1520,6 @@ function App() {
               </Grid>
             </Paper>
           )}
-              
-              {/* Host Controls */}
-              {isHost && (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    Guests can request remote control access
-                  </Typography>
-                </Alert>
-              )}
-            </Paper>
-          )}
 
           {/* File Transfer Section */}
           <Paper sx={{ mt: 3, p: 3 }}>
