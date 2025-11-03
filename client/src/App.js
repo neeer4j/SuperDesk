@@ -1216,9 +1216,14 @@ function App() {
         <AppBar position="static" elevation={2}>
           <Toolbar>
             <DesktopWindows sx={{ mr: 2 }} />
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              SuperDesk Remote Desktop
-            </Typography>
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="h6" component="div">
+                SuperDesk Remote Desktop
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                Seamless Remote Access • Crystal Clear Desktop Sharing • Full System Control
+              </Typography>
+            </Box>
             <Chip 
               icon={connected ? <CheckCircle /> : <Cancel />}
               label={connected ? 'Connected' : 'Disconnected'}
@@ -1230,6 +1235,30 @@ function App() {
         </AppBar>
 
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          {/* Hero Section */}
+          <Paper sx={{ p: 4, mb: 4, background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', color: 'white', textAlign: 'center' }}>
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+              Next-Generation Remote Desktop
+            </Typography>
+            <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
+              Experience ultra-responsive remote control with enterprise-grade security
+            </Typography>
+            <Box display="flex" justifyContent="center" gap={4} flexWrap="wrap">
+              <Box display="flex" alignItems="center">
+                <DesktopWindows sx={{ mr: 1 }} />
+                <Typography variant="body2">Real-time Screen Sharing</Typography>
+              </Box>
+              <Box display="flex" alignItems="center">
+                <TouchApp sx={{ mr: 1 }} />
+                <Typography variant="body2">Instant Remote Control</Typography>
+              </Box>
+              <Box display="flex" alignItems="center">
+                <CloudUpload sx={{ mr: 1 }} />
+                <Typography variant="body2">Secure File Transfer</Typography>
+              </Box>
+            </Box>
+          </Paper>
+
           {loading && (
             <Paper sx={{ p: 4, textAlign: 'center' }}>
               <CircularProgress size={60} sx={{ mb: 2 }} />
