@@ -152,6 +152,38 @@ io.on('connection', (socket) => {
     socket.to(data.sessionId).emit('remote-control-disabled');
   });
 
+  // Screen sharing events
+  socket.on('request-screen-share', (data) => {
+    console.log('Screen share requested:', data);
+    const { sessionId, requesterId } = data;
+    // Notify the host about the request
+    socket.to(sessionId).emit('screen-share-requested', { requesterId });
+  });
+
+  socket.on('approve-screen-request', (data) => {
+    console.log('Screen share approved:', data);
+    const { sessionId, requesterId } = data;
+    // Notify the requester that it's approved
+    socket.to(requesterId).emit('screen-share-approved');
+  });
+
+  socket.on('deny-screen-request', (data) => {
+    console.log('Screen share denied:', data);
+    const { sessionId, requesterId } = data;
+    // Notify the requester that it's denied
+    socket.to(requesterId).emit('screen-share-denied');
+  });
+
+  socket.on('screen-share-started', (sessionId) => {
+    console.log('Screen sharing started for session:', sessionId);
+    socket.to(sessionId).emit('screen-share-started');
+  });
+
+  socket.on('screen-share-stopped', (sessionId) => {
+    console.log('Screen sharing stopped for session:', sessionId);
+    socket.to(sessionId).emit('screen-share-stopped');
+  });
+
   socket.on('end-session', (sessionId) => {
     console.log('Ending session:', sessionId);
     const session = sessions.get(sessionId);

@@ -430,3 +430,125 @@ button:disabled {
   margin: 5px 0;
   font-size: 14px;
 }
+
+/* Screen Sharing Styles */
+.screen-sharing-section {
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(33, 150, 243, 0.3);
+}
+
+.screen-sharing-section h3 {
+  margin-top: 0;
+  color: #2196F3;
+  font-size: 18px;
+}
+
+.start-screen-btn, .stop-screen-btn, .request-screen-btn {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 10px;
+}
+
+.start-screen-btn, .request-screen-btn {
+  background: linear-gradient(145deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.start-screen-btn:hover, .request-screen-btn:hover {
+  background: linear-gradient(145deg, #45a049, #3d8b40);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+}
+
+.stop-screen-btn {
+  background: linear-gradient(145deg, #ff5722, #e64a19);
+  color: white;
+}
+
+.stop-screen-btn:hover {
+  background: linear-gradient(145deg, #e64a19, #d84315);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
+}
+
+.request-status {
+  background: rgba(255, 193, 7, 0.2);
+  border: 1px solid rgba(255, 193, 7, 0.5);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  color: #FFA000;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+.screen-requests {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.screen-requests h4 {
+  margin: 0 0 10px 0;
+  color: #FFA000;
+  font-size: 14px;
+}
+
+.request-item {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.request-item span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.request-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.approve-btn, .deny-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.approve-btn {
+  background: linear-gradient(145deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.approve-btn:hover {
+  background: linear-gradient(145deg, #45a049, #3d8b40);
+  transform: translateY(-1px);
+}
+
+.deny-btn {
+  background: linear-gradient(145deg, #f44336, #d32f2f);
+  color: white;
+}
+
+.deny-btn:hover {
+  background: linear-gradient(145deg, #d32f2f, #b71c1c);
+  transform: translateY(-1px);
+}

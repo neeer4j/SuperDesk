@@ -17,6 +17,9 @@ function App() {
   const [isHost, setIsHost] = useState(false);
   const [remoteControlEnabled, setRemoteControlEnabled] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState([]);
+  const [screenSharing, setScreenSharing] = useState(false);
+  const [screenShareRequested, setScreenShareRequested] = useState(false);
+  const [pendingScreenRequests, setPendingScreenRequests] = useState([]);
   
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -46,9 +49,31 @@ function App() {
       upgrade: true,
       rememberUpgrade: false
     });
-    setSocket(newSocket);
+      // Screen sharing event handlers
+      newSocket.on('screen-share-requested', (data) => {
+        const { requesterId } = data;
+        setPendingScreenRequests(prev => [...prev, requesterId]);
+        alert('Someone wants to request screen sharing permission!');
+      });
 
-    newSocket.on('connect', () => {
+      newSocket.on('screen-share-approved', () => {
+        alert('Screen share request approved! Host can start sharing.');
+      });
+
+      newSocket.on('screen-share-denied', () => {
+        alert('Screen share request was denied.');
+        setScreenShareRequested(false);
+      });
+
+      newSocket.on('screen-share-started', () => {
+        alert('Host started screen sharing!');
+      });
+
+      newSocket.on('screen-share-stopped', () => {
+        alert('Host stopped screen sharing.');
+      });
+
+      setSocket(newSocket);    newSocket.on('connect', () => {
       setConnected(true);
       setConnectionError(null);
       setLoading(false);
@@ -324,9 +349,122 @@ function App() {
       setIsHost(false);
       setRemoteControlEnabled(false);
       setConnectedUsers([]);
+      setScreenSharing(false);
+      setScreenShareRequested(false);
+      setPendingScreenRequests([]);
       
       alert('Session ended successfully!');
     }
+  };
+
+  // Screen Sharing Functions
+  const requestScreenShare = () => {
+    if (socket && sessionId) {
+      socket.emit('request-screen-share', { 
+        sessionId, 
+        requesterId: socket.id 
+      });
+      setScreenShareRequested(true);
+      alert('Screen share request sent to host!');
+    }
+  };
+
+  const startScreenShare = async () => {
+    try {
+      // Get screen capture
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: 'always',
+          displaySurface: 'monitor'
+        },
+        audio: true
+      });
+
+      // Replace video track in peer connection
+      if (peerConnection && localStream) {
+        const videoTrack = screenStream.getVideoTracks()[0];
+        const sender = peerConnection.getSenders().find(s => 
+          s.track && s.track.kind === 'video'
+        );
+        
+        if (sender) {
+          await sender.replaceTrack(videoTrack);
+        }
+      }
+
+      setScreenSharing(true);
+      
+      // Notify other participants
+      if (socket) {
+        socket.emit('screen-share-started', sessionId);
+      }
+
+      // Handle when user stops sharing (browser stop button)
+      screenStream.getVideoTracks()[0].onended = () => {
+        stopScreenShare();
+      };
+
+      alert('Screen sharing started! Others can now see your screen.');
+    } catch (error) {
+      console.error('Error starting screen share:', error);
+      alert('Could not start screen sharing: ' + error.message);
+    }
+  };
+
+  const stopScreenShare = async () => {
+    try {
+      // Get camera stream back
+      const cameraStream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+
+      // Replace screen track with camera track
+      if (peerConnection) {
+        const videoTrack = cameraStream.getVideoTracks()[0];
+        const sender = peerConnection.getSenders().find(s => 
+          s.track && s.track.kind === 'video'
+        );
+        
+        if (sender) {
+          await sender.replaceTrack(videoTrack);
+        }
+      }
+
+      setLocalStream(cameraStream);
+      setScreenSharing(false);
+      
+      // Notify other participants
+      if (socket) {
+        socket.emit('screen-share-stopped', sessionId);
+      }
+
+      alert('Screen sharing stopped. Back to camera view.');
+    } catch (error) {
+      console.error('Error stopping screen share:', error);
+    }
+  };
+
+  const approveScreenRequest = (requesterId) => {
+    if (socket) {
+      socket.emit('approve-screen-request', { 
+        sessionId, 
+        requesterId 
+      });
+    }
+    setPendingScreenRequests(prev => prev.filter(id => id !== requesterId));
+    alert('Screen share request approved!');
+  };
+
+  const denyScreenRequest = (requesterId) => {
+    if (socket) {
+      socket.emit('deny-screen-request', { 
+        sessionId, 
+        requesterId 
+      });
+    }
+    setPendingScreenRequests(prev => prev.filter(id => id !== requesterId));
+    alert('Screen share request denied.');
   };
 
   const handleOffer = async (offer) => {
@@ -517,6 +655,71 @@ function App() {
               <button onClick={endSession} className="end-session-btn">
                 🚪 End Session
               </button>
+              
+              {/* Screen Sharing Controls */}
+              <div className="screen-sharing-section">
+                <h3>📺 Screen Sharing</h3>
+                
+                {isHost ? (
+                  <div className="host-screen-controls">
+                    {!screenSharing ? (
+                      <button 
+                        onClick={startScreenShare}
+                        className="start-screen-btn"
+                      >
+                        🖥️ Start Screen Share
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={stopScreenShare}
+                        className="stop-screen-btn"
+                      >
+                        🛑 Stop Screen Share
+                      </button>
+                    )}
+                    
+                    {pendingScreenRequests.length > 0 && (
+                      <div className="screen-requests">
+                        <h4>Screen Share Requests:</h4>
+                        {pendingScreenRequests.map(requesterId => (
+                          <div key={requesterId} className="request-item">
+                            <span>User {requesterId.substring(0, 8)} wants screen access</span>
+                            <div className="request-actions">
+                              <button 
+                                onClick={() => approveScreenRequest(requesterId)}
+                                className="approve-btn"
+                              >
+                                ✅ Approve
+                              </button>
+                              <button 
+                                onClick={() => denyScreenRequest(requesterId)}
+                                className="deny-btn"
+                              >
+                                ❌ Deny
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="guest-screen-controls">
+                    {!screenShareRequested ? (
+                      <button 
+                        onClick={requestScreenShare}
+                        className="request-screen-btn"
+                      >
+                        📺 Request Screen Share
+                      </button>
+                    ) : (
+                      <div className="request-status">
+                        📡 Screen share request sent - waiting for approval...
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               
               {/* Remote Control (only for guests) */}
               {!isHost && (
