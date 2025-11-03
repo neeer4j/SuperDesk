@@ -3,6 +3,112 @@ import io from 'socket.io-client';
 import config from './config';
 import './App.css';
 
+// Material UI imports
+import { 
+  ThemeProvider, 
+  createTheme,
+  AppBar,
+  Toolbar,
+  Typography,
+  Container,
+  Card,
+  CardContent,
+  CardActions,
+  Button,
+  TextField,
+  Box,
+  Grid,
+  Paper,
+  Alert,
+  Chip,
+  Badge,
+  CircularProgress,
+  LinearProgress,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Snackbar
+} from '@mui/material';
+
+import {
+  DesktopWindows,
+  VideoCall,
+  Share,
+  Person,
+  Group,
+  CheckCircle,
+  Cancel,
+  Warning,
+  CloudUpload,
+  Download,
+  Settings,
+  PowerSettingsNew,
+  Computer,
+  TouchApp,
+  ScreenShare
+} from '@mui/icons-material';
+
+// Create professional Material UI theme
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#1976d2',
+      light: '#42a5f5',
+      dark: '#1565c0',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+    success: {
+      main: '#2e7d32',
+    },
+    background: {
+      default: '#f5f5f5',
+      paper: '#ffffff',
+    },
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 500,
+    },
+  },
+  shape: {
+    borderRadius: 8,
+  },
+  components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          transition: 'box-shadow 0.3s ease-in-out',
+          '&:hover': {
+            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+          },
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 500,
+        },
+      },
+    },
+  },
+});
+
 function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
@@ -1105,177 +1211,313 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>🖥️ SuperDesk Remote Desktop</h1>
-        <p className="app-description">
-          TeamViewer-like remote desktop access • Share your screen • Remote control • System audio
-        </p>
-        
-        {loading && (
-          <div className="loading-state">
-            <h2>🔄 Connecting to SuperDesk Server...</h2>
-            <p>Server: {config.server}</p>
-            <div className="spinner"></div>
-          </div>
-        )}
-        
-        {connectionError && (
-          <div className="error-state">
-            <h2>❌ Connection Failed</h2>
-            <p>{connectionError}</p>
-            <div className="troubleshooting">
-              <h3>🔧 Troubleshooting:</h3>
-              <ul>
+    <ThemeProvider theme={theme}>
+      <Box sx={{ flexGrow: 1, minHeight: '100vh', backgroundColor: 'background.default' }}>
+        <AppBar position="static" elevation={2}>
+          <Toolbar>
+            <DesktopWindows sx={{ mr: 2 }} />
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              SuperDesk Remote Desktop
+            </Typography>
+            <Chip 
+              icon={connected ? <CheckCircle /> : <Cancel />}
+              label={connected ? 'Connected' : 'Disconnected'}
+              color={connected ? 'success' : 'error'}
+              variant="outlined"
+              sx={{ color: 'white', borderColor: 'white' }}
+            />
+          </Toolbar>
+        </AppBar>
+
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          {loading && (
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <CircularProgress size={60} sx={{ mb: 2 }} />
+              <Typography variant="h5" gutterBottom>
+                Connecting to SuperDesk Server...
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Server: {config.server}
+              </Typography>
+            </Paper>
+          )}
+          
+          {connectionError && (
+            <Alert 
+              severity="error" 
+              sx={{ mb: 3 }}
+              action={
+                <Button 
+                  color="inherit" 
+                  size="small" 
+                  onClick={() => window.location.reload()}
+                  startIcon={<PowerSettingsNew />}
+                >
+                  Retry
+                </Button>
+              }
+            >
+              <Typography variant="h6" gutterBottom>
+                Connection Failed
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                {connectionError}
+              </Typography>
+              <Box component="ul" sx={{ m: 0, pl: 2 }}>
                 <li>Check if server is deployed and running</li>
                 <li>Verify server URL: {config.server}</li>
                 <li>Disable ad blockers (they can block Socket.io)</li>
                 <li>Try incognito/private browsing mode</li>
-              </ul>
-              <button onClick={() => window.location.reload()}>
-                🔄 Retry Connection
-              </button>
-            </div>
-          </div>
-        )}
-        
-        <div className="connection-status">
-          Status: {connected ? '✅ Connected' : '❌ Disconnected'}
+              </Box>
+            </Alert>
+          )}
+
           {!connected && !loading && !connectionError && (
-            <div className="debug-info">
-              <p>⚠️ Connection Issue Detected</p>
-              <p>If you see "ERR_BLOCKED_BY_CLIENT" errors:</p>
-              <ul>
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Connection Issue Detected
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                If you see "ERR_BLOCKED_BY_CLIENT" errors:
+              </Typography>
+              <Box component="ul" sx={{ m: 0, pl: 2 }}>
                 <li>Disable ad blocker for this site</li>
                 <li>Try incognito/private browsing mode</li>
                 <li>Check browser console for errors</li>
-              </ul>
-              <button onClick={() => window.location.reload()}>
+              </Box>
+              <Button 
+                variant="contained" 
+                onClick={() => window.location.reload()}
+                startIcon={<PowerSettingsNew />}
+                sx={{ mt: 2 }}
+              >
                 Retry Connection
-              </button>
-            </div>
+              </Button>
+            </Alert>
           )}
-        </div>
-        
-        {sessionId && (
-          <div className="session-info">
-            <p>Session ID: <strong>{sessionId}</strong></p>
-            <p>Share this ID with others to join your session</p>
-          </div>
-        )}
 
-        <div className="controls">
-          <button onClick={startSession} disabled={!connected}>
-            🖥️ Share My Desktop
-          </button>
-          
-          <div className="join-session">
-            <input 
-              type="text" 
-              placeholder="Enter Session ID" 
-              value={joinSessionId}
-              onChange={(e) => setJoinSessionId(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleJoinClick();
-                }
-              }}
-              disabled={!connected}
-            />
-            <button 
-              onClick={handleJoinClick}
-              disabled={!connected || !joinSessionId.trim() || joinRequestStatus === 'pending'}
-            >
-              {joinRequestStatus === 'pending' ? '⏳ Request Sent...' : 'Request to Join'}
-            </button>
-          </div>
-          
-          {/* Join Request Status */}
-          {joinRequestStatus === 'pending' && (
-            <div className="request-status">
-              📨 Join request sent to host - waiting for approval...
-            </div>
+          {sessionId && (
+            <Alert severity="success" sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Session Active
+              </Typography>
+              <Typography variant="body1">
+                Session ID: <Chip label={sessionId} color="primary" size="small" sx={{ mx: 1 }} />
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Share this ID with others to join your session
+              </Typography>
+            </Alert>
           )}
-          
-          {joinRequestStatus === 'rejected' && (
-            <div className="request-status rejected">
-              ❌ Join request was rejected by the host
-            </div>
-          )}
+
+          <Grid container spacing={3}>
+            {/* Host Session Card */}
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Box display="flex" alignItems="center" mb={2}>
+                    <ScreenShare sx={{ mr: 1, color: 'primary.main' }} />
+                    <Typography variant="h6">Share My Desktop</Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Start a new session to share your desktop with others
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <Button 
+                    variant="contained"
+                    startIcon={<DesktopWindows />}
+                    onClick={startSession} 
+                    disabled={!connected}
+                    fullWidth
+                    size="large"
+                  >
+                    Start Session
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+
+            {/* Join Session Card */}
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Box display="flex" alignItems="center" mb={2}>
+                    <TouchApp sx={{ mr: 1, color: 'secondary.main' }} />
+                    <Typography variant="h6">Join Remote Session</Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Enter a session ID to connect to someone's desktop
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Session ID"
+                    variant="outlined"
+                    value={joinSessionId}
+                    onChange={(e) => setJoinSessionId(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleJoinClick();
+                      }
+                    }}
+                    placeholder="Enter session ID"
+                    size="medium"
+                    sx={{ mb: 2 }}
+                    disabled={!connected}
+                  />
+                  {joinRequestStatus === 'pending' && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <CircularProgress size={16} sx={{ mr: 1 }} />
+                      Waiting for host approval...
+                    </Alert>
+                  )}
+                  {joinRequestStatus === 'rejected' && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                      Join request was rejected by the host
+                    </Alert>
+                  )}
+                </CardContent>
+                <CardActions>
+                  <Button 
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<Person />}
+                    onClick={handleJoinClick}
+                    disabled={!connected || !joinSessionId.trim() || joinRequestStatus === 'pending'}
+                    fullWidth
+                    size="large"
+                  >
+                    {joinRequestStatus === 'pending' ? 'Request Sent...' : 'Request to Join'}
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          </Grid>
 
           {/* Session Management Controls */}
           {sessionId && (
-            <div className="session-controls">
-              <div className="session-info">
-                <p><strong>Session ID:</strong> {sessionId}</p>
-                <p><strong>Role:</strong> {isHost ? 'Host' : 'Guest'}</p>
-                <p><strong>Connected Users:</strong> {connectedUsers.length + 1}</p>
-              </div>
-              
-              <button onClick={endSession} className="end-session-btn">
-                🚪 End Session
-              </button>
-              
-              {/* Remote Desktop Status */}
-              <div className="screen-sharing-section">
-                <h3>�️ Remote Desktop</h3>
-                
-                {isHost ? (
-                  <div className="host-screen-controls">
-                    <div className="desktop-status">
-                      ✅ Desktop sharing is active
-                    </div>
-                    <p className="desktop-info">
-                      Your entire desktop is being shared with remote users. 
-                      They can see everything on your screen and control your computer.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="guest-screen-controls">
-                    <div className="desktop-status">
-                      � Viewing remote desktop
-                    </div>
-                    <p className="desktop-info">
-                      You are viewing the host's desktop. Use the remote control 
-                      features below to interact with their computer.
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              {/* Remote Control (only for guests) */}
-              {!isHost && (
-                <div className="remote-control">
-                  {!remoteControlEnabled ? (
-                    <button onClick={enableRemoteControl} className="control-btn">
-                      🖱️ Enable Remote Control
-                    </button>
-                  ) : (
-                    <button onClick={disableRemoteControl} className="control-btn active">
-                      🚫 Disable Remote Control
-                    </button>
-                  )}
-                </div>
-              )}
+            <Paper sx={{ mt: 3, p: 3 }}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Session Info
+                      </Typography>
+                      <Box display="flex" flexDirection="column" gap={1}>
+                        <Box display="flex" alignItems="center">
+                          <Computer sx={{ mr: 1, fontSize: 16 }} />
+                          <Typography variant="body2">
+                            ID: <Chip label={sessionId} size="small" color="primary" />
+                          </Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center">
+                          <Person sx={{ mr: 1, fontSize: 16 }} />
+                          <Typography variant="body2">
+                            Role: <Chip label={isHost ? 'Host' : 'Guest'} size="small" color={isHost ? 'success' : 'secondary'} />
+                          </Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center">
+                          <Group sx={{ mr: 1, fontSize: 16 }} />
+                          <Typography variant="body2">
+                            Connected: <Badge badgeContent={connectedUsers.length + 1} color="primary" showZero />
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                    <CardActions>
+                      <Button 
+                        onClick={endSession} 
+                        variant="outlined" 
+                        color="error" 
+                        startIcon={<PowerSettingsNew />}
+                        fullWidth
+                      >
+                        End Session
+                      </Button>
+                    </CardActions>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12} md={8}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        <DesktopWindows sx={{ mr: 1, verticalAlign: 'middle' }} />
+                        Remote Desktop
+                      </Typography>
+                      
+                      {isHost ? (
+                        <Alert severity="success" sx={{ mb: 2 }}>
+                          <Typography variant="body2">
+                            Desktop sharing is active. Your entire desktop is being shared with remote users.
+                          </Typography>
+                        </Alert>
+                      ) : (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                          <Typography variant="body2">
+                            You are viewing the host's desktop. Use remote control features to interact.
+                          </Typography>
+                        </Alert>
+                      )}
+
+                      {/* Remote Control (only for guests) */}
+                      {!isHost && (
+                        <Box display="flex" gap={2}>
+                          {!remoteControlEnabled ? (
+                            <Button 
+                              onClick={enableRemoteControl} 
+                              variant="contained"
+                              startIcon={<TouchApp />}
+                              color="primary"
+                            >
+                              Enable Remote Control
+                            </Button>
+                          ) : (
+                            <Button 
+                              onClick={disableRemoteControl} 
+                              variant="outlined"
+                              startIcon={<Cancel />}
+                              color="error"
+                            >
+                              Disable Remote Control
+                            </Button>
+                          )}
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Paper>
+          )}
               
               {/* Host Controls */}
               {isHost && (
-                <div className="host-controls">
-                  <p>💡 Guests can request remote control access</p>
-                </div>
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    Guests can request remote control access
+                  </Typography>
+                </Alert>
               )}
-            </div>
+            </Paper>
           )}
-        </div>
 
-        <div className="media-controls">
-          <div className="file-transfer">
+          {/* File Transfer Section */}
+          <Paper sx={{ mt: 3, p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              <CloudUpload sx={{ mr: 1, verticalAlign: 'middle' }} />
+              File Transfer
+            </Typography>
+            
             {/* Data Channel Status */}
-            <div className="connection-status" style={{fontSize: '12px', marginBottom: '10px'}}>
-              Data Channel: {dataChannel ? 
-                (dataChannel.readyState === 'open' ? '✅ Ready' : `⏳ ${dataChannel.readyState}`) : 
-                '❌ Not Connected'}
-            </div>
+            <Alert severity={dataChannel && dataChannel.readyState === 'open' ? 'success' : 'warning'} sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                Data Channel: {dataChannel ? 
+                  (dataChannel.readyState === 'open' ? 'Ready' : dataChannel.readyState) : 
+                  'Not Connected'}
+              </Typography>
+            </Alert>
             
             <input 
               type="file" 
@@ -1283,104 +1525,144 @@ function App() {
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
-            <button 
+            <Button 
               onClick={() => fileInputRef.current?.click()}
               disabled={!dataChannel || dataChannel.readyState !== 'open'}
+              variant="contained"
+              startIcon={<CloudUpload />}
+              sx={{ mb: 2 }}
             >
-              📁 Send File (Max 10MB)
-            </button>
+              Send File (Max 10MB)
+            </Button>
             {fileTransfer.active && (
-              <div className="file-progress">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${fileTransfer.progress}%` }}
-                  ></div>
-                </div>
-                <span>{Math.round(fileTransfer.progress)}%</span>
-              </div>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  Uploading: {Math.round(fileTransfer.progress)}%
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={fileTransfer.progress} 
+                />
+              </Box>
             )}
-          </div>
-        </div>
+          </Paper>
 
         {/* Remote Desktop Access */}
         {sessionId && !isHost && (
-          <div className="remote-desktop-section">
-            <h3>�️ Remote Desktop Access</h3>
-            <button 
+          <Paper sx={{ mt: 3, p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              <DesktopWindows sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Remote Desktop Access
+            </Typography>
+            <Button 
               onClick={openRemoteDesktop}
-              className="open-desktop-btn"
+              variant="contained"
+              startIcon={<ScreenShare />}
               disabled={!sessionId}
+              fullWidth
+              sx={{ mb: 2 }}
             >
-              {remoteStream ? '🖥️ Open Remote Desktop Viewer' : '🔍 Open Desktop Viewer (Debug)'}
-            </button>
+              {remoteStream ? 'Open Remote Desktop Viewer' : 'Open Desktop Viewer (Debug)'}
+            </Button>
             
             {/* Debug Info */}
-            <div className="debug-info" style={{fontSize: '12px', color: '#999', margin: '10px 0'}}>
-              Remote Stream: {remoteStream ? '✅ Available' : '❌ Not Available'} | 
-              Session: {sessionId ? '✅ Connected' : '❌ Not Connected'} | 
-              Connection: {peerConnection ? '✅ Active' : '❌ None'}
-            </div>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                Remote Stream: {remoteStream ? 'Available' : 'Not Available'} | 
+                Session: {sessionId ? 'Connected' : 'Not Connected'} | 
+                Connection: {peerConnection ? 'Active' : 'None'}
+              </Typography>
+            </Alert>
             
             {!remoteStream && (
-              <div className="request-section" style={{marginTop: '15px'}}>
-                <p style={{margin: '5px 0', fontSize: '14px'}}>No screen stream detected. Request screen sharing:</p>
-                <button 
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  No screen stream detected. Request screen sharing:
+                </Typography>
+                <Button 
                   onClick={requestScreenShare}
-                  className="request-screen-btn"
+                  variant="outlined"
+                  startIcon={<VideoCall />}
                   disabled={screenShareRequested}
-                  style={{padding: '8px 16px', fontSize: '14px'}}
+                  size="small"
                 >
-                  {screenShareRequested ? '⏳ Request Sent...' : '📺 Request Screen Share'}
-                </button>
-              </div>
+                  {screenShareRequested ? 'Request Sent...' : 'Request Screen Share'}
+                </Button>
+              </Box>
             )}
             {remoteControlEnabled && (
-              <div className="remote-status">
-                ✅ Remote control enabled - Click the button above to view and control the host's desktop
-              </div>
+              <Alert severity="success" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  Remote control enabled - Click the button above to view and control the host's desktop
+                </Typography>
+              </Alert>
             )}
-          </div>
+          </Paper>
         )}
 
         {isHost && sessionId && (
-          <div className="host-status-section">
-            <h3>🖥️ Host Status</h3>
-            <div className="host-info">
-              ✅ Your desktop is being shared
-              <br />
-              Session ID: <strong>{sessionId}</strong>
-            </div>
+          <Paper sx={{ mt: 3, p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              <Computer sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Host Status
+            </Typography>
+            <Alert severity="success" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                Your desktop is being shared
+                <br />
+                Session ID: <Chip label={sessionId} color="primary" size="small" sx={{ mt: 1 }} />
+              </Typography>
+            </Alert>
             
             {/* Pending Join Requests */}
             {pendingJoinRequests.length > 0 && (
-              <div className="join-requests">
-                <h4>🔔 Incoming Join Requests:</h4>
-                {pendingJoinRequests.map(requesterId => (
-                  <div key={requesterId} className="request-item">
-                    <span>User {requesterId.substring(0, 8)} wants to join your session</span>
-                    <div className="request-actions">
-                      <button 
-                        onClick={() => approveJoinRequest(requesterId)}
-                        className="approve-btn"
-                      >
-                        ✅ Accept
-                      </button>
-                      <button 
-                        onClick={() => rejectJoinRequest(requesterId)}
-                        className="deny-btn"
-                      >
-                        ❌ Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Paper sx={{ mt: 3, p: 3 }}>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Typography variant="h6" gutterBottom>
+                    <Warning sx={{ mr: 1, verticalAlign: 'middle' }} />
+                    Incoming Join Requests
+                  </Typography>
+                </Alert>
+                <List>
+                  {pendingJoinRequests.map(requesterId => (
+                    <ListItem key={requesterId} divider>
+                      <ListItemIcon>
+                        <Person />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={`User ${requesterId.substring(0, 8)} wants to join your session`}
+                        secondary="Click to approve or reject this request"
+                      />
+                      <Box display="flex" gap={1}>
+                        <Button 
+                          onClick={() => approveJoinRequest(requesterId)}
+                          variant="contained"
+                          color="success"
+                          startIcon={<CheckCircle />}
+                          size="small"
+                        >
+                          Accept
+                        </Button>
+                        <Button 
+                          onClick={() => rejectJoinRequest(requesterId)}
+                          variant="outlined"
+                          color="error"
+                          startIcon={<Cancel />}
+                          size="small"
+                        >
+                          Reject
+                        </Button>
+                      </Box>
+                    </ListItem>
+                  ))}
+                </List>
+              </Paper>
             )}
-          </div>
+          </Paper>
         )}
-      </header>
-    </div>
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 }
 
