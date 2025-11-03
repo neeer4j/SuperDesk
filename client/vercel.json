@@ -9,6 +9,11 @@
     }
   ],
   "env": {
-    "REACT_APP_SERVER_URL": "https://your-server-url.railway.app"
+    "REACT_APP_SERVER_URL": "https://superdesk-server-production.up.railway.app"
+  },
+  "build": {
+    "env": {
+      "REACT_APP_SERVER_URL": "https://superdesk-server-production.up.railway.app"
+    }
   }
 }

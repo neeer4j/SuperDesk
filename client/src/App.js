@@ -11,6 +11,8 @@ function App() {
   const [localStream, setLocalStream] = useState(null);
   const [peerConnection, setPeerConnection] = useState(null);
   const [fileTransfer, setFileTransfer] = useState({ progress: 0, active: false });
+  const [connectionError, setConnectionError] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -24,6 +26,9 @@ function App() {
 
   useEffect(() => {
     // Initialize socket connection with fallback options to bypass ad blockers
+    console.log('Connecting to server:', config.server);
+    setLoading(true);
+    
     const newSocket = io(config.server, {
       transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
       timeout: 20000,
@@ -40,6 +45,8 @@ function App() {
 
     newSocket.on('connect', () => {
       setConnected(true);
+      setConnectionError(null);
+      setLoading(false);
       console.log('Connected to signaling server via', newSocket.io.engine.transport.name);
     });
 
@@ -51,19 +58,24 @@ function App() {
     newSocket.on('connect_error', (error) => {
       console.error('Connection error:', error);
       setConnected(false);
+      setLoading(false);
+      setConnectionError(`Failed to connect to server: ${config.server}. ${error.message || 'Unknown error'}`);
     });
 
     newSocket.on('reconnect', (attemptNumber) => {
       console.log('Reconnected after', attemptNumber, 'attempts');
       setConnected(true);
+      setConnectionError(null);
     });
 
     newSocket.on('reconnect_error', (error) => {
       console.error('Reconnection error:', error);
+      setConnectionError(`Reconnection failed: ${error.message || 'Unknown error'}`);
     });
 
     newSocket.io.on('error', (error) => {
       console.error('Socket.io error:', error);
+      setConnectionError(`Socket error: ${error.message || 'Unknown error'}`);
     });
 
     newSocket.on('session-created', (id) => {
@@ -262,14 +274,42 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>SuperDesk Remote Desktop</h1>
+        
+        {loading && (
+          <div className="loading-state">
+            <h2>🔄 Connecting to SuperDesk Server...</h2>
+            <p>Server: {config.server}</p>
+            <div className="spinner"></div>
+          </div>
+        )}
+        
+        {connectionError && (
+          <div className="error-state">
+            <h2>❌ Connection Failed</h2>
+            <p>{connectionError}</p>
+            <div className="troubleshooting">
+              <h3>🔧 Troubleshooting:</h3>
+              <ul>
+                <li>Check if server is deployed and running</li>
+                <li>Verify server URL: {config.server}</li>
+                <li>Disable ad blockers (they can block Socket.io)</li>
+                <li>Try incognito/private browsing mode</li>
+              </ul>
+              <button onClick={() => window.location.reload()}>
+                🔄 Retry Connection
+              </button>
+            </div>
+          </div>
+        )}
+        
         <div className="connection-status">
-          Status: {connected ? 'Connected' : 'Disconnected'}
-          {!connected && (
+          Status: {connected ? '✅ Connected' : '❌ Disconnected'}
+          {!connected && !loading && !connectionError && (
             <div className="debug-info">
               <p>⚠️ Connection Issue Detected</p>
               <p>If you see "ERR_BLOCKED_BY_CLIENT" errors:</p>
               <ul>
-                <li>Disable ad blocker for localhost</li>
+                <li>Disable ad blocker for this site</li>
                 <li>Try incognito/private browsing mode</li>
                 <li>Check browser console for errors</li>
               </ul>
