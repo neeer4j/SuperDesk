@@ -1,19 +1,11 @@
 {
-  "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "env": {
     "REACT_APP_SERVER_URL": "https://superdesk-server-production.up.railway.app"
-  },
-  "build": {
-    "env": {
-      "REACT_APP_SERVER_URL": "https://superdesk-server-production.up.railway.app"
-    }
   }
 }
