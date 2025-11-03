@@ -11,6 +11,7 @@ function App() {
   const [remoteStream, setRemoteStream] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [peerConnection, setPeerConnection] = useState(null);
+  const [dataChannel, setDataChannel] = useState(null);
   const [fileTransfer, setFileTransfer] = useState({ progress: 0, active: false });
   const [connectionError, setConnectionError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -198,7 +199,23 @@ function App() {
     };
 
     pc.ondatachannel = (event) => {
+      console.log('Data channel received:', event.channel.label);
       const dataChannel = event.channel;
+      
+      dataChannel.onopen = () => {
+        console.log('Data channel opened (guest side)');
+        setDataChannel(dataChannel);
+      };
+      
+      dataChannel.onclose = () => {
+        console.log('Data channel closed (guest side)');
+        setDataChannel(null);
+      };
+      
+      dataChannel.onerror = (error) => {
+        console.error('Data channel error (guest side):', error);
+      };
+      
       dataChannel.onmessage = handleDataChannelMessage;
     };
 
@@ -258,7 +275,17 @@ function App() {
 
       // Create data channel for file transfer and control
       const dataChannel = pc.createDataChannel('control');
-      dataChannel.onopen = () => console.log('Data channel opened');
+      dataChannel.onopen = () => {
+        console.log('Data channel opened (host side)');
+        setDataChannel(dataChannel);
+      };
+      dataChannel.onclose = () => {
+        console.log('Data channel closed (host side)');
+        setDataChannel(null);
+      };
+      dataChannel.onerror = (error) => {
+        console.error('Data channel error (host side):', error);
+      };
       dataChannel.onmessage = handleDataChannelMessage;
 
       // Handle when user stops sharing (browser stop button)
@@ -289,22 +316,35 @@ function App() {
     console.log('Attempting to join session:', id);
     
     try {
-      // For guests, only get microphone audio (no camera needed)
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: false,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
+      let stream = null;
+      
+      try {
+        // Try to get microphone audio for guests (optional)
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: false,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        console.log('Got audio stream for guest');
+      } catch (audioError) {
+        console.log('Audio not available, continuing without microphone:', audioError.message);
+        // Create a dummy stream or continue without audio
+        stream = new MediaStream();
+      }
+      
       setLocalStream(stream);
 
       const pc = initializePeerConnection();
       
-      stream.getTracks().forEach(track => {
-        pc.addTrack(track, stream);
-      });
+      // Add tracks only if we have them
+      if (stream && stream.getTracks().length > 0) {
+        stream.getTracks().forEach(track => {
+          pc.addTrack(track, stream);
+        });
+      }
 
       if (socket) {
         console.log('Emitting join-session event for:', id);
@@ -314,7 +354,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error joining session:', error);
-      alert('Error accessing camera/microphone: ' + error.message);
+      alert('Error joining session: ' + error.message);
     }
   };
 
@@ -394,6 +434,11 @@ function App() {
         setPeerConnection(null);
       }
       
+      if (dataChannel) {
+        dataChannel.close();
+        setDataChannel(null);
+      }
+      
       setSessionId('');
       setJoinSessionId('');
       setRemoteStream(null);
@@ -403,6 +448,7 @@ function App() {
       setScreenSharing(false);
       setScreenShareRequested(false);
       setPendingScreenRequests([]);
+      setFileTransfer({ progress: 0, active: false });
       
       alert('Session ended successfully!');
     }
@@ -582,23 +628,32 @@ function App() {
     };
 
     reader.onload = (e) => {
-      const dataChannel = peerConnection?.dataChannel;
       if (dataChannel && dataChannel.readyState === 'open') {
-        dataChannel.send(JSON.stringify({
-          type: 'file-chunk',
-          name: file.name,
-          data: Array.from(new Uint8Array(e.target.result)),
-          offset: offset,
-          total: file.size
-        }));
+        try {
+          dataChannel.send(JSON.stringify({
+            type: 'file-chunk',
+            name: file.name,
+            data: Array.from(new Uint8Array(e.target.result)),
+            offset: offset,
+            total: file.size
+          }));
 
-        offset += chunkSize;
-        const progress = Math.min((offset / file.size) * 100, 100);
-        setFileTransfer({ progress, active: offset < file.size });
+          offset += chunkSize;
+          const progress = Math.min((offset / file.size) * 100, 100);
+          setFileTransfer({ progress, active: offset < file.size });
 
-        if (offset < file.size) {
-          sendChunk();
+          if (offset < file.size) {
+            sendChunk();
+          }
+        } catch (error) {
+          console.error('Error sending file chunk:', error);
+          alert('Error sending file: ' + error.message);
+          setFileTransfer({ progress: 0, active: false });
         }
+      } else {
+        console.error('Data channel not available for file transfer');
+        alert('Connection not ready for file transfer. Please try again.');
+        setFileTransfer({ progress: 0, active: false });
       }
     };
 
