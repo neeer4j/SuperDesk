@@ -1,0 +1,12 @@
+{
+  "name": "superdesk-shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and types for SuperDesk",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'No build process needed for shared utilities'"
+  },
+  "keywords": ["utilities", "types", "shared"],
+  "author": "Your Name",
+  "license": "MIT"
+}

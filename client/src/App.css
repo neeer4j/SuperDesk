@@ -1,0 +1,188 @@
+.App {
+  text-align: center;
+  background-color: #282c34;
+  color: white;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.App-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: calc(10px + 2vmin);
+}
+
+.connection-status {
+  font-size: 16px;
+  margin: 10px 0;
+  padding: 8px 16px;
+  border-radius: 4px;
+  background-color: #4CAF50;
+}
+
+.session-info {
+  background-color: #333;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+  border: 1px solid #555;
+}
+
+.session-info p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 20px 0;
+  align-items: center;
+}
+
+.join-session {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.join-session input {
+  padding: 8px 12px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background-color: #333;
+  color: white;
+  font-size: 14px;
+}
+
+.join-session input::placeholder {
+  color: #aaa;
+}
+
+button {
+  background-color: #61dafb;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  color: #282c34;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+button:hover:not(:disabled) {
+  background-color: #21a9c7;
+}
+
+button:disabled {
+  background-color: #555;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.media-controls {
+  margin: 20px 0;
+}
+
+.file-transfer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 200px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background-color: #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #61dafb;
+  transition: width 0.3s ease;
+}
+
+.video-container {
+  display: flex;
+  gap: 20px;
+  margin-top: 30px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.video-panel {
+  flex: 1;
+  max-width: 800px;
+  min-width: 400px;
+}
+
+.video-panel h3 {
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.remote-video {
+  width: 100%;
+  max-width: 800px;
+  height: auto;
+  background-color: #000;
+  border: 2px solid #555;
+  border-radius: 8px;
+}
+
+.local-video-container {
+  max-width: 300px;
+  min-width: 200px;
+}
+
+.local-video-container h4 {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.local-video {
+  width: 100%;
+  height: auto;
+  background-color: #000;
+  border: 1px solid #555;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .video-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .video-panel {
+    min-width: 300px;
+  }
+  
+  .controls {
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .join-session {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .join-session input {
+    width: 100%;
+    max-width: 200px;
+  }
+}

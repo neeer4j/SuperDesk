@@ -1,0 +1,30 @@
+{
+  "name": "superdesk",
+  "version": "1.0.0",
+  "description": "Remote desktop access software for Windows",
+  "main": "index.js",
+  "scripts": {
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "dev:agent": "cd agent && npm run dev",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "build:agent": "cd agent && npm run build",
+    "start:client": "cd client && npm start",
+    "start:server": "cd server && npm start",
+    "start:agent": "cd agent && npm start",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install && cd ../agent && npm install && cd ../shared && npm install"
+  },
+  "keywords": ["remote-desktop", "webrtc", "screen-sharing", "windows"],
+  "author": "Your Name",
+  "license": "MIT",
+  "workspaces": [
+    "client",
+    "server", 
+    "agent",
+    "shared"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
