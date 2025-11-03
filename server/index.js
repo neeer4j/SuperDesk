@@ -13,20 +13,28 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "https://super-desk-client.vercel.app",
   process.env.CLIENT_URL,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-].filter(Boolean);
+];
 
-// Configure CORS - more permissive to avoid ad blocker issues
-app.use(cors({
-  origin: allowedOrigins,
+// In production, be more permissive to allow cross-device connections
+const corsOptions = process.env.NODE_ENV === 'production' ? {
+  origin: true, // Allow all origins in production for cross-device access
   credentials: true,
   optionsSuccessStatus: 200
-}));
+} : {
+  origin: allowedOrigins.filter(Boolean),
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+// Configure CORS - more permissive to avoid ad blocker issues
+app.use(cors(corsOptions));
 
 const io = socketIo(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: process.env.NODE_ENV === 'production' ? true : allowedOrigins.filter(Boolean),
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   },
@@ -82,7 +90,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join-session', (sessionId) => {
+    console.log(`Attempting to join session: ${sessionId} from socket: ${socket.id}`);
     const session = sessions.get(sessionId);
+    
     if (session) {
       session.clients.push(socket.id);
       socket.join(sessionId);
@@ -91,8 +101,10 @@ io.on('connection', (socket) => {
       socket.to(sessionId).emit('user-joined', socket.id);
       socket.emit('session-joined', sessionId);
       
-      console.log(`Client ${socket.id} joined session ${sessionId}`);
+      console.log(`✅ Client ${socket.id} successfully joined session ${sessionId}`);
+      console.log(`Session now has: Host: ${session.host}, Clients: [${session.clients.join(', ')}]`);
     } else {
+      console.log(`❌ Session ${sessionId} not found. Available sessions:`, Array.from(sessions.keys()));
       socket.emit('session-error', 'Session not found');
     }
   });
