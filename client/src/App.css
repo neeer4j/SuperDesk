@@ -583,3 +583,81 @@ button:disabled {
   margin: 0;
   line-height: 1.4;
 }
+
+/* Remote Desktop Section Styles */
+.remote-desktop-section {
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  text-align: center;
+}
+
+.remote-desktop-section h3 {
+  margin-top: 0;
+  color: #4CAF50;
+  font-size: 18px;
+}
+
+.open-desktop-btn {
+  background: linear-gradient(145deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 15px;
+  min-width: 250px;
+}
+
+.open-desktop-btn:hover:not(:disabled) {
+  background: linear-gradient(145deg, #45a049, #3d8b40);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+}
+
+.open-desktop-btn:disabled {
+  background: linear-gradient(145deg, #757575, #616161);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.remote-status {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.5);
+  border-radius: 6px;
+  padding: 10px;
+  color: #4CAF50;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.host-status-section {
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(33, 150, 243, 0.3);
+  text-align: center;
+}
+
+.host-status-section h3 {
+  margin-top: 0;
+  color: #2196F3;
+  font-size: 18px;
+}
+
+.host-info {
+  background: rgba(33, 150, 243, 0.2);
+  border: 1px solid rgba(33, 150, 243, 0.4);
+  border-radius: 6px;
+  padding: 15px;
+  color: #64B5F6;
+  font-size: 14px;
+  line-height: 1.6;
+}

@@ -21,6 +21,7 @@ function App() {
   const [screenSharing, setScreenSharing] = useState(false);
   const [screenShareRequested, setScreenShareRequested] = useState(false);
   const [pendingScreenRequests, setPendingScreenRequests] = useState([]);
+  const [remoteDesktopWindow, setRemoteDesktopWindow] = useState(null);
   
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -177,6 +178,23 @@ function App() {
 
     return () => newSocket.close();
   }, []);
+
+  // Update popup when remote stream changes
+  useEffect(() => {
+    if (remoteDesktopWindow && !remoteDesktopWindow.closed && remoteStream) {
+      const popupVideo = remoteDesktopWindow.document.getElementById('remoteVideo');
+      const loadingOverlay = remoteDesktopWindow.document.getElementById('loadingOverlay');
+      
+      if (popupVideo) {
+        popupVideo.srcObject = remoteStream;
+        popupVideo.onloadedmetadata = () => {
+          if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+          }
+        };
+      }
+    }
+  }, [remoteStream, remoteDesktopWindow]);
 
   const initializePeerConnection = () => {
     const pc = new RTCPeerConnection(servers);
@@ -564,6 +582,317 @@ function App() {
     alert('Screen share request denied.');
   };
 
+  // Remote Desktop Popup
+  const openRemoteDesktop = () => {
+    if (!remoteStream) {
+      alert('No remote stream available. Wait for host to share screen.');
+      return;
+    }
+
+    // Close existing window if open
+    if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
+      remoteDesktopWindow.close();
+    }
+
+    // Create popup window
+    const popup = window.open(
+      '', 
+      'RemoteDesktop', 
+      'width=1200,height=800,resizable=yes,scrollbars=no,menubar=no,toolbar=no,location=no,status=no'
+    );
+
+    if (!popup) {
+      alert('Popup blocked! Please allow popups for this site to use remote desktop viewer.');
+      return;
+    }
+
+    setRemoteDesktopWindow(popup);
+
+    // Create the popup content
+    popup.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>SuperDesk - Remote Desktop</title>
+        <style>
+          body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+          }
+          
+          .desktop-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .desktop-header {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+          }
+          
+          .desktop-title {
+            font-size: 16px;
+            font-weight: bold;
+          }
+          
+          .desktop-controls {
+            display: flex;
+            gap: 10px;
+          }
+          
+          .control-btn {
+            padding: 5px 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+          }
+          
+          .control-btn:hover {
+            background: #2980b9;
+          }
+          
+          .control-btn.active {
+            background: #27ae60;
+          }
+          
+          .control-btn.close {
+            background: #e74c3c;
+          }
+          
+          .control-btn.close:hover {
+            background: #c0392b;
+          }
+          
+          .video-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+          }
+          
+          .remote-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            cursor: crosshair;
+          }
+          
+          .remote-video.controllable {
+            cursor: crosshair;
+          }
+          
+          .status-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 100;
+          }
+          
+          .loading-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            font-size: 18px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="desktop-container">
+          <div class="desktop-header">
+            <div class="desktop-title">🖥️ SuperDesk Remote Desktop</div>
+            <div class="desktop-controls">
+              <button class="control-btn" id="toggleControl" onclick="toggleRemoteControl()">
+                Enable Control
+              </button>
+              <button class="control-btn close" onclick="window.close()">
+                ✕ Close
+              </button>
+            </div>
+          </div>
+          
+          <div class="video-container">
+            <video 
+              id="remoteVideo" 
+              class="remote-video" 
+              autoplay 
+              playsinline
+            ></video>
+            
+            <div class="status-overlay" id="statusOverlay">
+              Connecting...
+            </div>
+            
+            <div class="loading-overlay" id="loadingOverlay">
+              <div>🔄 Loading Remote Desktop...</div>
+              <div style="font-size: 14px; margin-top: 10px;">Waiting for video stream...</div>
+            </div>
+          </div>
+        </div>
+        
+        <script>
+          let remoteControlEnabled = false;
+          let parentWindow = window.opener;
+          
+          function toggleRemoteControl() {
+            remoteControlEnabled = !remoteControlEnabled;
+            const btn = document.getElementById('toggleControl');
+            const video = document.getElementById('remoteVideo');
+            const status = document.getElementById('statusOverlay');
+            
+            if (remoteControlEnabled) {
+              btn.textContent = 'Disable Control';
+              btn.classList.add('active');
+              video.style.cursor = 'crosshair';
+              status.textContent = '🖱️ Remote Control Active';
+              
+              // Notify parent window
+              if (parentWindow && !parentWindow.closed) {
+                parentWindow.postMessage({ type: 'enableRemoteControl' }, '*');
+              }
+            } else {
+              btn.textContent = 'Enable Control';
+              btn.classList.remove('active');
+              video.style.cursor = 'default';
+              status.textContent = '👁️ View Only';
+              
+              // Notify parent window
+              if (parentWindow && !parentWindow.closed) {
+                parentWindow.postMessage({ type: 'disableRemoteControl' }, '*');
+              }
+            }
+          }
+          
+          function handleMouseEvent(event) {
+            if (!remoteControlEnabled || !parentWindow || parentWindow.closed) return;
+            
+            const rect = event.target.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 1920;
+            const y = ((event.clientY - rect.top) / rect.height) * 1080;
+            
+            parentWindow.postMessage({
+              type: 'mouseEvent',
+              event: {
+                type: event.type,
+                x: Math.round(x),
+                y: Math.round(y),
+                button: event.button
+              }
+            }, '*');
+          }
+          
+          function handleKeyboardEvent(event) {
+            if (!remoteControlEnabled || !parentWindow || parentWindow.closed) return;
+            
+            event.preventDefault();
+            parentWindow.postMessage({
+              type: 'keyboardEvent',
+              event: {
+                type: event.type,
+                key: event.key,
+                code: event.code,
+                ctrlKey: event.ctrlKey,
+                shiftKey: event.shiftKey,
+                altKey: event.altKey
+              }
+            }, '*');
+          }
+          
+          // Add event listeners
+          const video = document.getElementById('remoteVideo');
+          video.addEventListener('mousedown', handleMouseEvent);
+          video.addEventListener('mouseup', handleMouseEvent);
+          video.addEventListener('mousemove', handleMouseEvent);
+          video.addEventListener('click', handleMouseEvent);
+          video.addEventListener('dblclick', handleMouseEvent);
+          
+          document.addEventListener('keydown', handleKeyboardEvent);
+          document.addEventListener('keyup', handleKeyboardEvent);
+          
+          // Handle window close
+          window.addEventListener('beforeunload', () => {
+            if (parentWindow && !parentWindow.closed) {
+              parentWindow.postMessage({ type: 'popupClosed' }, '*');
+            }
+          });
+          
+          // Initialize
+          document.getElementById('statusOverlay').textContent = '👁️ View Only';
+        </script>
+      </body>
+      </html>
+    `);
+
+    popup.document.close();
+
+    // Set up the video stream in the popup
+    const popupVideo = popup.document.getElementById('remoteVideo');
+    const loadingOverlay = popup.document.getElementById('loadingOverlay');
+    
+    if (popupVideo && remoteStream) {
+      popupVideo.srcObject = remoteStream;
+      popupVideo.onloadedmetadata = () => {
+        loadingOverlay.style.display = 'none';
+      };
+    }
+
+    // Handle popup messages
+    const handlePopupMessage = (event) => {
+      if (event.source !== popup) return;
+      
+      switch (event.data.type) {
+        case 'enableRemoteControl':
+          enableRemoteControl();
+          break;
+        case 'disableRemoteControl':
+          disableRemoteControl();
+          break;
+        case 'mouseEvent':
+          if (socket && sessionId) {
+            socket.emit('mouse-event', {
+              sessionId,
+              ...event.data.event
+            });
+          }
+          break;
+        case 'keyboardEvent':
+          if (socket && sessionId) {
+            socket.emit('keyboard-event', {
+              sessionId,
+              ...event.data.event
+            });
+          }
+          break;
+        case 'popupClosed':
+          setRemoteDesktopWindow(null);
+          window.removeEventListener('message', handlePopupMessage);
+          break;
+      }
+    };
+
+    window.addEventListener('message', handlePopupMessage);
+  };
+
   const handleOffer = async (offer) => {
     if (!peerConnection) return;
     
@@ -841,58 +1170,35 @@ function App() {
           </div>
         </div>
 
-        <div className="video-container">
-          <div className="video-panel">
-            <h3>Remote Screen</h3>
+        {/* Remote Desktop Access */}
+        {sessionId && !isHost && (
+          <div className="remote-desktop-section">
+            <h3>�️ Remote Desktop Access</h3>
+            <button 
+              onClick={openRemoteDesktop}
+              className="open-desktop-btn"
+              disabled={!remoteStream}
+            >
+              {remoteStream ? '🖥️ Open Remote Desktop Viewer' : '⏳ Waiting for host screen...'}
+            </button>
             {remoteControlEnabled && (
-              <div className="control-indicator">
-                🖱️ Remote Control Active - Click to control
+              <div className="remote-status">
+                ✅ Remote control enabled - Click the button above to view and control the host's desktop
               </div>
             )}
-            <div 
-              className={`remote-screen-wrapper ${remoteControlEnabled ? 'controllable' : ''}`}
-              ref={remoteScreenRef}
-              onMouseDown={handleMouseEvent}
-              onMouseUp={handleMouseEvent}
-              onMouseMove={handleMouseEvent}
-              onClick={handleMouseEvent}
-              onDoubleClick={handleMouseEvent}
-              onKeyDown={handleKeyboardEvent}
-              onKeyUp={handleKeyboardEvent}
-              tabIndex={remoteControlEnabled ? 0 : -1}
-              style={{
-                outline: remoteControlEnabled ? '2px solid #4CAF50' : 'none',
-                cursor: remoteControlEnabled ? 'crosshair' : 'default'
-              }}
-            >
-              <video 
-                ref={videoRef}
-                autoPlay 
-                playsInline 
-                className="remote-video"
-                style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
-              />
-              {!remoteStream && (
-                <div className="no-stream-placeholder">
-                  <p>No remote screen connected</p>
-                  <p>Waiting for host to share screen...</p>
-                </div>
-              )}
+          </div>
+        )}
+
+        {isHost && sessionId && (
+          <div className="host-status-section">
+            <h3>🖥️ Host Status</h3>
+            <div className="host-info">
+              ✅ Your desktop is being shared
+              <br />
+              Connected users can see your screen and control your computer
             </div>
           </div>
-          
-          <div className="local-video-container">
-            <h4>Local Camera</h4>
-            <video 
-              ref={audioRef}
-              autoPlay 
-              playsInline 
-              muted
-              className="local-video"
-              srcObject={localStream}
-            />
-          </div>
-        </div>
+        )}
       </header>
     </div>
   );
