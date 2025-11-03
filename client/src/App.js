@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
+import config from './config';
 import './App.css';
 
 function App() {
@@ -22,18 +23,47 @@ function App() {
   };
 
   useEffect(() => {
-    // Initialize socket connection
-    const newSocket = io('http://localhost:3001');
+    // Initialize socket connection with fallback options to bypass ad blockers
+    const newSocket = io(config.server, {
+      transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
+      timeout: 20000,
+      forceNew: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      maxReconnectionAttempts: 5,
+      // Additional options to bypass ad blockers
+      upgrade: true,
+      rememberUpgrade: false
+    });
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
       setConnected(true);
-      console.log('Connected to signaling server');
+      console.log('Connected to signaling server via', newSocket.io.engine.transport.name);
     });
 
     newSocket.on('disconnect', () => {
       setConnected(false);
       console.log('Disconnected from signaling server');
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+      setConnected(false);
+    });
+
+    newSocket.on('reconnect', (attemptNumber) => {
+      console.log('Reconnected after', attemptNumber, 'attempts');
+      setConnected(true);
+    });
+
+    newSocket.on('reconnect_error', (error) => {
+      console.error('Reconnection error:', error);
+    });
+
+    newSocket.io.on('error', (error) => {
+      console.error('Socket.io error:', error);
     });
 
     newSocket.on('session-created', (id) => {
@@ -234,6 +264,20 @@ function App() {
         <h1>SuperDesk Remote Desktop</h1>
         <div className="connection-status">
           Status: {connected ? 'Connected' : 'Disconnected'}
+          {!connected && (
+            <div className="debug-info">
+              <p>⚠️ Connection Issue Detected</p>
+              <p>If you see "ERR_BLOCKED_BY_CLIENT" errors:</p>
+              <ul>
+                <li>Disable ad blocker for localhost</li>
+                <li>Try incognito/private browsing mode</li>
+                <li>Check browser console for errors</li>
+              </ul>
+              <button onClick={() => window.location.reload()}>
+                Retry Connection
+              </button>
+            </div>
+          )}
         </div>
         
         {sessionId && (

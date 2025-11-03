@@ -9,18 +9,31 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// Configure CORS
+// Configure allowed origins for different environments
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  process.env.CLIENT_URL,
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+].filter(Boolean);
+
+// Configure CORS - more permissive to avoid ad blocker issues
 app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true
+  origin: allowedOrigins,
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
-  }
+  },
+  allowEIO3: true,
+  transports: ['websocket', 'polling'],
+  upgrade: true,
+  rememberUpgrade: false
 });
 
 app.use(express.json());
@@ -191,6 +204,35 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     activeSessions: sessions.size
+  });
+});
+
+// API info endpoint for deployment checking
+app.get('/api/info', (req, res) => {
+  res.json({
+    name: 'SuperDesk Server',
+    version: '1.0.0',
+    status: 'running',
+    features: {
+      webrtc: true,
+      fileTransfer: true,
+      maxFileSize: '10MB',
+      socketIO: true
+    },
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+    activeSessions: sessions.size,
+    uptime: process.uptime()
+  });
+});
+
+// Socket.io test endpoint to check if socket.io is accessible
+app.get('/socket-test', (req, res) => {
+  res.json({
+    status: 'Socket.io server is running',
+    endpoint: '/socket.io/',
+    transports: ['websocket', 'polling'],
+    timestamp: new Date().toISOString()
   });
 });
 
