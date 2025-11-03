@@ -7,6 +7,7 @@ function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [sessionId, setSessionId] = useState('');
+  const [joinSessionId, setJoinSessionId] = useState('');
   const [remoteStream, setRemoteStream] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [peerConnection, setPeerConnection] = useState(null);
@@ -80,6 +81,27 @@ function App() {
 
     newSocket.on('session-created', (id) => {
       setSessionId(id);
+      console.log('✅ Session created:', id);
+    });
+
+    newSocket.on('session-joined', (id) => {
+      console.log('✅ Successfully joined session:', id);
+      alert(`Successfully joined session: ${id}`);
+    });
+
+    newSocket.on('session-error', (error) => {
+      console.error('❌ Session error:', error);
+      alert(`Session error: ${error}`);
+    });
+
+    newSocket.on('user-joined', (userId) => {
+      console.log('👤 User joined session:', userId);
+      alert('Another user joined the session!');
+    });
+
+    newSocket.on('user-left', (userId) => {
+      console.log('👤 User left session:', userId);
+      alert('User left the session');
     });
 
     newSocket.on('offer', async (offer) => {
@@ -157,6 +179,13 @@ function App() {
   };
 
   const joinSession = async (id) => {
+    if (!id || !id.trim()) {
+      alert('Please enter a valid Session ID');
+      return;
+    }
+    
+    console.log('Attempting to join session:', id);
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
@@ -171,10 +200,22 @@ function App() {
       });
 
       if (socket) {
-        socket.emit('join-session', id);
+        console.log('Emitting join-session event for:', id);
+        socket.emit('join-session', id.trim());
+      } else {
+        alert('Not connected to server. Please refresh and try again.');
       }
     } catch (error) {
       console.error('Error joining session:', error);
+      alert('Error accessing camera/microphone: ' + error.message);
+    }
+  };
+
+  const handleJoinClick = () => {
+    if (joinSessionId.trim()) {
+      joinSession(joinSessionId.trim());
+    } else {
+      alert('Please enter a Session ID');
     }
   };
 
@@ -337,16 +378,19 @@ function App() {
             <input 
               type="text" 
               placeholder="Enter Session ID" 
+              value={joinSessionId}
+              onChange={(e) => setJoinSessionId(e.target.value)}
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
-                  joinSession(e.target.value);
+                  handleJoinClick();
                 }
               }}
+              disabled={!connected}
             />
-            <button onClick={() => {
-              const input = document.querySelector('input[placeholder="Enter Session ID"]');
-              if (input.value) joinSession(input.value);
-            }}>
+            <button 
+              onClick={handleJoinClick}
+              disabled={!connected || !joinSessionId.trim()}
+            >
               Join Session
             </button>
           </div>
