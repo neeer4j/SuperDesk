@@ -33,7 +33,8 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Snackbar
+  Snackbar,
+  IconButton
 } from '@mui/material';
 
 import {
@@ -51,13 +52,15 @@ import {
   PowerSettingsNew,
   Computer,
   TouchApp,
-  ScreenShare
+  ScreenShare,
+  Brightness4,
+  Brightness7
 } from '@mui/icons-material';
 
 // Create professional Material UI theme
-const theme = createTheme({
+const createAppTheme = (mode) => createTheme({
   palette: {
-    mode: 'light',
+    mode,
     primary: {
       main: '#1976d2',
       light: '#42a5f5',
@@ -70,8 +73,8 @@ const theme = createTheme({
       main: '#2e7d32',
     },
     background: {
-      default: '#f5f5f5',
-      paper: '#ffffff',
+      default: mode === 'light' ? '#f5f5f5' : '#121212',
+      paper: mode === 'light' ? '#ffffff' : '#1e1e1e',
     },
   },
   typography: {
@@ -90,10 +93,14 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          boxShadow: mode === 'light' 
+            ? '0 2px 8px rgba(0,0,0,0.1)' 
+            : '0 2px 8px rgba(0,0,0,0.3)',
           transition: 'box-shadow 0.3s ease-in-out',
           '&:hover': {
-            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+            boxShadow: mode === 'light'
+              ? '0 4px 16px rgba(0,0,0,0.15)'
+              : '0 4px 16px rgba(0,0,0,0.4)',
           },
         },
       },
@@ -130,6 +137,15 @@ function App() {
   const [remoteDesktopWindow, setRemoteDesktopWindow] = useState(null);
   const [pendingJoinRequests, setPendingJoinRequests] = useState([]);
   const [joinRequestStatus, setJoinRequestStatus] = useState(null); // 'pending', 'approved', 'rejected'
+  const [darkMode, setDarkMode] = useState(false);
+  
+  // Create theme based on current mode
+  const theme = createAppTheme(darkMode ? 'dark' : 'light');
+  
+  // Toggle dark/light mode
+  const toggleTheme = () => {
+    setDarkMode(!darkMode);
+  };
   
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -1224,19 +1240,37 @@ function App() {
                 Seamless Remote Access • Crystal Clear Desktop Sharing • Full System Control
               </Typography>
             </Box>
-            <Chip 
-              icon={connected ? <CheckCircle /> : <Cancel />}
-              label={connected ? 'Connected' : 'Disconnected'}
-              color={connected ? 'success' : 'error'}
-              variant="outlined"
-              sx={{ color: 'white', borderColor: 'white' }}
-            />
+            <Box display="flex" alignItems="center" gap={1}>
+              <Button
+                color="inherit"
+                onClick={toggleTheme}
+                startIcon={darkMode ? <Brightness7 /> : <Brightness4 />}
+                sx={{ textTransform: 'none', color: 'white' }}
+              >
+                {darkMode ? 'Light' : 'Dark'}
+              </Button>
+              <Chip 
+                icon={connected ? <CheckCircle /> : <Cancel />}
+                label={connected ? 'Connected' : 'Disconnected'}
+                color={connected ? 'success' : 'error'}
+                variant="outlined"
+                sx={{ color: 'white', borderColor: 'white' }}
+              />
+            </Box>
           </Toolbar>
         </AppBar>
 
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
           {/* Hero Section */}
-          <Paper sx={{ p: 4, mb: 4, background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', color: 'white', textAlign: 'center' }}>
+          <Paper sx={{ 
+            p: 4, 
+            mb: 4, 
+            background: darkMode 
+              ? 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)' 
+              : 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', 
+            color: 'white', 
+            textAlign: 'center' 
+          }}>
             <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
               Next-Generation Remote Desktop
             </Typography>
