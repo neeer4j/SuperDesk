@@ -5,7 +5,7 @@ const config = {
     client: 'http://localhost:3000',
   },
   production: {
-    server: process.env.REACT_APP_SERVER_URL || 'https://superdesk-server-production.up.railway.app',
+    server: process.env.REACT_APP_SERVER_URL || 'https://superdesk-7m7f.onrender.com',
     client: process.env.REACT_APP_CLIENT_URL || window.location.origin,
   }
 };

@@ -274,6 +274,7 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>SuperDesk Remote Desktop</h1>
+        {/* Auto-deploy test - this should work now! */}
         
         {loading && (
           <div className="loading-state">

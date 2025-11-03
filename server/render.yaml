@@ -1,0 +1,11 @@
+# Render Deployment Configuration
+# This file tells Render how to deploy your server
+
+# Build settings
+buildCommand = "npm install"
+startCommand = "npm start"
+
+# Environment variables
+[env]
+NODE_ENV = "production"
+PORT = "10000"
