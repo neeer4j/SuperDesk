@@ -356,6 +356,25 @@ function App() {
     }
   }, [remoteStream, isHost, joinRequestStatus]);
 
+  // Update popup window when remoteStream changes
+  useEffect(() => {
+    if (remoteDesktopWindow && !remoteDesktopWindow.closed && remoteStream) {
+      const popupVideo = remoteDesktopWindow.document.getElementById('remoteVideo');
+      const loadingOverlay = remoteDesktopWindow.document.getElementById('loadingOverlay');
+      
+      if (popupVideo) {
+        console.log('Updating popup with new remote stream');
+        popupVideo.srcObject = remoteStream;
+        popupVideo.onloadedmetadata = () => {
+          console.log('Video metadata loaded in popup');
+          if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+          }
+        };
+      }
+    }
+  }, [remoteStream, remoteDesktopWindow]);
+
   const initializePeerConnection = () => {
     const pc = new RTCPeerConnection(servers);
     
@@ -373,6 +392,14 @@ function App() {
       setRemoteStream(event.streams[0]);
       if (videoRef.current) {
         videoRef.current.srcObject = event.streams[0];
+      }
+      
+      // Automatically open remote desktop popup for guests
+      if (!isHost && sessionId) {
+        console.log('Auto-opening remote desktop for guest');
+        setTimeout(() => {
+          openRemoteDesktop();
+        }, 1000); // Small delay to ensure stream is properly set
       }
     };
 
@@ -1109,6 +1136,19 @@ function App() {
         case 'popupClosed':
           setRemoteDesktopWindow(null);
           window.removeEventListener('message', handlePopupMessage);
+          break;
+        case 'requestStream':
+          // Send current stream to popup if available
+          if (remoteStream && popup && !popup.closed) {
+            const popupVideo = popup.document.getElementById('remoteVideo');
+            const loadingOverlay = popup.document.getElementById('loadingOverlay');
+            if (popupVideo) {
+              popupVideo.srcObject = remoteStream;
+              if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+              }
+            }
+          }
           break;
       }
     };
