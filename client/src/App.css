@@ -661,3 +661,35 @@ button:disabled {
   font-size: 14px;
   line-height: 1.6;
 }
+
+/* Join Request Styles */
+.join-requests {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.join-requests h4 {
+  margin: 0 0 15px 0;
+  color: #FFA000;
+  font-size: 16px;
+}
+
+.request-status {
+  background: rgba(255, 193, 7, 0.2);
+  border: 1px solid rgba(255, 193, 7, 0.5);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  color: #FFA000;
+  font-weight: bold;
+  margin: 15px 0;
+  animation: pulse 2s infinite;
+}
+
+.request-status.rejected {
+  background: rgba(244, 67, 54, 0.2);
+  border: 1px solid rgba(244, 67, 54, 0.5);
+  color: #f44336;
+  animation: none;
+}

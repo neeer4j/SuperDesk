@@ -89,6 +89,37 @@ io.on('connection', (socket) => {
     console.log(`Session created: ${sessionId}`);
   });
 
+  // Handle join requests (new permission-based system)
+  socket.on('request-join-session', (data) => {
+    const { sessionId, requesterId } = data;
+    console.log(`Join request received for session: ${sessionId} from: ${requesterId}`);
+    
+    const session = sessions.get(sessionId);
+    if (session) {
+      // Notify the host about the join request
+      socket.to(session.host).emit('join-request-received', { requesterId });
+      console.log(`Notified host ${session.host} about join request from ${requesterId}`);
+    } else {
+      socket.emit('error', { message: 'Session not found' });
+    }
+  });
+
+  socket.on('approve-join-request', (data) => {
+    const { sessionId, requesterId } = data;
+    console.log(`Join request approved for session: ${sessionId}, requester: ${requesterId}`);
+    
+    // Notify the requester that they're approved
+    socket.to(requesterId).emit('join-request-approved');
+  });
+
+  socket.on('reject-join-request', (data) => {
+    const { sessionId, requesterId } = data;
+    console.log(`Join request rejected for session: ${sessionId}, requester: ${requesterId}`);
+    
+    // Notify the requester that they're rejected
+    socket.to(requesterId).emit('join-request-rejected');
+  });
+
   socket.on('join-session', (sessionId) => {
     console.log(`Attempting to join session: ${sessionId} from socket: ${socket.id}`);
     const session = sessions.get(sessionId);

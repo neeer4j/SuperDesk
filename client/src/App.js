@@ -22,6 +22,8 @@ function App() {
   const [screenShareRequested, setScreenShareRequested] = useState(false);
   const [pendingScreenRequests, setPendingScreenRequests] = useState([]);
   const [remoteDesktopWindow, setRemoteDesktopWindow] = useState(null);
+  const [pendingJoinRequests, setPendingJoinRequests] = useState([]);
+  const [joinRequestStatus, setJoinRequestStatus] = useState(null); // 'pending', 'approved', 'rejected'
   
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -59,6 +61,28 @@ function App() {
         const { requesterId } = data;
         setPendingScreenRequests(prev => [...prev, requesterId]);
         alert('Someone wants to request screen sharing permission!');
+      });
+
+      // Join request event handlers
+      newSocket.on('join-request-received', (data) => {
+        const { requesterId } = data;
+        setPendingJoinRequests(prev => [...prev, requesterId]);
+        alert('Someone wants to join your session!');
+      });
+
+      newSocket.on('join-request-approved', () => {
+        setJoinRequestStatus('approved');
+        alert('Join request approved! Connecting to desktop...');
+        // Automatically perform the join and open desktop viewer
+        if (joinSessionId) {
+          performJoinSession(joinSessionId);
+        }
+      });
+
+      newSocket.on('join-request-rejected', () => {
+        setJoinRequestStatus('rejected');
+        alert('Join request was rejected by the host.');
+        setJoinSessionId('');
       });
 
       newSocket.on('screen-share-approved', () => {
@@ -195,6 +219,20 @@ function App() {
       }
     }
   }, [remoteStream, remoteDesktopWindow]);
+
+  // Auto-open remote desktop when guest joins successfully
+  useEffect(() => {
+    if (remoteStream && !isHost && joinRequestStatus === 'approved') {
+      // Automatically open remote desktop viewer for approved guests
+      setTimeout(() => {
+        openRemoteDesktop();
+        // Enable remote control by default
+        setTimeout(() => {
+          enableRemoteControl();
+        }, 1000);
+      }, 1000);
+    }
+  }, [remoteStream, isHost, joinRequestStatus]);
 
   const initializePeerConnection = () => {
     const pc = new RTCPeerConnection(servers);
@@ -335,7 +373,25 @@ function App() {
       return;
     }
     
-    console.log('Attempting to join session:', id);
+    console.log('Sending join request for session:', id);
+    
+    if (socket) {
+      // Send join request to host (not direct join)
+      socket.emit('request-join-session', { 
+        sessionId: id.trim(),
+        requesterId: socket.id 
+      });
+      setJoinSessionId(id.trim());
+      setJoinRequestStatus('pending');
+      alert('Join request sent to host. Waiting for approval...');
+    } else {
+      alert('Not connected to server. Please refresh and try again.');
+    }
+  };
+
+  // Actually join session after host approval
+  const performJoinSession = async (sessionId) => {
+    console.log('Performing actual join for session:', sessionId);
     
     try {
       let stream = null;
@@ -369,15 +425,36 @@ function App() {
       }
 
       if (socket) {
-        console.log('Emitting join-session event for:', id);
-        socket.emit('join-session', id.trim());
-      } else {
-        alert('Not connected to server. Please refresh and try again.');
+        console.log('Emitting actual join-session event for:', sessionId);
+        socket.emit('join-session', sessionId);
       }
     } catch (error) {
       console.error('Error joining session:', error);
       alert('Error joining session: ' + error.message);
     }
+  };
+
+  // Host functions for handling join requests
+  const approveJoinRequest = (requesterId) => {
+    if (socket) {
+      socket.emit('approve-join-request', { 
+        sessionId, 
+        requesterId 
+      });
+    }
+    setPendingJoinRequests(prev => prev.filter(id => id !== requesterId));
+    alert('Join request approved! User can now access your desktop.');
+  };
+
+  const rejectJoinRequest = (requesterId) => {
+    if (socket) {
+      socket.emit('reject-join-request', { 
+        sessionId, 
+        requesterId 
+      });
+    }
+    setPendingJoinRequests(prev => prev.filter(id => id !== requesterId));
+    alert('Join request rejected.');
   };
 
   const handleJoinClick = () => {
@@ -1107,11 +1184,24 @@ function App() {
             />
             <button 
               onClick={handleJoinClick}
-              disabled={!connected || !joinSessionId.trim()}
+              disabled={!connected || !joinSessionId.trim() || joinRequestStatus === 'pending'}
             >
-              Join Session
+              {joinRequestStatus === 'pending' ? '⏳ Request Sent...' : 'Request to Join'}
             </button>
           </div>
+          
+          {/* Join Request Status */}
+          {joinRequestStatus === 'pending' && (
+            <div className="request-status">
+              📨 Join request sent to host - waiting for approval...
+            </div>
+          )}
+          
+          {joinRequestStatus === 'rejected' && (
+            <div className="request-status rejected">
+              ❌ Join request was rejected by the host
+            </div>
+          )}
 
           {/* Session Management Controls */}
           {sessionId && (
@@ -1259,8 +1349,34 @@ function App() {
             <div className="host-info">
               ✅ Your desktop is being shared
               <br />
-              Connected users can see your screen and control your computer
+              Session ID: <strong>{sessionId}</strong>
             </div>
+            
+            {/* Pending Join Requests */}
+            {pendingJoinRequests.length > 0 && (
+              <div className="join-requests">
+                <h4>🔔 Incoming Join Requests:</h4>
+                {pendingJoinRequests.map(requesterId => (
+                  <div key={requesterId} className="request-item">
+                    <span>User {requesterId.substring(0, 8)} wants to join your session</span>
+                    <div className="request-actions">
+                      <button 
+                        onClick={() => approveJoinRequest(requesterId)}
+                        className="approve-btn"
+                      >
+                        ✅ Accept
+                      </button>
+                      <button 
+                        onClick={() => rejectJoinRequest(requesterId)}
+                        className="deny-btn"
+                      >
+                        ❌ Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </header>
