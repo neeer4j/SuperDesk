@@ -28,8 +28,11 @@ function App() {
 
   const servers = {
     iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' }
-    ]
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' }
+    ],
+    iceCandidatePoolSize: 10
   };
 
   useEffect(() => {
@@ -177,6 +180,9 @@ function App() {
   const initializePeerConnection = () => {
     const pc = new RTCPeerConnection(servers);
     
+    // Optimize for desktop streaming
+    const senders = [];
+    
     pc.onicecandidate = (event) => {
       if (event.candidate && socket) {
         socket.emit('ice-candidate', event.candidate);
@@ -184,6 +190,7 @@ function App() {
     };
 
     pc.ontrack = (event) => {
+      console.log('Received remote stream:', event.streams[0]);
       setRemoteStream(event.streams[0]);
       if (videoRef.current) {
         videoRef.current.srcObject = event.streams[0];
@@ -195,19 +202,52 @@ function App() {
       dataChannel.onmessage = handleDataChannelMessage;
     };
 
+    // Set up optimized encoding parameters for screen sharing
+    pc.addEventListener('negotiationneeded', async () => {
+      try {
+        const senders = pc.getSenders();
+        for (const sender of senders) {
+          if (sender.track && sender.track.kind === 'video') {
+            const params = sender.getParameters();
+            if (params.encodings) {
+              params.encodings.forEach(encoding => {
+                encoding.maxBitrate = 2000000; // 2 Mbps for good quality
+                encoding.maxFramerate = 30;
+              });
+              await sender.setParameters(params);
+            }
+          }
+        }
+      } catch (error) {
+        console.log('Error setting encoding parameters:', error);
+      }
+    });
+
     setPeerConnection(pc);
     return pc;
   };
 
   const startSession = async () => {
     try {
-      // Get user media for audio and camera
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
+      // Get screen capture with system audio for true remote desktop experience
+      const stream = await navigator.mediaDevices.getDisplayMedia({ 
+        video: {
+          cursor: 'always',
+          displaySurface: 'monitor',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
+        },
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          systemAudio: 'include' // Capture system audio
+        }
       });
       setLocalStream(stream);
       setIsHost(true); // Mark as host
+      setScreenSharing(true); // Mark as screen sharing from start
 
       const pc = initializePeerConnection();
       
@@ -220,6 +260,12 @@ function App() {
       const dataChannel = pc.createDataChannel('control');
       dataChannel.onopen = () => console.log('Data channel opened');
       dataChannel.onmessage = handleDataChannelMessage;
+
+      // Handle when user stops sharing (browser stop button)
+      stream.getVideoTracks()[0].onended = () => {
+        alert('Screen sharing ended. Session will be terminated.');
+        endSession();
+      };
 
       // Create offer
       const offer = await pc.createOffer();
@@ -243,9 +289,14 @@ function App() {
     console.log('Attempting to join session:', id);
     
     try {
+      // For guests, only get microphone audio (no camera needed)
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
+        video: false,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       });
       setLocalStream(stream);
 
@@ -562,8 +613,10 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>SuperDesk Remote Desktop</h1>
-        {/* Auto-deploy test - this should work now! */}
+        <h1>🖥️ SuperDesk Remote Desktop</h1>
+        <p className="app-description">
+          TeamViewer-like remote desktop access • Share your screen • Remote control • System audio
+        </p>
         
         {loading && (
           <div className="loading-state">
@@ -619,7 +672,7 @@ function App() {
 
         <div className="controls">
           <button onClick={startSession} disabled={!connected}>
-            Start New Session
+            🖥️ Share My Desktop
           </button>
           
           <div className="join-session">
@@ -656,67 +709,29 @@ function App() {
                 🚪 End Session
               </button>
               
-              {/* Screen Sharing Controls */}
+              {/* Remote Desktop Status */}
               <div className="screen-sharing-section">
-                <h3>📺 Screen Sharing</h3>
+                <h3>�️ Remote Desktop</h3>
                 
                 {isHost ? (
                   <div className="host-screen-controls">
-                    {!screenSharing ? (
-                      <button 
-                        onClick={startScreenShare}
-                        className="start-screen-btn"
-                      >
-                        🖥️ Start Screen Share
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={stopScreenShare}
-                        className="stop-screen-btn"
-                      >
-                        🛑 Stop Screen Share
-                      </button>
-                    )}
-                    
-                    {pendingScreenRequests.length > 0 && (
-                      <div className="screen-requests">
-                        <h4>Screen Share Requests:</h4>
-                        {pendingScreenRequests.map(requesterId => (
-                          <div key={requesterId} className="request-item">
-                            <span>User {requesterId.substring(0, 8)} wants screen access</span>
-                            <div className="request-actions">
-                              <button 
-                                onClick={() => approveScreenRequest(requesterId)}
-                                className="approve-btn"
-                              >
-                                ✅ Approve
-                              </button>
-                              <button 
-                                onClick={() => denyScreenRequest(requesterId)}
-                                className="deny-btn"
-                              >
-                                ❌ Deny
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="desktop-status">
+                      ✅ Desktop sharing is active
+                    </div>
+                    <p className="desktop-info">
+                      Your entire desktop is being shared with remote users. 
+                      They can see everything on your screen and control your computer.
+                    </p>
                   </div>
                 ) : (
                   <div className="guest-screen-controls">
-                    {!screenShareRequested ? (
-                      <button 
-                        onClick={requestScreenShare}
-                        className="request-screen-btn"
-                      >
-                        📺 Request Screen Share
-                      </button>
-                    ) : (
-                      <div className="request-status">
-                        📡 Screen share request sent - waiting for approval...
-                      </div>
-                    )}
+                    <div className="desktop-status">
+                      � Viewing remote desktop
+                    </div>
+                    <p className="desktop-info">
+                      You are viewing the host's desktop. Use the remote control 
+                      features below to interact with their computer.
+                    </p>
                   </div>
                 )}
               </div>

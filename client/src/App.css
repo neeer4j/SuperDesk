@@ -13,6 +13,14 @@
   font-size: calc(10px + 2vmin);
 }
 
+.app-description {
+  font-size: 16px;
+  color: #90CAF9;
+  margin: 0 0 20px 0;
+  text-align: center;
+  font-weight: 400;
+}
+
 .connection-status {
   font-size: 16px;
   margin: 10px 0;
@@ -551,4 +559,27 @@ button:disabled {
 .deny-btn:hover {
   background: linear-gradient(145deg, #d32f2f, #b71c1c);
   transform: translateY(-1px);
+}
+
+/* Remote Desktop Status Styles */
+.desktop-status {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.5);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  color: #4CAF50;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.desktop-info {
+  background: rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 14px;
+  color: #90CAF9;
+  margin: 0;
+  line-height: 1.4;
 }
