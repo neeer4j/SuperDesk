@@ -388,7 +388,15 @@ function App() {
     };
 
     pc.ontrack = (event) => {
-      console.log('Received remote stream:', event.streams[0]);
+      console.log('=== RECEIVED REMOTE STREAM ===');
+      console.log('Stream:', event.streams[0]);
+      console.log('Tracks:', event.streams[0].getTracks().map(t => ({
+        kind: t.kind,
+        label: t.label,
+        enabled: t.enabled,
+        readyState: t.readyState
+      })));
+      
       setRemoteStream(event.streams[0]);
       if (videoRef.current) {
         videoRef.current.srcObject = event.streams[0];
@@ -584,12 +592,40 @@ function App() {
   };
 
   // Host functions for handling join requests
-  const approveJoinRequest = (requesterId) => {
+  const approveJoinRequest = async (requesterId) => {
     if (socket) {
       socket.emit('approve-join-request', { 
         sessionId, 
         requesterId 
       });
+      
+      // Ensure WebRTC connection is established with screen sharing
+      if (peerConnection && localStream) {
+        console.log('Re-adding tracks for approved guest');
+        
+        // Remove existing tracks and re-add them to ensure proper sharing
+        const senders = peerConnection.getSenders();
+        for (const sender of senders) {
+          if (sender.track) {
+            await peerConnection.removeTrack(sender);
+          }
+        }
+        
+        // Add all tracks from local stream (screen + audio)
+        localStream.getTracks().forEach(track => {
+          console.log('Adding track:', track.kind, track.label);
+          peerConnection.addTrack(track, localStream);
+        });
+        
+        // Create and send a new offer
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('offer', offer);
+        
+        console.log('Sent offer with screen sharing tracks to approved guest');
+      } else {
+        console.warn('No peer connection or local stream available for screen sharing');
+      }
     }
     setPendingJoinRequests(prev => prev.filter(id => id !== requesterId));
     alert('Join request approved! User can now access your desktop.');
@@ -1157,20 +1193,39 @@ function App() {
   };
 
   const handleOffer = async (offer) => {
-    if (!peerConnection) return;
+    console.log('Received offer from host:', offer);
+    if (!peerConnection) {
+      console.error('No peer connection available to handle offer');
+      return;
+    }
     
-    await peerConnection.setRemoteDescription(offer);
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    
-    if (socket) {
-      socket.emit('answer', answer);
+    try {
+      await peerConnection.setRemoteDescription(offer);
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      
+      if (socket) {
+        console.log('Sending answer back to host');
+        socket.emit('answer', answer);
+      }
+    } catch (error) {
+      console.error('Error handling offer:', error);
     }
   };
 
   const handleAnswer = async (answer) => {
-    if (!peerConnection) return;
-    await peerConnection.setRemoteDescription(answer);
+    console.log('Received answer from guest:', answer);
+    if (!peerConnection) {
+      console.error('No peer connection available to handle answer');
+      return;
+    }
+    
+    try {
+      await peerConnection.setRemoteDescription(answer);
+      console.log('Successfully set remote description from answer');
+    } catch (error) {
+      console.error('Error handling answer:', error);
+    }
   };
 
   const handleIceCandidate = (candidate) => {
