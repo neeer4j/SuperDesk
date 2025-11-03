@@ -314,3 +314,119 @@ button:disabled {
     max-width: 200px;
   }
 }
+
+/* Session Management Styles */
+.session-controls {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  border: 2px solid #4CAF50;
+}
+
+.session-info {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.session-info p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.end-session-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  margin: 5px;
+}
+
+.end-session-btn:hover {
+  background-color: #d32f2f;
+}
+
+.remote-control {
+  margin: 10px 0;
+}
+
+.control-btn {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  margin: 5px;
+}
+
+.control-btn.active {
+  background-color: #4CAF50;
+}
+
+.control-btn:hover {
+  opacity: 0.8;
+}
+
+.host-controls {
+  margin: 10px 0;
+  padding: 10px;
+  background-color: rgba(76, 175, 80, 0.1);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Remote Screen Control Styles */
+.remote-screen-wrapper {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  background-color: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.remote-screen-wrapper.controllable {
+  border: 2px solid #4CAF50;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.control-indicator {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(76, 175, 80, 0.9);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 10;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.no-stream-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #888;
+}
+
+.no-stream-placeholder p {
+  margin: 5px 0;
+  font-size: 14px;
+}

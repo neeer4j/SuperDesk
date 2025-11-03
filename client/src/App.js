@@ -14,10 +14,14 @@ function App() {
   const [fileTransfer, setFileTransfer] = useState({ progress: 0, active: false });
   const [connectionError, setConnectionError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isHost, setIsHost] = useState(false);
+  const [remoteControlEnabled, setRemoteControlEnabled] = useState(false);
+  const [connectedUsers, setConnectedUsers] = useState([]);
   
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
+  const remoteScreenRef = useRef(null);
 
   const servers = {
     iceServers: [
@@ -81,6 +85,7 @@ function App() {
 
     newSocket.on('session-created', (id) => {
       setSessionId(id);
+      setIsHost(true);
       console.log('✅ Session created:', id);
     });
 
@@ -102,6 +107,31 @@ function App() {
     newSocket.on('user-left', (userId) => {
       console.log('👤 User left session:', userId);
       alert('User left the session');
+      setConnectedUsers(prev => prev.filter(user => user !== userId));
+    });
+
+    newSocket.on('session-ended', () => {
+      alert('Session has been ended by the host');
+      // Clean up
+      setSessionId('');
+      setJoinSessionId('');
+      setRemoteStream(null);
+      setIsHost(false);
+      setRemoteControlEnabled(false);
+      setConnectedUsers([]);
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
+      }
+    });
+
+    newSocket.on('remote-control-enabled', () => {
+      alert('Remote control has been enabled by the host');
+    });
+
+    newSocket.on('remote-control-disabled', () => {
+      alert('Remote control has been disabled by the host');
+      setRemoteControlEnabled(false);
     });
 
     newSocket.on('offer', async (offer) => {
@@ -152,6 +182,7 @@ function App() {
         audio: true 
       });
       setLocalStream(stream);
+      setIsHost(true); // Mark as host
 
       const pc = initializePeerConnection();
       
@@ -216,6 +247,85 @@ function App() {
       joinSession(joinSessionId.trim());
     } else {
       alert('Please enter a Session ID');
+    }
+  };
+
+  // Remote Control Functions
+  const enableRemoteControl = () => {
+    setRemoteControlEnabled(true);
+    if (socket) {
+      socket.emit('enable-remote-control', { sessionId });
+    }
+    alert('Remote control enabled! Click on the screen to control the remote PC.');
+  };
+
+  const disableRemoteControl = () => {
+    setRemoteControlEnabled(false);
+    if (socket) {
+      socket.emit('disable-remote-control', { sessionId });
+    }
+    alert('Remote control disabled.');
+  };
+
+  const handleMouseEvent = (event) => {
+    if (!remoteControlEnabled || !socket) return;
+    
+    const rect = remoteScreenRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const x = ((event.clientX - rect.left) / rect.width) * 1920; // Assume 1920x1080 remote screen
+    const y = ((event.clientY - rect.top) / rect.height) * 1080;
+
+    socket.emit('mouse-event', {
+      sessionId,
+      type: event.type,
+      x: Math.round(x),
+      y: Math.round(y),
+      button: event.button
+    });
+  };
+
+  const handleKeyboardEvent = (event) => {
+    if (!remoteControlEnabled || !socket) return;
+    
+    event.preventDefault();
+    socket.emit('keyboard-event', {
+      sessionId,
+      type: event.type,
+      key: event.key,
+      keyCode: event.keyCode,
+      ctrlKey: event.ctrlKey,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey
+    });
+  };
+
+  // Session Management
+  const endSession = () => {
+    if (window.confirm('Are you sure you want to end this session?')) {
+      if (socket) {
+        socket.emit('end-session', sessionId);
+      }
+      
+      // Clean up local resources
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
+      }
+      
+      if (peerConnection) {
+        peerConnection.close();
+        setPeerConnection(null);
+      }
+      
+      setSessionId('');
+      setJoinSessionId('');
+      setRemoteStream(null);
+      setIsHost(false);
+      setRemoteControlEnabled(false);
+      setConnectedUsers([]);
+      
+      alert('Session ended successfully!');
     }
   };
 
@@ -394,6 +504,43 @@ function App() {
               Join Session
             </button>
           </div>
+
+          {/* Session Management Controls */}
+          {sessionId && (
+            <div className="session-controls">
+              <div className="session-info">
+                <p><strong>Session ID:</strong> {sessionId}</p>
+                <p><strong>Role:</strong> {isHost ? 'Host' : 'Guest'}</p>
+                <p><strong>Connected Users:</strong> {connectedUsers.length + 1}</p>
+              </div>
+              
+              <button onClick={endSession} className="end-session-btn">
+                🚪 End Session
+              </button>
+              
+              {/* Remote Control (only for guests) */}
+              {!isHost && (
+                <div className="remote-control">
+                  {!remoteControlEnabled ? (
+                    <button onClick={enableRemoteControl} className="control-btn">
+                      🖱️ Enable Remote Control
+                    </button>
+                  ) : (
+                    <button onClick={disableRemoteControl} className="control-btn active">
+                      🚫 Disable Remote Control
+                    </button>
+                  )}
+                </div>
+              )}
+              
+              {/* Host Controls */}
+              {isHost && (
+                <div className="host-controls">
+                  <p>💡 Guests can request remote control access</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="media-controls">
@@ -424,12 +571,41 @@ function App() {
         <div className="video-container">
           <div className="video-panel">
             <h3>Remote Screen</h3>
-            <video 
-              ref={videoRef}
-              autoPlay 
-              playsInline 
-              className="remote-video"
-            />
+            {remoteControlEnabled && (
+              <div className="control-indicator">
+                🖱️ Remote Control Active - Click to control
+              </div>
+            )}
+            <div 
+              className={`remote-screen-wrapper ${remoteControlEnabled ? 'controllable' : ''}`}
+              ref={remoteScreenRef}
+              onMouseDown={handleMouseEvent}
+              onMouseUp={handleMouseEvent}
+              onMouseMove={handleMouseEvent}
+              onClick={handleMouseEvent}
+              onDoubleClick={handleMouseEvent}
+              onKeyDown={handleKeyboardEvent}
+              onKeyUp={handleKeyboardEvent}
+              tabIndex={remoteControlEnabled ? 0 : -1}
+              style={{
+                outline: remoteControlEnabled ? '2px solid #4CAF50' : 'none',
+                cursor: remoteControlEnabled ? 'crosshair' : 'default'
+              }}
+            >
+              <video 
+                ref={videoRef}
+                autoPlay 
+                playsInline 
+                className="remote-video"
+                style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
+              />
+              {!remoteStream && (
+                <div className="no-stream-placeholder">
+                  <p>No remote screen connected</p>
+                  <p>Waiting for host to share screen...</p>
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="local-video-container">

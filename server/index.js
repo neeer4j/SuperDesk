@@ -133,11 +133,35 @@ io.on('connection', (socket) => {
 
   // Remote control events
   socket.on('mouse-event', (data) => {
-    socket.broadcast.emit('mouse-event', data);
+    console.log('Mouse event:', data);
+    socket.to(data.sessionId).emit('mouse-event', data);
   });
 
   socket.on('keyboard-event', (data) => {
-    socket.broadcast.emit('keyboard-event', data);
+    console.log('Keyboard event:', data);
+    socket.to(data.sessionId).emit('keyboard-event', data);
+  });
+
+  socket.on('enable-remote-control', (data) => {
+    console.log('Remote control enabled for session:', data.sessionId);
+    socket.to(data.sessionId).emit('remote-control-enabled');
+  });
+
+  socket.on('disable-remote-control', (data) => {
+    console.log('Remote control disabled for session:', data.sessionId);
+    socket.to(data.sessionId).emit('remote-control-disabled');
+  });
+
+  socket.on('end-session', (sessionId) => {
+    console.log('Ending session:', sessionId);
+    const session = sessions.get(sessionId);
+    if (session) {
+      // Notify all participants
+      socket.to(sessionId).emit('session-ended');
+      // Remove session
+      sessions.delete(sessionId);
+      console.log(`Session ${sessionId} ended and removed`);
+    }
   });
 
   // Audio events
