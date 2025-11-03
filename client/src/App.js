@@ -1632,9 +1632,8 @@ function App() {
               </Typography>
             </Alert>
             
-            {/* Pending Join Requests */}
             {pendingJoinRequests.length > 0 && (
-              <Paper sx={{ mt: 3, p: 3 }}>
+              <Box sx={{ mt: 3 }}>
                 <Alert severity="warning" sx={{ mb: 2 }}>
                   <Typography variant="h6" gutterBottom>
                     <Warning sx={{ mr: 1, verticalAlign: 'middle' }} />
@@ -1674,7 +1673,7 @@ function App() {
                     </ListItem>
                   ))}
                 </List>
-              </Paper>
+              </Box>
             )}
           </Paper>
         )}
