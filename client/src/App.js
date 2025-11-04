@@ -598,13 +598,6 @@ function App() {
     
     console.log('Sending join request for session:', id);
     
-    // Initialize peer connection early to be ready for offers
-    if (!peerConnection) {
-      console.log('Pre-initializing peer connection for incoming offers');
-      const pc = initializePeerConnection();
-      setPeerConnection(pc);
-    }
-    
     if (socket) {
       // Send join request to host (not direct join)
       socket.emit('request-join-session', { 
@@ -653,17 +646,30 @@ function App() {
       
       setLocalStream(stream);
 
-      const pc = initializePeerConnection();
-      setPeerConnection(pc);
-      console.log('Guest peer connection created and set:', pc);
-      console.log('Peer connection state:', pc.connectionState);
-      
-      // Add tracks only if we have them
-      if (stream && stream.getTracks().length > 0) {
-        stream.getTracks().forEach(track => {
-          console.log('Guest adding track:', track.kind, track.label);
-          pc.addTrack(track, stream);
-        });
+      // Only create peer connection if it doesn't exist
+      if (!peerConnection) {
+        console.log('Creating peer connection for guest');
+        const pc = initializePeerConnection();
+        setPeerConnection(pc);
+        console.log('Guest peer connection created and set:', pc);
+        console.log('Peer connection state:', pc.connectionState);
+        
+        // Add tracks only if we have them
+        if (stream && stream.getTracks().length > 0) {
+          stream.getTracks().forEach(track => {
+            console.log('Guest adding track:', track.kind, track.label);
+            pc.addTrack(track, stream);
+          });
+        }
+      } else {
+        console.log('Peer connection already exists, reusing it');
+        // Add tracks to existing connection
+        if (stream && stream.getTracks().length > 0) {
+          stream.getTracks().forEach(track => {
+            console.log('Guest adding track to existing PC:', track.kind, track.label);
+            peerConnection.addTrack(track, stream);
+          });
+        }
       }
 
       if (socket) {
