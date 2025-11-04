@@ -532,6 +532,13 @@ function App() {
     
     console.log('Sending join request for session:', id);
     
+    // Initialize peer connection early to be ready for offers
+    if (!peerConnection) {
+      console.log('Pre-initializing peer connection for incoming offers');
+      const pc = initializePeerConnection();
+      setPeerConnection(pc);
+    }
+    
     if (socket) {
       // Send join request to host (not direct join)
       socket.emit('request-join-session', { 
@@ -1203,23 +1210,34 @@ function App() {
   };
 
   const handleOffer = async (offer) => {
-    console.log('Received offer from host:', offer);
-    if (!peerConnection) {
-      console.error('No peer connection available to handle offer');
-      return;
+    console.log('=== RECEIVED OFFER FROM HOST ===');
+    console.log('Offer:', offer);
+    console.log('Current peer connection:', peerConnection);
+    
+    // Initialize peer connection if it doesn't exist
+    let pc = peerConnection;
+    if (!pc) {
+      console.log('No peer connection found, creating new one');
+      pc = initializePeerConnection();
+      setPeerConnection(pc);
     }
     
     try {
-      await peerConnection.setRemoteDescription(offer);
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
+      console.log('Setting remote description...');
+      await pc.setRemoteDescription(offer);
+      console.log('Creating answer...');
+      const answer = await pc.createAnswer();
+      console.log('Setting local description...');
+      await pc.setLocalDescription(answer);
       
       if (socket) {
         console.log('Sending answer back to host');
         socket.emit('answer', answer);
       }
+      console.log('=== OFFER HANDLING COMPLETE ===');
     } catch (error) {
       console.error('Error handling offer:', error);
+      alert('Error connecting to host: ' + error.message);
     }
   };
 
