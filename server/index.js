@@ -108,8 +108,11 @@ io.on('connection', (socket) => {
     const { sessionId, requesterId } = data;
     console.log(`Join request approved for session: ${sessionId}, requester: ${requesterId}`);
     
-    // Notify the requester that they're approved
-    socket.to(requesterId).emit('join-request-approved');
+    // Notify the requester that they're approved and include the session details
+    socket.to(requesterId).emit('join-request-approved', {
+      sessionId,
+      hostId: socket.id
+    });
   });
 
   socket.on('reject-join-request', (data) => {

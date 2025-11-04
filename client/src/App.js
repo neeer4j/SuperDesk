@@ -209,18 +209,21 @@ function App() {
         alert('Someone wants to join your session!');
       });
 
-      newSocket.on('join-request-approved', () => {
-        console.log('=== JOIN REQUEST APPROVED ===');
-        console.log('joinSessionId from state:', joinSessionId);
+      newSocket.on('join-request-approved', (data) => {
+        console.log('=== JOIN REQUEST APPROVED ===', data);
+        const approvedSessionId = data?.sessionId || joinSessionId;
+        console.log('Using session ID for join:', approvedSessionId);
+        if (!approvedSessionId) {
+          console.error('No session ID received with approval. Cannot join session.');
+          alert('Join was approved but session ID was missing. Please try again.');
+          return;
+        }
+
+        setJoinSessionId(approvedSessionId);
+        setSessionId(approvedSessionId);
         setJoinRequestStatus('approved');
         alert('Join request approved! Connecting to desktop...');
-        // Automatically perform the join and open desktop viewer
-        if (joinSessionId) {
-          console.log('Calling performJoinSession with:', joinSessionId);
-          performJoinSession(joinSessionId);
-        } else {
-          console.error('joinSessionId is empty! Cannot join session.');
-        }
+        performJoinSession(approvedSessionId);
       });
 
       newSocket.on('join-request-rejected', () => {
