@@ -125,6 +125,7 @@ function App() {
   const [localStream, setLocalStream] = useState(null);
   const [peerConnection, setPeerConnection] = useState(null);
   const [dataChannel, setDataChannel] = useState(null);
+  const [remoteSocketId, setRemoteSocketIdState] = useState(null);
   const [fileTransfer, setFileTransfer] = useState({ progress: 0, active: false });
   const [connectionError, setConnectionError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -151,6 +152,11 @@ function App() {
     joinSessionIdRef.current = value;
     setJoinSessionIdState(value);
   };
+
+  const setRemoteSocketId = (value) => {
+    remoteSocketIdRef.current = value;
+    setRemoteSocketIdState(value);
+  };
   
   // Toggle dark/light mode
   const toggleTheme = () => {
@@ -160,6 +166,7 @@ function App() {
   const videoRef = useRef(null);
   const sessionIdRef = useRef('');
   const joinSessionIdRef = useRef('');
+  const remoteSocketIdRef = useRef(null);
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
   const remoteScreenRef = useRef(null);
@@ -224,6 +231,10 @@ function App() {
       newSocket.on('join-request-approved', (data) => {
         console.log('=== JOIN REQUEST APPROVED ===', data);
         const approvedSessionId = data?.sessionId || joinSessionIdRef.current;
+        if (data?.hostId) {
+          console.log('Setting remote socket ID from hostId:', data.hostId);
+          setRemoteSocketId(data.hostId);
+        }
         console.log('Using session ID for join:', approvedSessionId);
         if (!approvedSessionId) {
           console.error('No session ID received with approval. Cannot join session.');
@@ -330,6 +341,7 @@ function App() {
       setJoinSessionId('');
       setRemoteStream(null);
       setIsHost(false);
+      setRemoteSocketId(null);
       setRemoteControlEnabled(false);
       setConnectedUsers([]);
       if (localStream) {
@@ -347,16 +359,16 @@ function App() {
       setRemoteControlEnabled(false);
     });
 
-    newSocket.on('offer', async (offer) => {
-      await handleOffer(offer);
+    newSocket.on('offer', async (data) => {
+      await handleOffer(data);
     });
 
-    newSocket.on('answer', async (answer) => {
-      await handleAnswer(answer);
+    newSocket.on('answer', async (data) => {
+      await handleAnswer(data);
     });
 
-    newSocket.on('ice-candidate', (candidate) => {
-      handleIceCandidate(candidate);
+    newSocket.on('ice-candidate', (data) => {
+      handleIceCandidate(data);
     });
 
     return () => newSocket.close();
@@ -420,7 +432,11 @@ function App() {
     
     pc.onicecandidate = (event) => {
       if (event.candidate && socket) {
-        socket.emit('ice-candidate', event.candidate);
+        socket.emit('ice-candidate', {
+          sessionId: sessionIdRef.current,
+          targetId: remoteSocketIdRef.current,
+          candidate: event.candidate
+        });
       }
     };
 
@@ -550,13 +566,8 @@ function App() {
         endSession();
       };
 
-      // Create offer
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      
       if (socket) {
         socket.emit('create-session');
-        socket.emit('offer', offer);
       }
     } catch (error) {
       console.error('Error starting session:', error);
@@ -647,6 +658,7 @@ function App() {
 
   // Host functions for handling join requests
   const approveJoinRequest = async (requesterId) => {
+    setRemoteSocketId(requesterId);
     if (socket) {
       socket.emit('approve-join-request', { 
         sessionId, 
@@ -674,7 +686,11 @@ function App() {
         // Create and send a new offer
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
-        socket.emit('offer', offer);
+        socket.emit('offer', {
+          sessionId: sessionIdRef.current,
+          targetId: requesterId,
+          offer
+        });
         
         console.log('Sent offer with screen sharing tracks to approved guest');
       } else {
@@ -781,6 +797,7 @@ function App() {
       setJoinSessionId('');
       setRemoteStream(null);
       setIsHost(false);
+      setRemoteSocketId(null);
       setRemoteControlEnabled(false);
       setConnectedUsers([]);
       setScreenSharing(false);
@@ -1266,9 +1283,27 @@ function App() {
     window.addEventListener('message', handlePopupMessage);
   };
 
-  const handleOffer = async (offer) => {
-    console.log('=== RECEIVED OFFER FROM HOST ===');
-    console.log('Offer:', offer);
+  const handleOffer = async (payload) => {
+    console.log('=== RECEIVED OFFER ===');
+    console.log('Payload:', payload);
+
+    const { offer, from, sessionId: incomingSessionId } = payload || {};
+
+    if (!offer) {
+      console.error('Offer payload missing `offer` SDP');
+      return;
+    }
+
+    if (from) {
+      console.log('Setting remote socket id from offer:', from);
+      setRemoteSocketId(from);
+    }
+
+    if (!sessionIdRef.current && incomingSessionId) {
+      console.log('Updating session id from incoming offer:', incomingSessionId);
+      setSessionId(incomingSessionId);
+    }
+
     console.log('Current peer connection:', peerConnection);
     
     // Initialize peer connection if it doesn't exist
@@ -1289,7 +1324,11 @@ function App() {
       
       if (socket) {
         console.log('Sending answer back to host');
-        socket.emit('answer', answer);
+        socket.emit('answer', {
+          sessionId: sessionIdRef.current,
+          targetId: remoteSocketIdRef.current,
+          answer
+        });
       }
       console.log('=== OFFER HANDLING COMPLETE ===');
     } catch (error) {
@@ -1298,8 +1337,26 @@ function App() {
     }
   };
 
-  const handleAnswer = async (answer) => {
-    console.log('Received answer from guest:', answer);
+  const handleAnswer = async (payload) => {
+    console.log('Received answer payload:', payload);
+
+    const { answer, from, sessionId: incomingSessionId } = payload || {};
+
+    if (from) {
+      console.log('Setting remote socket id from answer:', from);
+      setRemoteSocketId(from);
+    }
+
+    if (!sessionIdRef.current && incomingSessionId) {
+      console.log('Updating session id from incoming answer:', incomingSessionId);
+      setSessionId(incomingSessionId);
+    }
+
+    if (!answer) {
+      console.error('Answer payload missing `answer` SDP');
+      return;
+    }
+
     if (!peerConnection) {
       console.error('No peer connection available to handle answer');
       return;
@@ -1313,7 +1370,24 @@ function App() {
     }
   };
 
-  const handleIceCandidate = (candidate) => {
+  const handleIceCandidate = (payload) => {
+    if (!payload) {
+      console.warn('Received empty ICE candidate payload');
+      return;
+    }
+
+    const { candidate, from } = payload;
+
+    if (from && !remoteSocketIdRef.current) {
+      console.log('Setting remote socket id from ICE candidate:', from);
+      setRemoteSocketId(from);
+    }
+
+    if (!candidate) {
+      console.warn('ICE candidate payload missing `candidate`');
+      return;
+    }
+
     if (peerConnection) {
       peerConnection.addIceCandidate(candidate);
     }

@@ -144,16 +144,43 @@ io.on('connection', (socket) => {
   });
 
   // WebRTC signaling messages
-  socket.on('offer', (offer) => {
-    socket.broadcast.emit('offer', offer);
+  socket.on('offer', (payload) => {
+    const { sessionId, targetId, offer } = payload;
+    const message = { offer, from: socket.id, sessionId };
+
+    if (targetId) {
+      socket.to(targetId).emit('offer', message);
+    } else if (sessionId) {
+      socket.to(sessionId).emit('offer', message);
+    } else {
+      socket.broadcast.emit('offer', message);
+    }
   });
 
-  socket.on('answer', (answer) => {
-    socket.broadcast.emit('answer', answer);
+  socket.on('answer', (payload) => {
+    const { sessionId, targetId, answer } = payload;
+    const message = { answer, from: socket.id, sessionId };
+
+    if (targetId) {
+      socket.to(targetId).emit('answer', message);
+    } else if (sessionId) {
+      socket.to(sessionId).emit('answer', message);
+    } else {
+      socket.broadcast.emit('answer', message);
+    }
   });
 
-  socket.on('ice-candidate', (candidate) => {
-    socket.broadcast.emit('ice-candidate', candidate);
+  socket.on('ice-candidate', (payload) => {
+    const { sessionId, targetId, candidate } = payload;
+    const message = { candidate, from: socket.id, sessionId };
+
+    if (targetId) {
+      socket.to(targetId).emit('ice-candidate', message);
+    } else if (sessionId) {
+      socket.to(sessionId).emit('ice-candidate', message);
+    } else {
+      socket.broadcast.emit('ice-candidate', message);
+    }
   });
 
   // Screen sharing events
