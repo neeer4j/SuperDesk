@@ -1117,13 +1117,13 @@ function App() {
             remoteControlEnabled = !remoteControlEnabled;
             window.remoteControlEnabled = remoteControlEnabled;
             const btn = document.getElementById('toggleControl');
-            const video = document.getElementById('remoteVideo');
+            const remoteVideoElement = document.getElementById('remoteVideo');
             const status = document.getElementById('statusOverlay');
             
             if (remoteControlEnabled) {
               btn.textContent = 'Disable Control';
               btn.classList.add('active');
-              video.style.cursor = 'crosshair';
+              remoteVideoElement.style.cursor = 'crosshair';
               status.textContent = '🖱️ Remote Control Active';
               
               // Notify parent window
@@ -1133,7 +1133,7 @@ function App() {
             } else {
               btn.textContent = 'Enable Control';
               btn.classList.remove('active');
-              video.style.cursor = 'default';
+              remoteVideoElement.style.cursor = 'default';
               status.textContent = '👁️ View Only';
               
               // Notify parent window
@@ -1179,12 +1179,12 @@ function App() {
           }
           
           // Add event listeners
-          const video = document.getElementById('remoteVideo');
-          video.addEventListener('mousedown', handleMouseEvent);
-          video.addEventListener('mouseup', handleMouseEvent);
-          video.addEventListener('mousemove', handleMouseEvent);
-          video.addEventListener('click', handleMouseEvent);
-          video.addEventListener('dblclick', handleMouseEvent);
+          var remoteVideoElement = document.getElementById('remoteVideo');
+          remoteVideoElement.addEventListener('mousedown', handleMouseEvent);
+          remoteVideoElement.addEventListener('mouseup', handleMouseEvent);
+          remoteVideoElement.addEventListener('mousemove', handleMouseEvent);
+          remoteVideoElement.addEventListener('click', handleMouseEvent);
+          remoteVideoElement.addEventListener('dblclick', handleMouseEvent);
           
           document.addEventListener('keydown', handleKeyboardEvent);
           document.addEventListener('keyup', handleKeyboardEvent);
@@ -2077,6 +2077,7 @@ function App() {
               ref={fileInputRef}
               onChange={handleFileUpload}
               style={{ display: 'none' }}
+              aria-label="Select a file to transfer"
             />
             <Button 
               onClick={() => fileInputRef.current?.click()}
