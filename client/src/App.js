@@ -948,8 +948,9 @@ function App() {
     console.log('Popup created successfully');
     setRemoteDesktopWindow(popup);
 
-    // Create the popup content
-    popup.document.write(`
+  // Create the popup content
+  popup.document.open();
+  popup.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -1185,7 +1186,7 @@ function App() {
       </html>
     `);
 
-    popup.document.close();
+  popup.document.close();
 
     // Set up the video stream in the popup
     const popupVideo = popup.document.getElementById('remoteVideo');
