@@ -850,10 +850,20 @@ function App() {
 
   // Remote Desktop Popup
   const openRemoteDesktop = () => {
-    console.log('Opening remote desktop popup...', { remoteStream, sessionId, peerConnection });
+    console.log('=== OPEN REMOTE DESKTOP CLICKED ===');
+    console.log('Session ID:', sessionId);
+    console.log('Remote Stream:', remoteStream);
+    console.log('Peer Connection:', peerConnection);
+    console.log('Is Host:', isHost);
+    console.log('Join Request Status:', joinRequestStatus);
     
     if (!sessionId) {
       alert('No active session. Please join a session first.');
+      return;
+    }
+
+    if (!remoteStream && !isHost) {
+      alert('⏳ Waiting for host to share screen...\n\nThe host needs to start screen sharing, or you can request it from the Remote Desktop section below.');
       return;
     }
 
@@ -1338,41 +1348,68 @@ function App() {
             <Box display="flex" alignItems="center" gap={1}>
               {/* 🎉 FLOATING DESKTOP BUTTON - Shows when approved! */}
               {joinRequestStatus === 'approved' && !isHost && (
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={openRemoteDesktop}
-                  startIcon={<DesktopWindows />}
-                  sx={{ 
-                    textTransform: 'none',
-                    fontWeight: 'bold',
-                    fontSize: '1.1rem',
-                    py: 1.5,
-                    px: 3,
-                    backgroundColor: '#00e676',
-                    color: '#000',
-                    '&:hover': {
-                      backgroundColor: '#00c853',
-                    },
-                    animation: 'super-pulse 1s infinite',
-                    '@keyframes super-pulse': {
-                      '0%': { 
-                        transform: 'scale(1)',
-                        boxShadow: '0 0 10px rgba(0,230,118,0.7)'
+                <>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={openRemoteDesktop}
+                    startIcon={remoteStream ? <DesktopWindows /> : <CircularProgress size={20} sx={{ color: '#fff' }} />}
+                    disabled={!remoteStream}
+                    sx={{ 
+                      textTransform: 'none',
+                      fontWeight: 'bold',
+                      fontSize: '1.1rem',
+                      py: 1.5,
+                      px: 3,
+                      backgroundColor: remoteStream ? '#00e676' : '#ffa726',
+                      color: '#000',
+                      '&:hover': {
+                        backgroundColor: remoteStream ? '#00c853' : '#ff9800',
                       },
-                      '50%': { 
-                        transform: 'scale(1.1)',
-                        boxShadow: '0 0 30px rgba(0,230,118,1)'
+                      '&:disabled': {
+                        backgroundColor: '#ffa726',
+                        color: '#000',
+                        opacity: 0.8,
                       },
-                      '100%': { 
-                        transform: 'scale(1)',
-                        boxShadow: '0 0 10px rgba(0,230,118,0.7)'
+                      animation: remoteStream ? 'super-pulse 1s infinite' : 'waiting-pulse 1.5s infinite',
+                      '@keyframes super-pulse': {
+                        '0%': { 
+                          transform: 'scale(1)',
+                          boxShadow: '0 0 10px rgba(0,230,118,0.7)'
+                        },
+                        '50%': { 
+                          transform: 'scale(1.1)',
+                          boxShadow: '0 0 30px rgba(0,230,118,1)'
+                        },
+                        '100%': { 
+                          transform: 'scale(1)',
+                          boxShadow: '0 0 10px rgba(0,230,118,0.7)'
+                        }
+                      },
+                      '@keyframes waiting-pulse': {
+                        '0%': { 
+                          boxShadow: '0 0 10px rgba(255,167,38,0.5)'
+                        },
+                        '50%': { 
+                          boxShadow: '0 0 20px rgba(255,167,38,0.8)'
+                        },
+                        '100%': { 
+                          boxShadow: '0 0 10px rgba(255,167,38,0.5)'
+                        }
                       }
-                    }
-                  }}
-                >
-                  🖥️ OPEN DESKTOP NOW!
-                </Button>
+                    }}
+                  >
+                    {remoteStream ? '🖥️ OPEN DESKTOP NOW!' : '⏳ Waiting for Stream...'}
+                  </Button>
+                  {remoteStream && (
+                    <Chip 
+                      label="Stream Ready ✅" 
+                      color="success"
+                      size="small"
+                      sx={{ fontWeight: 'bold' }}
+                    />
+                  )}
+                </>
               )}
               <Button
                 color="inherit"
