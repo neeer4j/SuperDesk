@@ -574,6 +574,10 @@ function App() {
   const performJoinSession = async (sessionId) => {
     console.log('Performing actual join for session:', sessionId);
     
+    // Set the session ID in state so guest knows they're in a session
+    setSessionId(sessionId);
+    setIsHost(false); // Mark as guest
+    
     try {
       let stream = null;
       
