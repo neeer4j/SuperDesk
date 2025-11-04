@@ -210,11 +210,16 @@ function App() {
       });
 
       newSocket.on('join-request-approved', () => {
+        console.log('=== JOIN REQUEST APPROVED ===');
+        console.log('joinSessionId from state:', joinSessionId);
         setJoinRequestStatus('approved');
         alert('Join request approved! Connecting to desktop...');
         // Automatically perform the join and open desktop viewer
         if (joinSessionId) {
+          console.log('Calling performJoinSession with:', joinSessionId);
           performJoinSession(joinSessionId);
+        } else {
+          console.error('joinSessionId is empty! Cannot join session.');
         }
       });
 
@@ -574,11 +579,15 @@ function App() {
 
   // Actually join session after host approval
   const performJoinSession = async (sessionId) => {
+    console.log('=== PERFORM JOIN SESSION ===');
+    console.log('Received sessionId parameter:', sessionId);
     console.log('Performing actual join for session:', sessionId);
     
     // Set the session ID in state so guest knows they're in a session
+    console.log('Setting sessionId state to:', sessionId);
     setSessionId(sessionId);
     setIsHost(false); // Mark as guest
+    console.log('sessionId should now be set in state');
     
     try {
       let stream = null;
