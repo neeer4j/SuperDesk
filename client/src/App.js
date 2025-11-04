@@ -413,6 +413,8 @@ function App() {
         enabled: t.enabled,
         readyState: t.readyState
       })));
+      console.log('Current isHost value:', isHost);
+      console.log('Current sessionId value:', sessionId);
       
       setRemoteStream(event.streams[0]);
       if (videoRef.current) {
@@ -420,12 +422,12 @@ function App() {
       }
       
       // Automatically open remote desktop popup for guests
-      if (!isHost && sessionId) {
-        console.log('Auto-opening remote desktop for guest');
-        setTimeout(() => {
-          openRemoteDesktop();
-        }, 1000); // Small delay to ensure stream is properly set
-      }
+      // Don't check isHost here since it might not be updated yet
+      console.log('Auto-opening remote desktop viewer...');
+      setTimeout(() => {
+        console.log('Attempting to open desktop viewer popup');
+        openRemoteDesktop();
+      }, 1500); // Increased delay to ensure state is updated
     };
 
     pc.ondatachannel = (event) => {
@@ -881,22 +883,29 @@ function App() {
     console.log('=== OPEN REMOTE DESKTOP CLICKED ===');
     console.log('Session ID:', sessionId);
     console.log('Remote Stream:', remoteStream);
+    console.log('Remote Stream tracks:', remoteStream?.getTracks());
     console.log('Peer Connection:', peerConnection);
+    console.log('Peer Connection state:', peerConnection?.connectionState);
     console.log('Is Host:', isHost);
     console.log('Join Request Status:', joinRequestStatus);
     
     if (!sessionId) {
+      console.error('No session ID - cannot open desktop');
       alert('No active session. Please join a session first.');
       return;
     }
 
-    if (!remoteStream && !isHost) {
-      alert('⏳ Waiting for host to share screen...\n\nThe host needs to start screen sharing, or you can request it from the Remote Desktop section below.');
+    if (!remoteStream) {
+      console.error('No remote stream available yet');
+      alert('⏳ Waiting for host to share screen...\n\nThe host needs to start screen sharing. Please wait a moment and try again.');
       return;
     }
 
+    console.log('All checks passed, creating popup window...');
+
     // Close existing window if open
     if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
+      console.log('Closing existing popup window');
       remoteDesktopWindow.close();
     }
 
