@@ -451,19 +451,35 @@ function App() {
       })));
       console.log('Current isHost value:', isHost);
       console.log('Current sessionId value:', sessionId);
+      console.log('Remote socket ID:', remoteSocketIdRef.current);
       
-      setRemoteStream(event.streams[0]);
+      const receivedStream = event.streams[0];
+      setRemoteStream(receivedStream);
+      
       if (videoRef.current) {
-        videoRef.current.srcObject = event.streams[0];
+        videoRef.current.srcObject = receivedStream;
       }
       
-      // Automatically open remote desktop popup for guests
-      // Don't check isHost here since it might not be updated yet
-      console.log('Auto-opening remote desktop viewer...');
-      setTimeout(() => {
-        console.log('Attempting to open desktop viewer popup');
-        openRemoteDesktop();
-      }, 1500); // Increased delay to ensure state is updated
+      // Update popup if it's already open
+      if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
+        console.log('Popup already open, updating with new stream');
+        const popupVideo = remoteDesktopWindow.document.getElementById('remoteVideo');
+        const loadingOverlay = remoteDesktopWindow.document.getElementById('loadingOverlay');
+        if (popupVideo) {
+          popupVideo.srcObject = receivedStream;
+          popupVideo.play().catch(err => console.error('Popup video play error:', err));
+          if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+          }
+        }
+      } else {
+        // Automatically open remote desktop popup for guests
+        console.log('Auto-opening remote desktop viewer...');
+        setTimeout(() => {
+          console.log('Attempting to open desktop viewer popup');
+          openRemoteDesktop();
+        }, 1500);
+      }
     };
 
     pc.ondatachannel = (event) => {
@@ -638,10 +654,14 @@ function App() {
       setLocalStream(stream);
 
       const pc = initializePeerConnection();
+      setPeerConnection(pc);
+      console.log('Guest peer connection created and set:', pc);
+      console.log('Peer connection state:', pc.connectionState);
       
       // Add tracks only if we have them
       if (stream && stream.getTracks().length > 0) {
         stream.getTracks().forEach(track => {
+          console.log('Guest adding track:', track.kind, track.label);
           pc.addTrack(track, stream);
         });
       }
@@ -679,13 +699,24 @@ function App() {
         
         // Add all tracks from local stream (screen + audio)
         localStream.getTracks().forEach(track => {
-          console.log('Adding track:', track.kind, track.label);
+          console.log('Adding track:', track.kind, track.label, 'enabled:', track.enabled, 'readyState:', track.readyState);
           peerConnection.addTrack(track, localStream);
         });
         
+        console.log('All senders after adding tracks:', peerConnection.getSenders().map(s => ({
+          track: s.track ? {
+            kind: s.track.kind,
+            label: s.track.label,
+            enabled: s.track.enabled,
+            readyState: s.track.readyState
+          } : null
+        })));
+        
         // Create and send a new offer
         const offer = await peerConnection.createOffer();
+        console.log('Created offer:', offer);
         await peerConnection.setLocalDescription(offer);
+        console.log('Set local description, now emitting offer to:', requesterId);
         socket.emit('offer', {
           sessionId: sessionIdRef.current,
           targetId: requesterId,
@@ -1305,20 +1336,26 @@ function App() {
     }
 
     console.log('Current peer connection:', peerConnection);
+    console.log('Peer connection state:', peerConnection?.connectionState);
+    console.log('Peer connection signaling state:', peerConnection?.signalingState);
     
-    // Initialize peer connection if it doesn't exist
+    // Use existing peer connection or create new one
     let pc = peerConnection;
     if (!pc) {
       console.log('No peer connection found, creating new one');
       pc = initializePeerConnection();
       setPeerConnection(pc);
+    } else {
+      console.log('Using existing peer connection');
     }
     
     try {
       console.log('Setting remote description...');
-      await pc.setRemoteDescription(offer);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      console.log('Remote description set successfully');
       console.log('Creating answer...');
       const answer = await pc.createAnswer();
+      console.log('Answer created:', answer);
       console.log('Setting local description...');
       await pc.setLocalDescription(answer);
       
