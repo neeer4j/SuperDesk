@@ -119,8 +119,8 @@ const createAppTheme = (mode) => createTheme({
 function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
-  const [sessionId, setSessionId] = useState('');
-  const [joinSessionId, setJoinSessionId] = useState('');
+  const [sessionId, setSessionIdState] = useState('');
+  const [joinSessionId, setJoinSessionIdState] = useState('');
   const [remoteStream, setRemoteStream] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [peerConnection, setPeerConnection] = useState(null);
@@ -141,6 +141,16 @@ function App() {
   
   // Create theme based on current mode
   const theme = createAppTheme(darkMode ? 'dark' : 'light');
+
+  const setSessionId = (value) => {
+    sessionIdRef.current = value;
+    setSessionIdState(value);
+  };
+
+  const setJoinSessionId = (value) => {
+    joinSessionIdRef.current = value;
+    setJoinSessionIdState(value);
+  };
   
   // Toggle dark/light mode
   const toggleTheme = () => {
@@ -148,6 +158,8 @@ function App() {
   };
   
   const videoRef = useRef(null);
+  const sessionIdRef = useRef('');
+  const joinSessionIdRef = useRef('');
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
   const remoteScreenRef = useRef(null);
@@ -211,7 +223,7 @@ function App() {
 
       newSocket.on('join-request-approved', (data) => {
         console.log('=== JOIN REQUEST APPROVED ===', data);
-        const approvedSessionId = data?.sessionId || joinSessionId;
+        const approvedSessionId = data?.sessionId || joinSessionIdRef.current;
         console.log('Using session ID for join:', approvedSessionId);
         if (!approvedSessionId) {
           console.error('No session ID received with approval. Cannot join session.');
