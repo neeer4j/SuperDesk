@@ -1091,11 +1091,13 @@ function App() {
         </div>
         
         <script>
-          let remoteControlEnabled = false;
-          let parentWindow = window.opener;
+          var remoteControlEnabled = window.remoteControlEnabled || false;
+          var parentWindow = window.opener;
+          window.remoteControlEnabled = remoteControlEnabled;
           
           function toggleRemoteControl() {
             remoteControlEnabled = !remoteControlEnabled;
+            window.remoteControlEnabled = remoteControlEnabled;
             const btn = document.getElementById('toggleControl');
             const video = document.getElementById('remoteVideo');
             const status = document.getElementById('statusOverlay');
