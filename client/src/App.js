@@ -165,6 +165,8 @@ function App() {
   const sessionIdRef = useRef('');
   const joinSessionIdRef = useRef('');
   const remoteSocketIdRef = useRef(null);
+  const peerConnectionRef = useRef(null);
+  const localStreamRef = useRef(null);
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
   const remoteScreenRef = useRef(null);
@@ -225,29 +227,37 @@ function App() {
         console.log('=== GUEST JOINED SESSION ===');
         console.log('Guest ID:', guestId);
         console.log('Session ID:', joinedSessionId);
+        console.log('peerConnectionRef.current:', peerConnectionRef.current);
+        console.log('localStreamRef.current:', localStreamRef.current);
         
         setRemoteSocketId(guestId);
         
-        if (peerConnection && localStream) {
-          console.log('Sending offer to new guest');
+        const pc = peerConnectionRef.current;
+        const stream = localStreamRef.current;
+        
+        if (pc && stream) {
+          console.log('✅ Sending offer to new guest');
           
           // Create and send offer
           try {
-            const offer = await peerConnection.createOffer();
+            const offer = await pc.createOffer();
             console.log('Created offer for guest:', offer);
-            await peerConnection.setLocalDescription(offer);
+            await pc.setLocalDescription(offer);
             
             newSocket.emit('offer', {
               sessionId: sessionIdRef.current,
               targetId: guestId,
               offer
             });
-            console.log('Sent offer to guest:', guestId);
+            console.log('✅ Sent offer to guest:', guestId);
           } catch (error) {
-            console.error('Error creating offer for guest:', error);
+            console.error('❌ Error creating offer for guest:', error);
           }
         } else {
-          console.warn('Cannot send offer - no peer connection or local stream');
+          console.error('❌ Cannot send offer - missing:', {
+            hasPeerConnection: !!pc,
+            hasLocalStream: !!stream
+          });
         }
       });
 
@@ -529,6 +539,7 @@ function App() {
     });
 
     setPeerConnection(pc);
+    peerConnectionRef.current = pc; // Store in ref
     return pc;
   };
 
@@ -551,11 +562,13 @@ function App() {
         }
       });
       setLocalStream(stream);
+      localStreamRef.current = stream; // Store in ref for event handlers
       setIsHost(true); // Mark as host
       setScreenSharing(true); // Mark as screen sharing from start
 
       const pc = initializePeerConnection();
       setPeerConnection(pc); // CRITICAL: Store peer connection in state
+      peerConnectionRef.current = pc; // Store in ref for event handlers
       
       // Add local stream to peer connection
       stream.getTracks().forEach(track => {
@@ -627,11 +640,13 @@ function App() {
       }
       
       setLocalStream(stream);
+      localStreamRef.current = stream; // Store in ref
 
       // Create peer connection
       console.log('Creating peer connection for guest');
       const pc = initializePeerConnection();
       setPeerConnection(pc);
+      peerConnectionRef.current = pc; // Store in ref
       console.log('Guest peer connection created');
       
       // Add tracks if we have them
