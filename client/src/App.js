@@ -428,6 +428,11 @@ function App() {
         popupVideo.srcObject = remoteStream;
         popupVideo.muted = true; // Required for autoplay
         
+        // Clear the progress animation interval
+        if (remoteDesktopWindow.progressInterval) {
+          clearInterval(remoteDesktopWindow.progressInterval);
+        }
+        
         // Try to play immediately
         popupVideo.play().then(() => {
           console.log('✅ Video playing immediately (useEffect)!');
@@ -458,6 +463,11 @@ function App() {
           console.log('Video metadata loaded in popup (useEffect)');
           popupVideo.play().then(() => {
             console.log('✅ Video playing after metadata (useEffect)!');
+            
+            // Clear the progress animation interval
+            if (remoteDesktopWindow.progressInterval) {
+              clearInterval(remoteDesktopWindow.progressInterval);
+            }
             
             // Update progress to 100% and show success
             const popupDoc = remoteDesktopWindow.document;
@@ -1137,7 +1147,7 @@ function App() {
           ];
           
           let stageIndex = 0;
-          const progressInterval = setInterval(() => {
+          window.progressInterval = setInterval(() => {
             if (stageIndex < stages.length) {
               const stage = stages[stageIndex];
               progress = stage.progress;
@@ -1146,7 +1156,7 @@ function App() {
               statusText.textContent = stage.status;
               stageIndex++;
             } else {
-              clearInterval(progressInterval);
+              clearInterval(window.progressInterval);
             }
           }, 800);
           
@@ -1255,14 +1265,20 @@ function App() {
         // Try to play immediately
         popupVideo.play().then(() => {
           console.log('✅ Video playing immediately!');
+          
+          // Clear the progress animation interval
+          if (popup.progressInterval) {
+            clearInterval(popup.progressInterval);
+          }
+          
           if (loadingOverlay) {
             // Show 100% before hiding
             const progressBar = popup.document.getElementById('progressBar');
             const progressText = popup.document.getElementById('progressText');
             const statusText = popup.document.getElementById('statusText');
             if (progressBar) progressBar.style.width = '100%';
-            if (progressText) progressText.textContent = '✅ Connected! 100%';
-            if (statusText) statusText.textContent = 'Stream ready!';
+            if (progressText) progressText.textContent = '100%';
+            if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
             setTimeout(() => {
               loadingOverlay.style.display = 'none';
             }, 500);
@@ -1276,6 +1292,12 @@ function App() {
           console.log('Video metadata loaded in popup');
           popupVideo.play().then(() => {
             console.log('✅ Video playing after metadata!');
+            
+            // Clear the progress animation interval
+            if (popup.progressInterval) {
+              clearInterval(popup.progressInterval);
+            }
+            
             if (loadingOverlay) {
               // Show 100% before hiding
               const progressBar = popup.document.getElementById('progressBar');
