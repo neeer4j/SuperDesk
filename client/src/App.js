@@ -426,6 +426,7 @@ function App() {
       if (popupVideo) {
         console.log('Updating popup with new remote stream');
         popupVideo.srcObject = remoteStream;
+        popupVideo.muted = true; // Required for autoplay
         
         // Try to play immediately
         popupVideo.play().then(() => {
@@ -1068,6 +1069,7 @@ function App() {
               class="remote-video" 
               autoplay 
               playsinline
+              muted
             ></video>
             
             <div class="status-overlay" id="statusOverlay">
@@ -1186,6 +1188,7 @@ function App() {
       if (remoteStream) {
         console.log('Setting remote stream to popup video');
         popupVideo.srcObject = remoteStream;
+        popupVideo.muted = true; // Required for autoplay
         
         // Try to play immediately
         popupVideo.play().then(() => {
