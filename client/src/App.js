@@ -1115,7 +1115,6 @@ function App() {
             <video 
               id="remoteVideo" 
               class="remote-video" 
-              autoplay 
               playsinline
               muted
             ></video>
