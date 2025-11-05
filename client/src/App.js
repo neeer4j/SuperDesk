@@ -492,7 +492,7 @@ function App() {
         };
       }
     }
-  }, [remoteStream, remoteDesktopWindow]);
+  }, [remoteStream]); // Only depend on remoteStream, NOT remoteDesktopWindow to avoid race condition
 
   const initializePeerConnection = () => {
     const pc = new RTCPeerConnection(servers);
