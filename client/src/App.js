@@ -1271,17 +1271,19 @@ function App() {
     }
 
     console.log('Current peer connection:', peerConnection);
+    console.log('Current peerConnectionRef:', peerConnectionRef.current);
     console.log('Peer connection state:', peerConnection?.connectionState);
     console.log('Peer connection signaling state:', peerConnection?.signalingState);
     
     // Use existing peer connection or create new one
-    let pc = peerConnection;
+    let pc = peerConnectionRef.current || peerConnection;
     if (!pc) {
-      console.log('No peer connection found, creating new one');
+      console.log('❌ No peer connection found, creating new one');
       pc = initializePeerConnection();
       setPeerConnection(pc);
+      peerConnectionRef.current = pc; // CRITICAL: Also set ref
     } else {
-      console.log('Using existing peer connection');
+      console.log('✅ Using existing peer connection');
     }
     
     try {
