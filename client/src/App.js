@@ -136,8 +136,6 @@ function App() {
   const [screenShareRequested, setScreenShareRequested] = useState(false);
   const [pendingScreenRequests, setPendingScreenRequests] = useState([]);
   const [remoteDesktopWindow, setRemoteDesktopWindow] = useState(null);
-  const [pendingJoinRequests, setPendingJoinRequests] = useState([]);
-  const [joinRequestStatus, setJoinRequestStatus] = useState(null); // 'pending', 'approved', 'rejected'
   const [darkMode, setDarkMode] = useState(false);
   
   // Create theme based on current mode
@@ -221,38 +219,36 @@ function App() {
         alert('Someone wants to request screen sharing permission!');
       });
 
-      // Join request event handlers
-      newSocket.on('join-request-received', (data) => {
-        const { requesterId } = data;
-        setPendingJoinRequests(prev => [...prev, requesterId]);
-        alert('Someone wants to join your session!');
-      });
-
-      newSocket.on('join-request-approved', (data) => {
-        console.log('=== JOIN REQUEST APPROVED ===', data);
-        const approvedSessionId = data?.sessionId || joinSessionIdRef.current;
-        if (data?.hostId) {
-          console.log('Setting remote socket ID from hostId:', data.hostId);
-          setRemoteSocketId(data.hostId);
+      // Guest joined - host needs to send offer
+      newSocket.on('guest-joined', async (data) => {
+        const { guestId, sessionId: joinedSessionId } = data;
+        console.log('=== GUEST JOINED SESSION ===');
+        console.log('Guest ID:', guestId);
+        console.log('Session ID:', joinedSessionId);
+        
+        setRemoteSocketId(guestId);
+        
+        if (peerConnection && localStream) {
+          console.log('Sending offer to new guest');
+          
+          // Create and send offer
+          try {
+            const offer = await peerConnection.createOffer();
+            console.log('Created offer for guest:', offer);
+            await peerConnection.setLocalDescription(offer);
+            
+            newSocket.emit('offer', {
+              sessionId: sessionIdRef.current,
+              targetId: guestId,
+              offer
+            });
+            console.log('Sent offer to guest:', guestId);
+          } catch (error) {
+            console.error('Error creating offer for guest:', error);
+          }
+        } else {
+          console.warn('Cannot send offer - no peer connection or local stream');
         }
-        console.log('Using session ID for join:', approvedSessionId);
-        if (!approvedSessionId) {
-          console.error('No session ID received with approval. Cannot join session.');
-          alert('Join was approved but session ID was missing. Please try again.');
-          return;
-        }
-
-        setJoinSessionId(approvedSessionId);
-        setSessionId(approvedSessionId);
-        setJoinRequestStatus('approved');
-        alert('Join request approved! Connecting to desktop...');
-        performJoinSession(approvedSessionId);
-      });
-
-      newSocket.on('join-request-rejected', () => {
-        setJoinRequestStatus('rejected');
-        alert('Join request was rejected by the host.');
-        setJoinSessionId('');
       });
 
       newSocket.on('screen-share-approved', () => {
@@ -391,10 +387,10 @@ function App() {
     }
   }, [remoteStream, remoteDesktopWindow]);
 
-  // Auto-open remote desktop when guest joins successfully
+  // Auto-open remote desktop when guest receives stream
   useEffect(() => {
-    if (remoteStream && !isHost && joinRequestStatus === 'approved') {
-      // Automatically open remote desktop viewer for approved guests
+    if (remoteStream && !isHost) {
+      // Automatically open remote desktop viewer for guests
       setTimeout(() => {
         openRemoteDesktop();
         // Enable remote control by default
@@ -403,7 +399,7 @@ function App() {
         }, 1000);
       }, 1000);
     }
-  }, [remoteStream, isHost, joinRequestStatus]);
+  }, [remoteStream, isHost]);
 
   // Update popup window when remoteStream changes
   useEffect(() => {
@@ -596,33 +592,13 @@ function App() {
       return;
     }
     
-    console.log('Sending join request for session:', id);
+    console.log('=== JOINING SESSION ===');
+    console.log('Session ID:', id.trim());
     
-    if (socket) {
-      // Send join request to host (not direct join)
-      socket.emit('request-join-session', { 
-        sessionId: id.trim(),
-        requesterId: socket.id 
-      });
-      setJoinSessionId(id.trim());
-      setJoinRequestStatus('pending');
-      alert('Join request sent to host. Waiting for approval...');
-    } else {
-      alert('Not connected to server. Please refresh and try again.');
-    }
-  };
-
-  // Actually join session after host approval
-  const performJoinSession = async (sessionId) => {
-    console.log('=== PERFORM JOIN SESSION ===');
-    console.log('Received sessionId parameter:', sessionId);
-    console.log('Performing actual join for session:', sessionId);
-    
-    // Set the session ID in state so guest knows they're in a session
-    console.log('Setting sessionId state to:', sessionId);
-    setSessionId(sessionId);
-    setIsHost(false); // Mark as guest
-    console.log('sessionId should now be set in state');
+    const sessionIdToJoin = id.trim();
+    setJoinSessionId(sessionIdToJoin);
+    setSessionId(sessionIdToJoin);
+    setIsHost(false);
     
     try {
       let stream = null;
@@ -640,41 +616,30 @@ function App() {
         console.log('Got audio stream for guest');
       } catch (audioError) {
         console.log('Audio not available, continuing without microphone:', audioError.message);
-        // Create a dummy stream or continue without audio
         stream = new MediaStream();
       }
       
       setLocalStream(stream);
 
-      // Only create peer connection if it doesn't exist
-      if (!peerConnection) {
-        console.log('Creating peer connection for guest');
-        const pc = initializePeerConnection();
-        setPeerConnection(pc);
-        console.log('Guest peer connection created and set:', pc);
-        console.log('Peer connection state:', pc.connectionState);
-        
-        // Add tracks only if we have them
-        if (stream && stream.getTracks().length > 0) {
-          stream.getTracks().forEach(track => {
-            console.log('Guest adding track:', track.kind, track.label);
-            pc.addTrack(track, stream);
-          });
-        }
-      } else {
-        console.log('Peer connection already exists, reusing it');
-        // Add tracks to existing connection
-        if (stream && stream.getTracks().length > 0) {
-          stream.getTracks().forEach(track => {
-            console.log('Guest adding track to existing PC:', track.kind, track.label);
-            peerConnection.addTrack(track, stream);
-          });
-        }
+      // Create peer connection
+      console.log('Creating peer connection for guest');
+      const pc = initializePeerConnection();
+      setPeerConnection(pc);
+      console.log('Guest peer connection created');
+      
+      // Add tracks if we have them
+      if (stream && stream.getTracks().length > 0) {
+        stream.getTracks().forEach(track => {
+          console.log('Guest adding track:', track.kind);
+          pc.addTrack(track, stream);
+        });
       }
 
+      // Emit join-session to server
       if (socket) {
-        console.log('Emitting actual join-session event for:', sessionId);
-        socket.emit('join-session', sessionId);
+        console.log('Emitting join-session event for:', sessionIdToJoin);
+        socket.emit('join-session', sessionIdToJoin);
+        alert(`Joining session ${sessionIdToJoin}...`);
       }
     } catch (error) {
       console.error('Error joining session:', error);
@@ -682,72 +647,7 @@ function App() {
     }
   };
 
-  // Host functions for handling join requests
-  const approveJoinRequest = async (requesterId) => {
-    setRemoteSocketId(requesterId);
-    if (socket) {
-      socket.emit('approve-join-request', { 
-        sessionId, 
-        requesterId 
-      });
-      
-      // Ensure WebRTC connection is established with screen sharing
-      if (peerConnection && localStream) {
-        console.log('Re-adding tracks for approved guest');
-        
-        // Remove existing tracks and re-add them to ensure proper sharing
-        const senders = peerConnection.getSenders();
-        for (const sender of senders) {
-          if (sender.track) {
-            await peerConnection.removeTrack(sender);
-          }
-        }
-        
-        // Add all tracks from local stream (screen + audio)
-        localStream.getTracks().forEach(track => {
-          console.log('Adding track:', track.kind, track.label, 'enabled:', track.enabled, 'readyState:', track.readyState);
-          peerConnection.addTrack(track, localStream);
-        });
-        
-        console.log('All senders after adding tracks:', peerConnection.getSenders().map(s => ({
-          track: s.track ? {
-            kind: s.track.kind,
-            label: s.track.label,
-            enabled: s.track.enabled,
-            readyState: s.track.readyState
-          } : null
-        })));
-        
-        // Create and send a new offer
-        const offer = await peerConnection.createOffer();
-        console.log('Created offer:', offer);
-        await peerConnection.setLocalDescription(offer);
-        console.log('Set local description, now emitting offer to:', requesterId);
-        socket.emit('offer', {
-          sessionId: sessionIdRef.current,
-          targetId: requesterId,
-          offer
-        });
-        
-        console.log('Sent offer with screen sharing tracks to approved guest');
-      } else {
-        console.warn('No peer connection or local stream available for screen sharing');
-      }
-    }
-    setPendingJoinRequests(prev => prev.filter(id => id !== requesterId));
-    alert('Join request approved! User can now access your desktop.');
-  };
-
-  const rejectJoinRequest = (requesterId) => {
-    if (socket) {
-      socket.emit('reject-join-request', { 
-        sessionId, 
-        requesterId 
-      });
-    }
-    setPendingJoinRequests(prev => prev.filter(id => id !== requesterId));
-    alert('Join request rejected.');
-  };
+  // Actually join session after host approval
 
   const handleJoinClick = () => {
     if (joinSessionId.trim()) {
@@ -1538,71 +1438,6 @@ function App() {
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
-              {/* 🎉 FLOATING DESKTOP BUTTON - Shows when approved! */}
-              {joinRequestStatus === 'approved' && !isHost && (
-                <>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={openRemoteDesktop}
-                    startIcon={remoteStream ? <DesktopWindows /> : <CircularProgress size={20} sx={{ color: '#fff' }} />}
-                    disabled={!remoteStream}
-                    sx={{ 
-                      textTransform: 'none',
-                      fontWeight: 'bold',
-                      fontSize: '1.1rem',
-                      py: 1.5,
-                      px: 3,
-                      backgroundColor: remoteStream ? '#00e676' : '#ffa726',
-                      color: '#000',
-                      '&:hover': {
-                        backgroundColor: remoteStream ? '#00c853' : '#ff9800',
-                      },
-                      '&:disabled': {
-                        backgroundColor: '#ffa726',
-                        color: '#000',
-                        opacity: 0.8,
-                      },
-                      animation: remoteStream ? 'super-pulse 1s infinite' : 'waiting-pulse 1.5s infinite',
-                      '@keyframes super-pulse': {
-                        '0%': { 
-                          transform: 'scale(1)',
-                          boxShadow: '0 0 10px rgba(0,230,118,0.7)'
-                        },
-                        '50%': { 
-                          transform: 'scale(1.1)',
-                          boxShadow: '0 0 30px rgba(0,230,118,1)'
-                        },
-                        '100%': { 
-                          transform: 'scale(1)',
-                          boxShadow: '0 0 10px rgba(0,230,118,0.7)'
-                        }
-                      },
-                      '@keyframes waiting-pulse': {
-                        '0%': { 
-                          boxShadow: '0 0 10px rgba(255,167,38,0.5)'
-                        },
-                        '50%': { 
-                          boxShadow: '0 0 20px rgba(255,167,38,0.8)'
-                        },
-                        '100%': { 
-                          boxShadow: '0 0 10px rgba(255,167,38,0.5)'
-                        }
-                      }
-                    }}
-                  >
-                    {remoteStream ? '🖥️ OPEN DESKTOP NOW!' : '⏳ Waiting for Stream...'}
-                  </Button>
-                  {remoteStream && (
-                    <Chip 
-                      label="Stream Ready ✅" 
-                      color="success"
-                      size="small"
-                      sx={{ fontWeight: 'bold' }}
-                    />
-                  )}
-                </>
-              )}
               <Button
                 color="inherit"
                 onClick={toggleTheme}
@@ -1790,17 +1625,6 @@ function App() {
                     sx={{ mb: 2 }}
                     disabled={!connected}
                   />
-                  {joinRequestStatus === 'pending' && (
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      <CircularProgress size={16} sx={{ mr: 1 }} />
-                      Waiting for host approval...
-                    </Alert>
-                  )}
-                  {joinRequestStatus === 'rejected' && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                      Join request was rejected by the host
-                    </Alert>
-                  )}
                 </CardContent>
                 <CardActions>
                   <Button 
@@ -1808,55 +1632,15 @@ function App() {
                     color="secondary"
                     startIcon={<Person />}
                     onClick={handleJoinClick}
-                    disabled={!connected || !joinSessionId.trim() || joinRequestStatus === 'pending'}
+                    disabled={!connected || !joinSessionId.trim()}
                     fullWidth
                     size="large"
                   >
-                    {joinRequestStatus === 'pending' ? 'Request Sent...' : 'Request to Join'}
+                    Join Session
                   </Button>
                 </CardActions>
               </Card>
             </Grid>
-
-            {/* HUGE Banner for Approved Guest */}
-            {joinRequestStatus === 'approved' && !isHost && (
-              <Grid item xs={12}>
-                <Paper 
-                  elevation={10} 
-                  sx={{ 
-                    p: 4, 
-                    textAlign: 'center',
-                    background: 'linear-gradient(135deg, #00c853 0%, #00e676 100%)',
-                    border: '4px solid #1b5e20',
-                    borderRadius: 3,
-                    animation: 'banner-pulse 2s infinite',
-                    '@keyframes banner-pulse': {
-                      '0%': { transform: 'scale(1)', boxShadow: '0 0 20px rgba(0,200,83,0.5)' },
-                      '50%': { transform: 'scale(1.02)', boxShadow: '0 0 40px rgba(0,200,83,0.8)' },
-                      '100%': { transform: 'scale(1)', boxShadow: '0 0 20px rgba(0,200,83,0.5)' },
-                    }
-                  }}
-                >
-                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'white', mb: 2, textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
-                    ✅ CONNECTION APPROVED! ✅
-                  </Typography>
-                  <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 600 }}>
-                    Your request was accepted! Scroll down to the "Remote Desktop Access" section below.
-                  </Typography>
-                  <Alert 
-                    severity="success" 
-                    sx={{ 
-                      fontSize: '1.3rem', 
-                      fontWeight: 'bold',
-                      backgroundColor: 'rgba(255,255,255,0.95)',
-                      '& .MuiAlert-icon': { fontSize: '2rem' }
-                    }}
-                  >
-                    👇 Scroll down and click the green "OPEN REMOTE DESKTOP" button! 👇
-                  </Alert>
-                </Paper>
-              </Grid>
-            )}
           </Grid>
 
           {/* Session Management Controls */}
@@ -2157,50 +1941,6 @@ function App() {
                 Session ID: <Chip label={sessionId} color="primary" size="small" sx={{ mt: 1 }} />
               </Typography>
             </Alert>
-            
-            {pendingJoinRequests.length > 0 && (
-              <Box sx={{ mt: 3 }}>
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  <Typography variant="h6" gutterBottom>
-                    <Warning sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Incoming Join Requests
-                  </Typography>
-                </Alert>
-                <List>
-                  {pendingJoinRequests.map(requesterId => (
-                    <ListItem key={requesterId} divider>
-                      <ListItemIcon>
-                        <Person />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={`User ${requesterId.substring(0, 8)} wants to join your session`}
-                        secondary="Click to approve or reject this request"
-                      />
-                      <Box display="flex" gap={1}>
-                        <Button 
-                          onClick={() => approveJoinRequest(requesterId)}
-                          variant="contained"
-                          color="success"
-                          startIcon={<CheckCircle />}
-                          size="small"
-                        >
-                          Accept
-                        </Button>
-                        <Button 
-                          onClick={() => rejectJoinRequest(requesterId)}
-                          variant="outlined"
-                          color="error"
-                          startIcon={<Cancel />}
-                          size="small"
-                        >
-                          Reject
-                        </Button>
-                      </Box>
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
           </Paper>
         )}
         {/* Vercel build fix */}
