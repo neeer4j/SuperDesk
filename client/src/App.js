@@ -1304,6 +1304,16 @@ function App() {
       // Set the srcObject - autoplay attribute will handle playing
       popupVideo.srcObject = remoteStream;
       console.log('Stream set, autoplay will handle playback');
+      
+      // Fallback: If autoplay doesn't work within 2 seconds, manually play
+      setTimeout(() => {
+        if (popupVideo.paused) {
+          console.log('⚠️ Autoplay didnt work, manually playing...');
+          popupVideo.play().catch(err => {
+            console.error('Manual play also failed:', err);
+          });
+        }
+      }, 2000);
     }
 
     // Handle popup messages
