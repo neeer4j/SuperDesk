@@ -937,7 +937,7 @@ function App() {
     }
 
     console.log('Popup created successfully');
-    setRemoteDesktopWindow(popup);
+    // Don't set state yet - wait until we're done setting up
 
   // Create the popup content
   popup.document.open();
@@ -1225,6 +1225,10 @@ function App() {
         }
       }
     }
+
+    // Now that setup is complete, set the window in state
+    // This prevents the useEffect from running before the video element exists
+    setRemoteDesktopWindow(popup);
 
     // Handle popup messages
     const handlePopupMessage = (event) => {
