@@ -1256,80 +1256,8 @@ function App() {
     const popupVideo = popup.document.getElementById('remoteVideo');
     const loadingOverlay = popup.document.getElementById('loadingOverlay');
     
-    if (popupVideo) {
-      if (remoteStream) {
-        console.log('Setting remote stream to popup video');
-        popupVideo.srcObject = remoteStream;
-        popupVideo.muted = true; // Required for autoplay
-        
-        // Try to play immediately
-        popupVideo.play().then(() => {
-          console.log('✅ Video playing immediately!');
-          
-          // Clear the progress animation interval
-          if (popup.progressInterval) {
-            clearInterval(popup.progressInterval);
-          }
-          
-          if (loadingOverlay) {
-            // Show 100% before hiding
-            const progressBar = popup.document.getElementById('progressBar');
-            const progressText = popup.document.getElementById('progressText');
-            const statusText = popup.document.getElementById('statusText');
-            if (progressBar) progressBar.style.width = '100%';
-            if (progressText) progressText.textContent = '100%';
-            if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
-            setTimeout(() => {
-              loadingOverlay.style.display = 'none';
-            }, 500);
-          }
-        }).catch(err => {
-          console.log('Immediate play failed, waiting for metadata...', err.message);
-        });
-        
-        // Also try on metadata event
-        popupVideo.onloadedmetadata = () => {
-          console.log('Video metadata loaded in popup');
-          popupVideo.play().then(() => {
-            console.log('✅ Video playing after metadata!');
-            
-            // Clear the progress animation interval
-            if (popup.progressInterval) {
-              clearInterval(popup.progressInterval);
-            }
-            
-            if (loadingOverlay) {
-              // Show 100% before hiding
-              const progressBar = popup.document.getElementById('progressBar');
-              const progressText = popup.document.getElementById('progressText');
-              const statusText = popup.document.getElementById('statusText');
-              if (progressBar) progressBar.style.width = '100%';
-              if (progressText) progressText.textContent = '✅ Connected! 100%';
-              if (statusText) statusText.textContent = 'Stream ready!';
-              setTimeout(() => {
-                loadingOverlay.style.display = 'none';
-              }, 500);
-            }
-          }).catch(err => {
-            console.error('❌ Error playing video:', err);
-          });
-        };
-      } else {
-        console.log('No remote stream available, showing waiting message');
-        if (loadingOverlay) {
-          loadingOverlay.innerHTML = `
-            <div>⏳ Waiting for Remote Stream...</div>
-            <div style="font-size: 14px; margin-top: 10px;">
-              Host needs to start screen sharing<br/>
-              Or request screen share from main window
-            </div>
-          `;
-        }
-      }
-    }
-
-    // Now that setup is complete, set the window in state
-    // This prevents the useEffect from running before the video element exists
+    // Don't set the stream here - let the useEffect handle it to avoid race conditions
+    // Just set the popup window reference, and useEffect will handle the stream
     setRemoteDesktopWindow(popup);
 
     // Handle popup messages
