@@ -426,15 +426,27 @@ function App() {
       if (popupVideo) {
         console.log('Updating popup with new remote stream');
         popupVideo.srcObject = remoteStream;
+        
+        // Try to play immediately
+        popupVideo.play().then(() => {
+          console.log('✅ Video playing immediately (useEffect)!');
+          if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+          }
+        }).catch(err => {
+          console.log('Immediate play failed (useEffect), waiting for metadata...', err.message);
+        });
+        
+        // Also try on metadata event
         popupVideo.onloadedmetadata = () => {
-          console.log('Video metadata loaded in popup');
+          console.log('Video metadata loaded in popup (useEffect)');
           popupVideo.play().then(() => {
-            console.log('✅ Video playing in popup!');
+            console.log('✅ Video playing after metadata (useEffect)!');
             if (loadingOverlay) {
               loadingOverlay.style.display = 'none';
             }
           }).catch(err => {
-            console.error('❌ Error playing video:', err);
+            console.error('❌ Error playing video (useEffect):', err);
           });
         };
       }
@@ -1174,10 +1186,22 @@ function App() {
       if (remoteStream) {
         console.log('Setting remote stream to popup video');
         popupVideo.srcObject = remoteStream;
+        
+        // Try to play immediately
+        popupVideo.play().then(() => {
+          console.log('✅ Video playing immediately!');
+          if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+          }
+        }).catch(err => {
+          console.log('Immediate play failed, waiting for metadata...', err.message);
+        });
+        
+        // Also try on metadata event
         popupVideo.onloadedmetadata = () => {
           console.log('Video metadata loaded in popup');
           popupVideo.play().then(() => {
-            console.log('✅ Video playing in popup!');
+            console.log('✅ Video playing after metadata!');
             if (loadingOverlay) {
               loadingOverlay.style.display = 'none';
             }
