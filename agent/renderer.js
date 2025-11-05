@@ -1,5 +1,5 @@
 const io = require('socket.io-client');
-const { desktopCapturer } = require('electron');
+const electron = require('electron');
 
 let socket;
 let peerConnection;
@@ -88,7 +88,7 @@ async function startScreenShare() {
     document.getElementById('startBtn').disabled = true;
     
     // Get desktop sources using Electron's desktopCapturer
-    const sources = await desktopCapturer.getSources({
+    const sources = await electron.desktopCapturer.getSources({
       types: ['screen'],
       thumbnailSize: { width: 1920, height: 1080 }
     });

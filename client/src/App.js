@@ -389,8 +389,9 @@ function App() {
   // Update popup when remote stream changes
   // Auto-open remote desktop when guest receives stream
   useEffect(() => {
-    if (remoteStream && !isHost) {
-      // Automatically open remote desktop viewer for guests
+    if (remoteStream && !isHost && (!remoteDesktopWindow || remoteDesktopWindow.closed)) {
+      // Automatically open remote desktop viewer for guests ONLY if not already open
+      console.log('🚀 Auto-opening remote desktop for guest');
       setTimeout(() => {
         openRemoteDesktop();
         // Enable remote control by default
@@ -1569,6 +1570,16 @@ function App() {
               </Box>
             </Box>
           </Paper>
+
+          {/* Popup Permission Warning Banner */}
+          {!isHost && sessionId && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                <strong>📌 Important:</strong> Remote desktop will open in a new window. 
+                Please <strong>allow popups</strong> for this site if prompted by your browser.
+              </Typography>
+            </Alert>
+          )}
 
           {loading && (
             <Paper sx={{ p: 4, textAlign: 'center' }}>

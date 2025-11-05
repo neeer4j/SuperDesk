@@ -19,10 +19,8 @@ function createWindow() {
   // Load the agent interface
   mainWindow.loadFile('agent.html');
 
-  // Open DevTools in development
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools();
-  }
+  // Open DevTools to see console logs
+  mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', () => {
     mainWindow = null;

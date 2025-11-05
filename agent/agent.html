@@ -109,8 +109,10 @@
         }
 
         button:disabled {
-            opacity: 0.5;
+            background: linear-gradient(45deg, #666, #444);
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
         
         .btn-stop {
@@ -143,6 +145,16 @@
         
         .instructions li {
             margin-bottom: 8px;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .capturing {
+            animation: pulse 2s infinite;
         }
     </style>
 </head>
@@ -184,207 +196,5 @@
     </div>
     
     <script src="renderer.js"></script>
-</body>
-</html>
-
-        button:disabled {
-            background: linear-gradient(45deg, #666, #444);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .session-info {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-        }
-
-        .shortcuts {
-            margin-top: 20px;
-            font-size: 12px;
-            opacity: 0.8;
-        }
-
-        .shortcuts h4 {
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-
-        .shortcuts p {
-            margin: 5px 0;
-        }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 3em;
-            opacity: 0.3;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .capturing {
-            animation: pulse 2s infinite;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="logo">🖥️</div>
-        <h1>SuperDesk Agent</h1>
-        
-        <div class="status-panel">
-            <div class="status-item">
-                <span>Server Connection:</span>
-                <div class="status-indicator status-disconnected" id="connectionStatus"></div>
-            </div>
-            <div class="status-item">
-                <span>Screen Capture:</span>
-                <div class="status-indicator status-disconnected" id="captureStatus"></div>
-            </div>
-            <div class="status-item">
-                <span>Active Sessions:</span>
-                <span id="sessionCount">0</span>
-            </div>
-        </div>
-
-        <div class="controls">
-            <div class="control-group">
-                <button id="startBtn" onclick="startSession()">Start New Session</button>
-                <button id="stopBtn" onclick="stopSession()" disabled>Stop Session</button>
-            </div>
-            <div class="control-group">
-                <button onclick="toggleCapture()">Toggle Screen Capture</button>
-                <button onclick="openSettings()">Settings</button>
-            </div>
-        </div>
-
-        <div class="session-info" id="sessionInfo" style="display: none;">
-            <h4>Current Session:</h4>
-            <p>Session ID: <span id="sessionId">-</span></p>
-            <p>Started: <span id="sessionStart">-</span></p>
-            <p>Share this session ID with clients to connect</p>
-        </div>
-
-        <div class="shortcuts">
-            <h4>Keyboard Shortcuts:</h4>
-            <p><strong>Ctrl+Shift+S:</strong> Toggle screen capture</p>
-            <p><strong>Alt+F4:</strong> Close agent</p>
-        </div>
-    </div>
-
-    <script>
-        const { ipcRenderer } = require('electron');
-        
-        let isConnected = false;
-        let isCapturing = false;
-        let currentSessionId = null;
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            updateConnectionStatus();
-            
-            // Listen for status updates from main process
-            ipcRenderer.on('connection-status', (event, data) => {
-                isConnected = data.connected;
-                updateUI();
-            });
-
-            ipcRenderer.on('capture-status', (event, data) => {
-                isCapturing = data.capturing;
-                updateUI();
-            });
-
-            ipcRenderer.on('session-created', (event, sessionId) => {
-                currentSessionId = sessionId;
-                document.getElementById('sessionId').textContent = sessionId;
-                document.getElementById('sessionStart').textContent = new Date().toLocaleString();
-                document.getElementById('sessionInfo').style.display = 'block';
-                updateUI();
-            });
-        });
-
-        async function updateConnectionStatus() {
-            try {
-                const status = await ipcRenderer.invoke('get-connection-status');
-                isConnected = status.connected;
-                updateUI();
-            } catch (error) {
-                console.error('Error getting connection status:', error);
-            }
-        }
-
-        function updateUI() {
-            // Update connection status
-            const connectionIndicator = document.getElementById('connectionStatus');
-            connectionIndicator.className = `status-indicator ${isConnected ? 'status-connected' : 'status-disconnected'}`;
-
-            // Update capture status
-            const captureIndicator = document.getElementById('captureStatus');
-            captureIndicator.className = `status-indicator ${isCapturing ? 'status-connected' : 'status-disconnected'}`;
-            
-            if (isCapturing) {
-                captureIndicator.classList.add('capturing');
-            } else {
-                captureIndicator.classList.remove('capturing');
-            }
-
-            // Update buttons
-            const startBtn = document.getElementById('startBtn');
-            const stopBtn = document.getElementById('stopBtn');
-            
-            startBtn.disabled = !isConnected || currentSessionId !== null;
-            stopBtn.disabled = !currentSessionId;
-        }
-
-        async function startSession() {
-            try {
-                const result = await ipcRenderer.invoke('start-session');
-                if (result.success) {
-                    console.log('Session started successfully');
-                } else {
-                    alert('Failed to start session: ' + result.error);
-                }
-            } catch (error) {
-                console.error('Error starting session:', error);
-                alert('Error starting session');
-            }
-        }
-
-        async function stopSession() {
-            try {
-                const result = await ipcRenderer.invoke('stop-session');
-                if (result.success) {
-                    currentSessionId = null;
-                    document.getElementById('sessionInfo').style.display = 'none';
-                    updateUI();
-                    console.log('Session stopped successfully');
-                }
-            } catch (error) {
-                console.error('Error stopping session:', error);
-            }
-        }
-
-        function toggleCapture() {
-            // This will be handled by the main process via global shortcut
-            // or we can implement a direct IPC call
-            console.log('Toggle capture requested');
-        }
-
-        function openSettings() {
-            alert('Settings panel will be implemented in future versions');
-        }
-
-        // Auto-refresh connection status every 5 seconds
-        setInterval(updateConnectionStatus, 5000);
-    </script>
 </body>
 </html>
