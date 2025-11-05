@@ -865,7 +865,6 @@ function App() {
     console.log('Peer Connection:', peerConnection);
     console.log('Peer Connection state:', peerConnection?.connectionState);
     console.log('Is Host:', isHost);
-    console.log('Join Request Status:', joinRequestStatus);
     
     if (!sessionId) {
       console.error('No session ID - cannot open desktop');
