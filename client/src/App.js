@@ -1254,11 +1254,77 @@ function App() {
 
     // Set up the video stream in the popup
     const popupVideo = popup.document.getElementById('remoteVideo');
-    const loadingOverlay = popup.document.getElementById('loadingOverlay');
     
-    // Don't set the stream here - let the useEffect handle it to avoid race conditions
-    // Just set the popup window reference, and useEffect will handle the stream
+    // Set the popup window reference FIRST, before setting the stream
     setRemoteDesktopWindow(popup);
+    
+    // Now set the stream directly if it exists
+    if (popupVideo && remoteStream) {
+      console.log('Setting initial remote stream to popup video');
+      popupVideo.srcObject = remoteStream;
+      popupVideo.muted = true; // Required for autoplay
+      
+      // Clear the progress animation interval
+      if (popup.progressInterval) {
+        clearInterval(popup.progressInterval);
+      }
+      
+      // Try to play immediately
+      popupVideo.play().then(() => {
+        console.log('✅ Video playing immediately!');
+        
+        // Update progress to 100% and show success
+        const progressBar = popup.document.getElementById('progressBar');
+        const progressText = popup.document.getElementById('progressText');
+        const statusText = popup.document.getElementById('statusText');
+        const loadingOverlay = popup.document.getElementById('loadingOverlay');
+        
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressText) progressText.textContent = '100%';
+        if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
+        
+        // Hide overlay after a brief moment
+        setTimeout(() => {
+          if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+          }
+        }, 500);
+      }).catch(err => {
+        console.log('Immediate play failed, waiting for metadata...', err.message);
+      });
+      
+      // Also try on metadata event
+      popupVideo.onloadedmetadata = () => {
+        console.log('Video metadata loaded in popup');
+        popupVideo.play().then(() => {
+          console.log('✅ Video playing after metadata!');
+          
+          // Clear the progress animation interval
+          if (popup.progressInterval) {
+            clearInterval(popup.progressInterval);
+          }
+          
+          // Update progress to 100% and show success
+          const progressBar = popup.document.getElementById('progressBar');
+          const progressText = popup.document.getElementById('progressText');
+          const statusText = popup.document.getElementById('statusText');
+          const loadingOverlay = popup.document.getElementById('loadingOverlay');
+          
+          if (progressBar) progressBar.style.width = '100%';
+          if (progressText) progressText.textContent = '100%';
+          if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
+          
+          // Hide overlay after a brief moment
+          setTimeout(() => {
+            if (loadingOverlay) {
+              loadingOverlay.style.display = 'none';
+            }
+          }, 500);
+        }).catch(err => {
+          console.error('❌ Error playing video:', err);
+        });
+      };
+    }
 
     // Handle popup messages
     const handlePopupMessage = (event) => {
