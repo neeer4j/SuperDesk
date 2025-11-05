@@ -431,9 +431,24 @@ function App() {
         // Try to play immediately
         popupVideo.play().then(() => {
           console.log('✅ Video playing immediately (useEffect)!');
-          if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
-          }
+          
+          // Update progress to 100% and show success
+          const popupDoc = remoteDesktopWindow.document;
+          const progressBar = popupDoc.getElementById('progressBar');
+          const progressText = popupDoc.getElementById('progressText');
+          const statusText = popupDoc.getElementById('statusText');
+          const loadingOverlay = popupDoc.getElementById('loadingOverlay');
+          
+          if (progressBar) progressBar.style.width = '100%';
+          if (progressText) progressText.textContent = '100%';
+          if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
+          
+          // Hide overlay after a brief moment
+          setTimeout(() => {
+            if (loadingOverlay) {
+              loadingOverlay.style.display = 'none';
+            }
+          }, 500);
         }).catch(err => {
           console.log('Immediate play failed (useEffect), waiting for metadata...', err.message);
         });
@@ -443,9 +458,24 @@ function App() {
           console.log('Video metadata loaded in popup (useEffect)');
           popupVideo.play().then(() => {
             console.log('✅ Video playing after metadata (useEffect)!');
-            if (loadingOverlay) {
-              loadingOverlay.style.display = 'none';
-            }
+            
+            // Update progress to 100% and show success
+            const popupDoc = remoteDesktopWindow.document;
+            const progressBar = popupDoc.getElementById('progressBar');
+            const progressText = popupDoc.getElementById('progressText');
+            const statusText = popupDoc.getElementById('statusText');
+            const loadingOverlay = popupDoc.getElementById('loadingOverlay');
+            
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressText) progressText.textContent = '100%';
+            if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
+            
+            // Hide overlay after a brief moment
+            setTimeout(() => {
+              if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+              }
+            }, 500);
           }).catch(err => {
             console.error('❌ Error playing video (useEffect):', err);
           });
@@ -1077,8 +1107,12 @@ function App() {
             </div>
             
             <div class="loading-overlay" id="loadingOverlay">
-              <div>🔄 Loading Remote Desktop...</div>
-              <div style="font-size: 14px; margin-top: 10px;">Waiting for video stream...</div>
+              <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">�️ Connecting to Host</div>
+              <div style="width: 300px; background: rgba(255,255,255,0.2); border-radius: 10px; height: 30px; overflow: hidden;">
+                <div id="progressBar" style="width: 10%; height: 100%; background: linear-gradient(90deg, #4CAF50, #8BC34A); transition: width 0.3s ease;"></div>
+              </div>
+              <div id="progressText" style="font-size: 18px; margin-top: 15px; font-weight: bold;">Initializing... 10%</div>
+              <div id="statusText" style="font-size: 14px; margin-top: 10px; color: rgba(255,255,255,0.8);">Setting up connection...</div>
             </div>
           </div>
         </div>
@@ -1087,6 +1121,34 @@ function App() {
           var remoteControlEnabled = window.remoteControlEnabled || false;
           var parentWindow = window.opener;
           window.remoteControlEnabled = remoteControlEnabled;
+          
+          // Progress simulation
+          let progress = 10;
+          const progressBar = document.getElementById('progressBar');
+          const progressText = document.getElementById('progressText');
+          const statusText = document.getElementById('statusText');
+          
+          const stages = [
+            { progress: 10, text: 'Initializing...', status: 'Setting up connection...' },
+            { progress: 30, text: 'Connecting...', status: 'Establishing peer connection...' },
+            { progress: 50, text: 'Negotiating...', status: 'Exchanging connection details...' },
+            { progress: 70, text: 'Receiving...', status: 'Waiting for video stream...' },
+            { progress: 90, text: 'Almost ready...', status: 'Preparing video player...' }
+          ];
+          
+          let stageIndex = 0;
+          const progressInterval = setInterval(() => {
+            if (stageIndex < stages.length) {
+              const stage = stages[stageIndex];
+              progress = stage.progress;
+              progressBar.style.width = progress + '%';
+              progressText.textContent = stage.text + ' ' + progress + '%';
+              statusText.textContent = stage.status;
+              stageIndex++;
+            } else {
+              clearInterval(progressInterval);
+            }
+          }, 800);
           
           function toggleRemoteControl() {
             remoteControlEnabled = !remoteControlEnabled;
@@ -1194,7 +1256,16 @@ function App() {
         popupVideo.play().then(() => {
           console.log('✅ Video playing immediately!');
           if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
+            // Show 100% before hiding
+            const progressBar = popup.document.getElementById('progressBar');
+            const progressText = popup.document.getElementById('progressText');
+            const statusText = popup.document.getElementById('statusText');
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressText) progressText.textContent = '✅ Connected! 100%';
+            if (statusText) statusText.textContent = 'Stream ready!';
+            setTimeout(() => {
+              loadingOverlay.style.display = 'none';
+            }, 500);
           }
         }).catch(err => {
           console.log('Immediate play failed, waiting for metadata...', err.message);
@@ -1206,7 +1277,16 @@ function App() {
           popupVideo.play().then(() => {
             console.log('✅ Video playing after metadata!');
             if (loadingOverlay) {
-              loadingOverlay.style.display = 'none';
+              // Show 100% before hiding
+              const progressBar = popup.document.getElementById('progressBar');
+              const progressText = popup.document.getElementById('progressText');
+              const statusText = popup.document.getElementById('statusText');
+              if (progressBar) progressBar.style.width = '100%';
+              if (progressText) progressText.textContent = '✅ Connected! 100%';
+              if (statusText) statusText.textContent = 'Stream ready!';
+              setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+              }, 500);
             }
           }).catch(err => {
             console.error('❌ Error playing video:', err);
