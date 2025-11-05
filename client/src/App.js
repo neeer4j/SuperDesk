@@ -387,22 +387,6 @@ function App() {
   }, []);
 
   // Update popup when remote stream changes
-  useEffect(() => {
-    if (remoteDesktopWindow && !remoteDesktopWindow.closed && remoteStream) {
-      const popupVideo = remoteDesktopWindow.document.getElementById('remoteVideo');
-      const loadingOverlay = remoteDesktopWindow.document.getElementById('loadingOverlay');
-      
-      if (popupVideo) {
-        popupVideo.srcObject = remoteStream;
-        popupVideo.onloadedmetadata = () => {
-          if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
-          }
-        };
-      }
-    }
-  }, [remoteStream, remoteDesktopWindow]);
-
   // Auto-open remote desktop when guest receives stream
   useEffect(() => {
     if (remoteStream && !isHost) {
@@ -417,7 +401,7 @@ function App() {
     }
   }, [remoteStream, isHost]);
 
-  // Update popup window when remoteStream changes
+  // Update popup window when remoteStream changes (ONLY for cases where stream arrives AFTER popup opens)
   useEffect(() => {
     console.log('🔄 useEffect triggered - remoteStream changed');
     console.log('remoteDesktopWindow exists:', !!remoteDesktopWindow);
@@ -432,75 +416,23 @@ function App() {
       console.log('Are they equal?', popupVideo?.srcObject === remoteStream);
       
       if (popupVideo && popupVideo.srcObject !== remoteStream) {
-        console.log('⚠️ useEffect setting stream (this should NOT happen right after openRemoteDesktop!)');
+        console.log('⚠️ useEffect setting stream - stream arrived after popup opened');
+        
+        // Just set the stream - the onplaying handler from openRemoteDesktop will handle the rest
         popupVideo.srcObject = remoteStream;
-        popupVideo.muted = true; // Required for autoplay
         
-        // Clear the progress animation interval
-        if (remoteDesktopWindow.progressInterval) {
-          clearInterval(remoteDesktopWindow.progressInterval);
-        }
-        
-        // Try to play immediately
-        popupVideo.play().then(() => {
-          console.log('✅ Video playing immediately (useEffect)!');
-          
-          // Update progress to 100% and show success
-          const popupDoc = remoteDesktopWindow.document;
-          const progressBar = popupDoc.getElementById('progressBar');
-          const progressText = popupDoc.getElementById('progressText');
-          const statusText = popupDoc.getElementById('statusText');
-          const loadingOverlay = popupDoc.getElementById('loadingOverlay');
-          
-          if (progressBar) progressBar.style.width = '100%';
-          if (progressText) progressText.textContent = '100%';
-          if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
-          
-          // Hide overlay after a brief moment
-          setTimeout(() => {
-            if (loadingOverlay) {
-              loadingOverlay.style.display = 'none';
-            }
-          }, 500);
-        }).catch(err => {
-          console.log('Immediate play failed (useEffect), waiting for metadata...', err.message);
-        });
-        
-        // Also try on metadata event
-        popupVideo.onloadedmetadata = () => {
-          console.log('Video metadata loaded in popup (useEffect)');
-          popupVideo.play().then(() => {
-            console.log('✅ Video playing after metadata (useEffect)!');
-            
-            // Clear the progress animation interval
-            if (remoteDesktopWindow.progressInterval) {
-              clearInterval(remoteDesktopWindow.progressInterval);
-            }
-            
-            // Update progress to 100% and show success
-            const popupDoc = remoteDesktopWindow.document;
-            const progressBar = popupDoc.getElementById('progressBar');
-            const progressText = popupDoc.getElementById('progressText');
-            const statusText = popupDoc.getElementById('statusText');
-            const loadingOverlay = popupDoc.getElementById('loadingOverlay');
-            
-            if (progressBar) progressBar.style.width = '100%';
-            if (progressText) progressText.textContent = '100%';
-            if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
-            
-            // Hide overlay after a brief moment
-            setTimeout(() => {
-              if (loadingOverlay) {
-                loadingOverlay.style.display = 'none';
-              }
-            }, 500);
-          }).catch(err => {
-            console.error('❌ Error playing video (useEffect):', err);
-          });
-        };
+        // Autoplay should handle it, but add fallback
+        setTimeout(() => {
+          if (popupVideo.paused) {
+            console.log('⚠️ useEffect: Autoplay didnt work, manually playing...');
+            popupVideo.play().catch(err => {
+              console.error('useEffect manual play failed:', err);
+            });
+          }
+        }, 2000);
       }
     }
-  }, [remoteStream]); // Only depend on remoteStream, NOT remoteDesktopWindow to avoid race condition
+  }, [remoteStream, remoteDesktopWindow]); // Include both dependencies
 
   const initializePeerConnection = () => {
     const pc = new RTCPeerConnection(servers);
