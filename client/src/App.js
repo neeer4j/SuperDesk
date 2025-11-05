@@ -356,14 +356,20 @@ function App() {
     });
 
     newSocket.on('offer', async (data) => {
+      console.log('📨 RECEIVED OFFER from server');
+      console.log('Offer data:', data);
       await handleOffer(data);
     });
 
     newSocket.on('answer', async (data) => {
+      console.log('📨 RECEIVED ANSWER from server');
+      console.log('Answer data:', data);
       await handleAnswer(data);
     });
 
     newSocket.on('ice-candidate', (data) => {
+      console.log('📨 RECEIVED ICE CANDIDATE from server');
+      console.log('Candidate:', data.candidate);
       handleIceCandidate(data);
     });
 
@@ -640,7 +646,15 @@ function App() {
       if (socket) {
         console.log('Emitting join-session event for:', sessionIdToJoin);
         socket.emit('join-session', sessionIdToJoin);
-        alert(`Joining session ${sessionIdToJoin}...`);
+        alert(`Joining session ${sessionIdToJoin}...\n\nWaiting for host to send their screen.\nThe popup will open automatically when ready.`);
+        
+        // Set timeout to warn if no stream received
+        setTimeout(() => {
+          if (!remoteStream) {
+            console.warn('⚠️ No stream received after 10 seconds');
+            alert('⚠️ No response from host.\n\nPossible issues:\n1. Host is not online or session ended\n2. Host hasn\'t started screen sharing\n3. Connection blocked by firewall/network\n\nPlease verify the session ID and try again.');
+          }
+        }, 10000);
       }
     } catch (error) {
       console.error('Error joining session:', error);
