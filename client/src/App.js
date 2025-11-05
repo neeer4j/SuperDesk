@@ -1674,306 +1674,167 @@ function App() {
             </Grid>
           </Grid>
 
-          {/* Session Management Controls */}
+          {/* Session Management Controls - Simplified */}
           {sessionId && (
-            <Paper sx={{ mt: 3, p: 3 }}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Session Info
-                      </Typography>
-                      <Box display="flex" flexDirection="column" gap={1}>
-                        <Box display="flex" alignItems="center">
-                          <Computer sx={{ mr: 1, fontSize: 16 }} />
-                          <Typography variant="body2">
-                            ID: <Chip label={sessionId} size="small" color="primary" />
-                          </Typography>
-                        </Box>
-                        <Box display="flex" alignItems="center">
-                          <Person sx={{ mr: 1, fontSize: 16 }} />
-                          <Typography variant="body2">
-                            Role: <Chip label={isHost ? 'Host' : 'Guest'} size="small" color={isHost ? 'success' : 'secondary'} />
-                          </Typography>
-                        </Box>
-                        <Box display="flex" alignItems="center">
-                          <Group sx={{ mr: 1, fontSize: 16 }} />
-                          <Typography variant="body2">
-                            Connected: <Badge badgeContent={connectedUsers.length + 1} color="primary" showZero />
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </CardContent>
-                    <CardActions>
-                      <Button 
-                        onClick={endSession} 
-                        variant="outlined" 
-                        color="error" 
-                        startIcon={<PowerSettingsNew />}
-                        fullWidth
-                      >
-                        End Session
-                      </Button>
-                    </CardActions>
-                  </Card>
-                </Grid>
-
-                <Grid item xs={12} md={8}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        <DesktopWindows sx={{ mr: 1, verticalAlign: 'middle' }} />
-                        Remote Desktop
-                      </Typography>
-                      
-                      {isHost ? (
-                        <Alert severity="success" sx={{ mb: 2 }}>
-                          <Typography variant="body2">
-                            Desktop sharing is active. Your entire desktop is being shared with remote users.
-                          </Typography>
-                        </Alert>
-                      ) : (
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                          <Typography variant="body2">
-                            You are viewing the host's desktop. Use remote control features to interact.
-                          </Typography>
-                        </Alert>
-                      )}
-
-                      {/* Remote Control (only for guests) */}
-                      {!isHost && (
-                        <Box display="flex" gap={2}>
-                          {!remoteControlEnabled ? (
-                            <Button 
-                              onClick={enableRemoteControl} 
-                              variant="contained"
-                              startIcon={<TouchApp />}
-                              color="primary"
-                            >
-                              Enable Remote Control
-                            </Button>
-                          ) : (
-                            <Button 
-                              onClick={disableRemoteControl} 
-                              variant="outlined"
-                              startIcon={<Cancel />}
-                              color="error"
-                            >
-                              Disable Remote Control
-                            </Button>
-                          )}
-                        </Box>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
+            <Paper sx={{ mt: 3, p: 2 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+                <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
+                  <Chip 
+                    icon={<Computer />} 
+                    label={`${sessionId.substring(0, 8)}...`} 
+                    size="small"
+                    color="primary" 
+                  />
+                  <Chip 
+                    icon={<Person />} 
+                    label={isHost ? 'Host' : 'Guest'} 
+                    size="small"
+                    color={isHost ? 'success' : 'secondary'}
+                  />
+                  {!isHost && remoteControlEnabled && (
+                    <Chip 
+                      icon={<TouchApp />} 
+                      label="Control ON" 
+                      size="small"
+                      color="success"
+                    />
+                  )}
+                </Box>
+                <Box display="flex" gap={1}>
+                  {!isHost && (
+                    <Button 
+                      onClick={remoteControlEnabled ? disableRemoteControl : enableRemoteControl} 
+                      variant={remoteControlEnabled ? "outlined" : "contained"}
+                      startIcon={remoteControlEnabled ? <Cancel /> : <TouchApp />}
+                      color={remoteControlEnabled ? "error" : "primary"}
+                      size="small"
+                    >
+                      {remoteControlEnabled ? 'Disable' : 'Enable'} Control
+                    </Button>
+                  )}
+                  <Button 
+                    onClick={endSession} 
+                    variant="outlined" 
+                    color="error" 
+                    startIcon={<PowerSettingsNew />}
+                    size="small"
+                  >
+                    End
+                  </Button>
+                </Box>
+              </Box>
             </Paper>
           )}
 
-          {/* ⭐⭐⭐ REMOTE DESKTOP ACCESS - GUESTS ⭐⭐⭐ */}
+          {/* Remote Desktop Access - Guest */}
           {sessionId && !isHost && (
-            <Paper 
-              elevation={remoteStream ? 20 : 3}
-              sx={{ 
-                mt: 3, 
-                p: 4, 
-                background: remoteStream 
-                  ? 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)' 
-                  : 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', 
-                color: 'white',
-                border: remoteStream ? '5px solid #00e676' : '3px solid #64b5f6',
-                borderRadius: 3,
-                animation: remoteStream ? 'section-pulse 2s infinite' : 'none',
-                '@keyframes section-pulse': {
-                  '0%': { boxShadow: '0 0 30px rgba(0,230,118,0.5)' },
-                  '50%': { boxShadow: '0 0 60px rgba(0,230,118,0.9)' },
-                  '100%': { boxShadow: '0 0 30px rgba(0,230,118,0.5)' },
-                }
-              }}
-            >
-              <Typography 
-                variant="h3" 
-                gutterBottom 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  textAlign: 'center',
-                  textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-                  mb: 3
-                }}
-              >
-                {remoteStream ? '🎉 DESKTOP READY! 🎉' : '🖥️ Remote Desktop Access'}
+            <Paper sx={{ mt: 3, p: 3, textAlign: 'center' }}>
+              <Typography variant="h5" gutterBottom fontWeight="bold">
+                {remoteStream ? '✅ Desktop Connected' : '🖥️ Remote Desktop'}
               </Typography>
-              
-              {remoteStream && (
-                <Alert 
-                  severity="success" 
-                  sx={{ 
-                    mb: 3, 
-                    fontSize: '1.3rem', 
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    border: '3px solid #00c853',
-                    '& .MuiAlert-icon': { fontSize: '2.5rem' }
-                  }}
-                >
-                  <Typography variant="h5" gutterBottom fontWeight="bold">
-                    ✅ Connected to Host's Desktop!
-                  </Typography>
-                  <Typography variant="h6">
-                    👇 Click the button below to view and control the screen 👇
-                  </Typography>
-                </Alert>
-              )}
               
               <Button 
                 onClick={openRemoteDesktop}
                 variant="contained"
-                color={remoteStream ? 'secondary' : 'primary'}
+                color={remoteStream ? 'success' : 'primary'}
                 startIcon={<ScreenShare />}
                 disabled={!sessionId}
-                fullWidth
                 size="large"
                 sx={{ 
-                  mb: 3, 
-                  py: 3, 
-                  fontSize: '1.5rem',
-                  fontWeight: 'bold',
-                  backgroundColor: remoteStream ? '#ff4081' : '#64b5f6',
-                  '&:hover': {
-                    backgroundColor: remoteStream ? '#f50057' : '#42a5f5',
-                  },
-                  animation: remoteStream ? 'pulse 1.5s infinite' : 'none',
-                  '@keyframes pulse': {
-                    '0%': { transform: 'scale(1)' },
-                    '50%': { transform: 'scale(1.08)' },
-                    '100%': { transform: 'scale(1)' }
-                  }
+                  mt: 2,
+                  mb: 2,
+                  py: 2, 
+                  px: 4,
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold'
                 }}
               >
-                {remoteStream ? '🖥️ OPEN REMOTE DESKTOP NOW!' : 'Open Desktop Viewer'}
+                {remoteStream ? 'Open Desktop Viewer' : 'Waiting for Host...'}
               </Button>
-              
-              {/* Status Info */}
-              <Box sx={{ mt: 3, p: 2, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2 }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={4}>
-                    <Typography variant="h6" fontWeight="bold" sx={{ color: 'white' }}>Remote Stream:</Typography>
-                    <Chip 
-                      label={remoteStream ? 'Available ✅' : 'Not Available ❌'} 
-                      color={remoteStream ? 'success' : 'default'}
-                      sx={{ fontSize: '1rem', fontWeight: 'bold' }}
-                    />
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Typography variant="h6" fontWeight="bold" sx={{ color: 'white' }}>Session:</Typography>
-                    <Chip 
-                      label={sessionId ? 'Connected ✅' : 'Not Connected ❌'} 
-                      color={sessionId ? 'success' : 'default'}
-                      sx={{ fontSize: '1rem', fontWeight: 'bold' }}
-                    />
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Typography variant="h6" fontWeight="bold" sx={{ color: 'white' }}>WebRTC:</Typography>
-                    <Chip 
-                      label={peerConnection ? 'Active ✅' : 'None ❌'} 
-                      color={peerConnection ? 'success' : 'default'}
-                      sx={{ fontSize: '1rem', fontWeight: 'bold' }}
-                    />
-                  </Grid>
-                </Grid>
+
+              <Box display="flex" justifyContent="center" gap={2} flexWrap="wrap">
+                <Chip 
+                  label={remoteStream ? 'Stream: Ready' : 'Stream: Waiting'} 
+                  color={remoteStream ? 'success' : 'default'}
+                  size="small"
+                />
+                <Chip 
+                  label={peerConnection ? 'WebRTC: Active' : 'WebRTC: None'} 
+                  color={peerConnection ? 'success' : 'default'}
+                  size="small"
+                />
               </Box>
               
               {!remoteStream && (
-                <Alert severity="warning" sx={{ mt: 3, backgroundColor: 'rgba(255,255,255,0.9)' }}>
-                  <Typography variant="h6" gutterBottom fontWeight="bold">
-                    ⏳ Waiting for host's screen...
-                  </Typography>
-                  <Typography variant="body1">
-                    If you don't see the desktop after 10 seconds, try requesting screen share:
-                  </Typography>
-                  <Button 
-                    onClick={requestScreenShare}
-                    variant="contained"
-                    startIcon={<VideoCall />}
-                    disabled={screenShareRequested}
-                    sx={{ mt: 2 }}
-                  >
-                    {screenShareRequested ? 'Request Sent...' : 'Request Screen Share'}
-                  </Button>
-                </Alert>
-              )}
-              
-              {remoteControlEnabled && (
-                <Alert severity="info" sx={{ mt: 2, backgroundColor: 'rgba(255,255,255,0.9)' }}>
-                  <Typography variant="body1" fontWeight="bold">
-                    🎮 Remote control is enabled - You can interact with the host's desktop
-                  </Typography>
-                </Alert>
+                <Button 
+                  onClick={requestScreenShare}
+                  variant="outlined"
+                  startIcon={<VideoCall />}
+                  disabled={screenShareRequested}
+                  size="small"
+                  sx={{ mt: 2 }}
+                >
+                  {screenShareRequested ? 'Request Sent' : 'Request Screen Share'}
+                </Button>
               )}
             </Paper>
           )}
 
-          {/* File Transfer Section */}
-          <Paper sx={{ mt: 3, p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              <CloudUpload sx={{ mr: 1, verticalAlign: 'middle' }} />
-              File Transfer
-            </Typography>
-            
-            {/* Data Channel Status */}
-            <Alert severity={dataChannel && dataChannel.readyState === 'open' ? 'success' : 'warning'} sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                Data Channel: {dataChannel ? 
-                  (dataChannel.readyState === 'open' ? 'Ready' : dataChannel.readyState) : 
-                  'Not Connected'}
-              </Typography>
-            </Alert>
-            
-            <input 
-              type="file" 
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-              aria-label="Select a file to transfer"
-            />
-            <Button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!dataChannel || dataChannel.readyState !== 'open'}
-              variant="contained"
-              startIcon={<CloudUpload />}
-              sx={{ mb: 2 }}
-            >
-              Send File (Max 10MB)
-            </Button>
-            {fileTransfer.active && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" gutterBottom>
-                  Uploading: {Math.round(fileTransfer.progress)}%
-                </Typography>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={fileTransfer.progress} 
+          {/* File Transfer - Simplified */}
+          {sessionId && (
+            <Paper sx={{ mt: 3, p: 2 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <CloudUpload />
+                  <Typography variant="body1" fontWeight="bold">File Transfer</Typography>
+                  <Chip 
+                    label={dataChannel && dataChannel.readyState === 'open' ? 'Ready' : 'Not Ready'} 
+                    size="small"
+                    color={dataChannel && dataChannel.readyState === 'open' ? 'success' : 'default'}
+                  />
+                </Box>
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }}
+                  aria-label="Select a file to transfer"
                 />
+                <Button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!dataChannel || dataChannel.readyState !== 'open'}
+                  variant="contained"
+                  startIcon={<CloudUpload />}
+                  size="small"
+                >
+                  Send File (Max 10MB)
+                </Button>
               </Box>
-            )}
-          </Paper>
+              {fileTransfer.active && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Uploading: {Math.round(fileTransfer.progress)}%
+                  </Typography>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={fileTransfer.progress} 
+                  />
+                </Box>
+              )}
+            </Paper>
+          )}
 
-        {isHost && sessionId && (
-          <Paper sx={{ mt: 3, p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              <Computer sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Host Status
-            </Typography>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                Your desktop is being shared
-                <br />
-                Session ID: <Chip label={sessionId} color="primary" size="small" sx={{ mt: 1 }} />
-              </Typography>
-            </Alert>
-          </Paper>
-        )}
+          {/* Host Status - Simplified */}
+          {isHost && sessionId && (
+            <Paper sx={{ mt: 3, p: 2 }}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Computer />
+                <Typography variant="body1">
+                  Sharing desktop - Session: <Chip label={sessionId.substring(0, 12) + '...'} size="small" color="primary" />
+                </Typography>
+              </Box>
+            </Paper>
+          )}
         {/* Vercel build fix */}
         </Container>
       </Box>
