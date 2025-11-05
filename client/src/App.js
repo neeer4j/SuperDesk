@@ -1270,40 +1270,11 @@ function App() {
       console.log('📺 openRemoteDesktop: Setting initial remote stream to popup video');
       console.log('Stream object:', remoteStream);
       console.log('Current srcObject before setting:', popupVideo.srcObject);
-      popupVideo.srcObject = remoteStream;
-      console.log('Current srcObject after setting:', popupVideo.srcObject);
+      
+      // IMPORTANT: Set up event handlers BEFORE setting srcObject
       popupVideo.muted = true; // Required for autoplay
       
-      // Clear the progress animation interval
-      if (popup.progressInterval) {
-        clearInterval(popup.progressInterval);
-      }
-      
-      // Try to play immediately
-      popupVideo.play().then(() => {
-        console.log('✅ Video playing immediately!');
-        
-        // Update progress to 100% and show success
-        const progressBar = popup.document.getElementById('progressBar');
-        const progressText = popup.document.getElementById('progressText');
-        const statusText = popup.document.getElementById('statusText');
-        const loadingOverlay = popup.document.getElementById('loadingOverlay');
-        
-        if (progressBar) progressBar.style.width = '100%';
-        if (progressText) progressText.textContent = '100%';
-        if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
-        
-        // Hide overlay after a brief moment
-        setTimeout(() => {
-          if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
-          }
-        }, 500);
-      }).catch(err => {
-        console.log('Immediate play failed, waiting for metadata...', err.message);
-      });
-      
-      // Also try on metadata event
+      // Set up metadata handler FIRST
       popupVideo.onloadedmetadata = () => {
         console.log('Video metadata loaded in popup');
         popupVideo.play().then(() => {
@@ -1334,6 +1305,15 @@ function App() {
           console.error('❌ Error playing video:', err);
         });
       };
+      
+      // NOW set the srcObject - this will trigger metadata loading
+      popupVideo.srcObject = remoteStream;
+      console.log('Current srcObject after setting:', popupVideo.srcObject);
+      
+      // Clear the progress animation interval
+      if (popup.progressInterval) {
+        clearInterval(popup.progressInterval);
+      }
     }
 
     // Handle popup messages
