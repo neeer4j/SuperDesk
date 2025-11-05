@@ -428,9 +428,14 @@ function App() {
         popupVideo.srcObject = remoteStream;
         popupVideo.onloadedmetadata = () => {
           console.log('Video metadata loaded in popup');
-          if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
-          }
+          popupVideo.play().then(() => {
+            console.log('✅ Video playing in popup!');
+            if (loadingOverlay) {
+              loadingOverlay.style.display = 'none';
+            }
+          }).catch(err => {
+            console.error('❌ Error playing video:', err);
+          });
         };
       }
     }
@@ -1171,9 +1176,14 @@ function App() {
         popupVideo.srcObject = remoteStream;
         popupVideo.onloadedmetadata = () => {
           console.log('Video metadata loaded in popup');
-          if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
-          }
+          popupVideo.play().then(() => {
+            console.log('✅ Video playing in popup!');
+            if (loadingOverlay) {
+              loadingOverlay.style.display = 'none';
+            }
+          }).catch(err => {
+            console.error('❌ Error playing video:', err);
+          });
         };
       } else {
         console.log('No remote stream available, showing waiting message');
