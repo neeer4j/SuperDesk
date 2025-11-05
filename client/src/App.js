@@ -419,12 +419,20 @@ function App() {
 
   // Update popup window when remoteStream changes
   useEffect(() => {
+    console.log('🔄 useEffect triggered - remoteStream changed');
+    console.log('remoteDesktopWindow exists:', !!remoteDesktopWindow);
+    console.log('remoteStream exists:', !!remoteStream);
+    
     if (remoteDesktopWindow && !remoteDesktopWindow.closed && remoteStream) {
       const popupVideo = remoteDesktopWindow.document.getElementById('remoteVideo');
-      const loadingOverlay = remoteDesktopWindow.document.getElementById('loadingOverlay');
+      
+      console.log('popupVideo exists:', !!popupVideo);
+      console.log('popupVideo.srcObject:', popupVideo?.srcObject);
+      console.log('remoteStream:', remoteStream);
+      console.log('Are they equal?', popupVideo?.srcObject === remoteStream);
       
       if (popupVideo && popupVideo.srcObject !== remoteStream) {
-        console.log('Updating popup with new remote stream');
+        console.log('⚠️ useEffect setting stream (this should NOT happen right after openRemoteDesktop!)');
         popupVideo.srcObject = remoteStream;
         popupVideo.muted = true; // Required for autoplay
         
@@ -1260,8 +1268,11 @@ function App() {
     
     // Now set the stream directly if it exists
     if (popupVideo && remoteStream) {
-      console.log('Setting initial remote stream to popup video');
+      console.log('📺 openRemoteDesktop: Setting initial remote stream to popup video');
+      console.log('Stream object:', remoteStream);
+      console.log('Current srcObject before setting:', popupVideo.srcObject);
       popupVideo.srcObject = remoteStream;
+      console.log('Current srcObject after setting:', popupVideo.srcObject);
       popupVideo.muted = true; // Required for autoplay
       
       // Clear the progress animation interval
