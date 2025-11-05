@@ -440,6 +440,16 @@ function App() {
     
     // Optimize for desktop streaming
     const senders = [];
+
+    // If we're the guest (no local stream), proactively indicate we want to receive
+    try {
+      if (!localStreamRef.current) {
+        pc.addTransceiver('video', { direction: 'recvonly' });
+        pc.addTransceiver('audio', { direction: 'recvonly' });
+      }
+    } catch (e) {
+      console.log('Optional transceiver setup failed (safe to ignore):', e);
+    }
     
     pc.onicecandidate = (event) => {
       if (event.candidate && socket) {
@@ -466,6 +476,13 @@ function App() {
       
       const receivedStream = event.streams[0];
       setRemoteStream(receivedStream);
+
+      // Track diagnostics
+      receivedStream.getTracks().forEach(track => {
+        track.onended = () => console.log(`[remote track ended] kind=${track.kind}`);
+        track.onmute = () => console.log(`[remote track muted] kind=${track.kind}`);
+        track.onunmute = () => console.log(`[remote track unmuted] kind=${track.kind}`);
+      });
       
       if (videoRef.current) {
         videoRef.current.srcObject = receivedStream;
@@ -485,6 +502,25 @@ function App() {
         }
       }
       // Auto-open is now handled by useEffect watching remoteStream
+    };
+
+    // Connection diagnostics and UI status updates
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState;
+      console.log('[pc.connectionState]', state);
+      if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
+        const overlay = remoteDesktopWindow.document.getElementById('statusOverlay');
+        if (overlay) overlay.textContent = `Connection: ${state}`;
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      const state = pc.iceConnectionState;
+      console.log('[pc.iceConnectionState]', state);
+      if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
+        const overlay = remoteDesktopWindow.document.getElementById('statusOverlay');
+        if (overlay) overlay.textContent = `ICE: ${state}`;
+      }
     };
 
     pc.ondatachannel = (event) => {
@@ -1064,6 +1100,9 @@ function App() {
               </div>
               <div id="progressText" style="font-size: 18px; margin-top: 15px; font-weight: bold;">Initializing... 10%</div>
               <div id="statusText" style="font-size: 14px; margin-top: 10px; color: rgba(255,255,255,0.8);">Setting up connection...</div>
+              <div style="margin-top: 12px;">
+                <button id="retryBtn" style="padding:6px 12px;border:none;border-radius:4px;background:#1976d2;color:#fff;cursor:pointer;">Retry Play</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1203,6 +1242,9 @@ function App() {
     if (popupVideo && remoteStream) {
       console.log('📺 openRemoteDesktop: Setting initial remote stream to popup video');
       console.log('Stream object:', remoteStream);
+      console.log('Stream tracks:', remoteStream.getTracks());
+      console.log('Stream active:', remoteStream.active);
+      console.log('Video tracks:', remoteStream.getVideoTracks());
       
       // Set muted first (required for autoplay)
       popupVideo.muted = true;
@@ -1234,6 +1276,21 @@ function App() {
         }, 500);
       };
       
+      // Add error handlers
+      popupVideo.onerror = (e) => {
+        console.error('❌ Video error:', e);
+        console.error('Video error details:', popupVideo.error);
+      };
+      
+      popupVideo.onloadedmetadata = () => {
+        console.log('✅ Video metadata loaded');
+        console.log('Video dimensions:', popupVideo.videoWidth, 'x', popupVideo.videoHeight);
+      };
+      
+      popupVideo.onloadeddata = () => {
+        console.log('✅ Video data loaded - ready to play');
+      };
+      
       // Set the srcObject - autoplay attribute will handle playing
       popupVideo.srcObject = remoteStream;
       console.log('Stream set, autoplay will handle playback');
@@ -1247,6 +1304,19 @@ function App() {
           });
         }
       }, 2000);
+
+      // Wire up Retry button to force play
+      const retryBtn = popup.document.getElementById('retryBtn');
+      if (retryBtn) {
+        retryBtn.onclick = () => {
+          console.log('🔁 Retry Play clicked');
+          popupVideo.play().then(() => {
+            console.log('Retry play succeeded');
+          }).catch(err => {
+            console.error('Retry play failed:', err);
+          });
+        };
+      }
     }
 
     // Handle popup messages
