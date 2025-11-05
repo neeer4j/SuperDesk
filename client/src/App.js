@@ -549,6 +549,7 @@ function App() {
       setScreenSharing(true); // Mark as screen sharing from start
 
       const pc = initializePeerConnection();
+      setPeerConnection(pc); // CRITICAL: Store peer connection in state
       
       // Add local stream to peer connection
       stream.getTracks().forEach(track => {
