@@ -484,14 +484,8 @@ function App() {
             loadingOverlay.style.display = 'none';
           }
         }
-      } else {
-        // Automatically open remote desktop popup for guests
-        console.log('Auto-opening remote desktop viewer...');
-        setTimeout(() => {
-          console.log('Attempting to open desktop viewer popup');
-          openRemoteDesktop();
-        }, 1500);
       }
+      // Auto-open is now handled by useEffect watching remoteStream
     };
 
     pc.ondatachannel = (event) => {
@@ -889,14 +883,18 @@ function App() {
   // Remote Desktop Popup
   const openRemoteDesktop = () => {
     console.log('=== OPEN REMOTE DESKTOP CLICKED ===');
-    console.log('Session ID:', sessionId);
+    console.log('Session ID (state):', sessionId);
+    console.log('Session ID (ref):', sessionIdRef.current);
     console.log('Remote Stream:', remoteStream);
     console.log('Remote Stream tracks:', remoteStream?.getTracks());
     console.log('Peer Connection:', peerConnection);
     console.log('Peer Connection state:', peerConnection?.connectionState);
     console.log('Is Host:', isHost);
     
-    if (!sessionId) {
+    // Use ref instead of state to avoid stale closure
+    const currentSessionId = sessionIdRef.current;
+    
+    if (!currentSessionId) {
       console.error('No session ID - cannot open desktop');
       alert('No active session. Please join a session first.');
       return;
