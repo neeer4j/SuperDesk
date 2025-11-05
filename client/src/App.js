@@ -1115,6 +1115,7 @@ function App() {
             <video 
               id="remoteVideo" 
               class="remote-video" 
+              autoplay
               playsinline
               muted
             ></video>
@@ -1269,51 +1270,40 @@ function App() {
     if (popupVideo && remoteStream) {
       console.log('📺 openRemoteDesktop: Setting initial remote stream to popup video');
       console.log('Stream object:', remoteStream);
-      console.log('Current srcObject before setting:', popupVideo.srcObject);
       
-      // IMPORTANT: Set up event handlers BEFORE setting srcObject
-      popupVideo.muted = true; // Required for autoplay
+      // Set muted first (required for autoplay)
+      popupVideo.muted = true;
       
-      // Set up metadata handler FIRST
-      popupVideo.onloadedmetadata = () => {
-        console.log('Video metadata loaded in popup');
-        popupVideo.play().then(() => {
-          console.log('✅ Video playing after metadata!');
-          
-          // Clear the progress animation interval
-          if (popup.progressInterval) {
-            clearInterval(popup.progressInterval);
+      // Set up a playing event to hide the loading overlay
+      popupVideo.onplaying = () => {
+        console.log('✅ Video is now playing!');
+        
+        // Clear the progress animation interval
+        if (popup.progressInterval) {
+          clearInterval(popup.progressInterval);
+        }
+        
+        // Update progress to 100% and show success
+        const progressBar = popup.document.getElementById('progressBar');
+        const progressText = popup.document.getElementById('progressText');
+        const statusText = popup.document.getElementById('statusText');
+        const loadingOverlay = popup.document.getElementById('loadingOverlay');
+        
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressText) progressText.textContent = '100%';
+        if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
+        
+        // Hide overlay after a brief moment
+        setTimeout(() => {
+          if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
           }
-          
-          // Update progress to 100% and show success
-          const progressBar = popup.document.getElementById('progressBar');
-          const progressText = popup.document.getElementById('progressText');
-          const statusText = popup.document.getElementById('statusText');
-          const loadingOverlay = popup.document.getElementById('loadingOverlay');
-          
-          if (progressBar) progressBar.style.width = '100%';
-          if (progressText) progressText.textContent = '100%';
-          if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
-          
-          // Hide overlay after a brief moment
-          setTimeout(() => {
-            if (loadingOverlay) {
-              loadingOverlay.style.display = 'none';
-            }
-          }, 500);
-        }).catch(err => {
-          console.error('❌ Error playing video:', err);
-        });
+        }, 500);
       };
       
-      // NOW set the srcObject - this will trigger metadata loading
+      // Set the srcObject - autoplay attribute will handle playing
       popupVideo.srcObject = remoteStream;
-      console.log('Current srcObject after setting:', popupVideo.srcObject);
-      
-      // Clear the progress animation interval
-      if (popup.progressInterval) {
-        clearInterval(popup.progressInterval);
-      }
+      console.log('Stream set, autoplay will handle playback');
     }
 
     // Handle popup messages
