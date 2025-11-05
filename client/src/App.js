@@ -423,7 +423,7 @@ function App() {
       const popupVideo = remoteDesktopWindow.document.getElementById('remoteVideo');
       const loadingOverlay = remoteDesktopWindow.document.getElementById('loadingOverlay');
       
-      if (popupVideo) {
+      if (popupVideo && popupVideo.srcObject !== remoteStream) {
         console.log('Updating popup with new remote stream');
         popupVideo.srcObject = remoteStream;
         popupVideo.muted = true; // Required for autoplay
