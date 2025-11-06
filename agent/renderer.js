@@ -202,6 +202,7 @@ function createPeerConnection() {
       console.log('📤 Sending ICE candidate');
       socket.emit('ice-candidate', {
         sessionId: sessionId,
+        targetId: currentGuestId || undefined,
         candidate: event.candidate
       });
     }
