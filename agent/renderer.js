@@ -374,6 +374,77 @@ function displaySessionId(id) {
 window.startScreenShare = startScreenShare;
 window.stopScreenShare = stopScreenShare;
 
+// Generate a moving canvas test pattern and stream it (for pipeline debugging)
+async function startTestPattern() {
+  try {
+    if (isSharing) {
+      console.log('Already sharing');
+      return;
+    }
+    updateStatus('Starting test pattern...');
+    document.getElementById('startBtn').disabled = true;
+
+    const width = 1280, height = 720;
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    let t = 0;
+    function draw() {
+      ctx.fillStyle = '#222';
+      ctx.fillRect(0,0,width,height);
+      // color bars
+      const colors = ['#F44336','#FF9800','#FFEB3B','#4CAF50','#2196F3','#3F51B5','#9C27B0'];
+      const barW = Math.ceil(width / colors.length);
+      colors.forEach((c, i) => {
+        ctx.fillStyle = c; ctx.fillRect(i*barW, 0, barW, height/2);
+      });
+      // moving text
+      ctx.fillStyle = 'white';
+      ctx.font = '28px sans-serif';
+      ctx.fillText('SuperDesk Test Pattern', 40 + (Math.sin(t/10)*80), height/2 + 50);
+      ctx.fillText('Time: ' + new Date().toLocaleTimeString(), 40, height/2 + 90);
+      t++;
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    const stream = canvas.captureStream(30);
+
+    localStream = stream;
+    isSharing = true;
+    createPeerConnection();
+    let videoSender = null;
+    stream.getTracks().forEach(track => {
+      console.log('Adding test track:', track.kind);
+      const sender = peerConnection.addTrack(track, stream);
+      if (track.kind === 'video') videoSender = sender;
+    });
+
+    try {
+      if (videoSender) {
+        const params = videoSender.getParameters();
+        params.encodings = params.encodings || [{}];
+        params.encodings[0].maxBitrate = 1_500_000;
+        params.encodings[0].maxFramerate = 30;
+        await videoSender.setParameters(params);
+      }
+    } catch {}
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.emit('offer', { sessionId, targetId: currentGuestId || undefined, offer });
+    updateStatus('Test pattern streaming - waiting for guest...');
+    document.getElementById('stopBtn').disabled = false;
+  } catch (e) {
+    console.error('Test pattern error:', e);
+    updateStatus('Error: ' + e.message);
+    isSharing = false;
+    document.getElementById('startBtn').disabled = false;
+  }
+}
+
+window.startTestPattern = startTestPattern;
+
 // Start connection when script loads
 console.log('Agent renderer script loaded');
 connectToServer();
