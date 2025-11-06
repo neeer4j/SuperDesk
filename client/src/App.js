@@ -1291,9 +1291,11 @@ function App() {
         console.log('✅ Video data loaded - ready to play');
       };
       
-      // Set the srcObject - autoplay attribute will handle playing
-      popupVideo.srcObject = remoteStream;
-      console.log('Stream set, autoplay will handle playback');
+  // Set the srcObject - autoplay attribute will handle playing
+  popupVideo.srcObject = remoteStream;
+  // Expose controls temporarily to help user trigger playback if needed
+  try { popupVideo.controls = true; } catch(_) {}
+  console.log('Stream set, autoplay will handle playback');
       
       // Fallback: If autoplay doesn't work within 2 seconds, manually play
       setTimeout(() => {
@@ -1317,6 +1319,28 @@ function App() {
           });
         };
       }
+
+      // Playback watchdog: if ICE is connected but the video stays paused/no frames, reattempt play
+      try {
+        let attempts = 0;
+        const maxAttempts = 5; // ~10s total
+        const watchdog = setInterval(() => {
+          attempts++;
+          const ready = popupVideo.readyState; // 0-4
+          const paused = popupVideo.paused;
+          console.log(`[watchdog] attempt=${attempts} readyState=${ready} paused=${paused}`);
+          if (!paused && ready >= 2) {
+            clearInterval(watchdog);
+            return;
+          }
+          popupVideo.play().catch(() => {});
+          if (attempts >= maxAttempts) {
+            clearInterval(watchdog);
+            const statusText = popup.document.getElementById('statusText');
+            if (statusText) statusText.textContent = 'If the video is still not visible, click Retry or check that the host is sharing.';
+          }
+        }, 2000);
+      } catch(e) { /* noop */ }
     }
 
     // Handle popup messages
