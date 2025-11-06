@@ -5,6 +5,7 @@ let socket;
 let peerConnection;
 let localStream;
 let sessionId;
+let currentGuestId = null; // target guest for directed signaling
 let isSharing = false;
 
 // Server URL - matches the deployed server
@@ -38,16 +39,19 @@ function connectToServer() {
     socket.emit('create-session');
   });
   
-  socket.on('session-created', (data) => {
-    sessionId = data.sessionId;
+  socket.on('session-created', (payload) => {
+    // Server currently sends a plain string; support both string and object
+    sessionId = typeof payload === 'string' ? payload : payload?.sessionId;
     console.log('📝 Session created:', sessionId);
     updateStatus('Ready - Waiting for guest');
     displaySessionId(sessionId);
   });
   
-  socket.on('user-joined', async (data) => {
-    console.log('👤 Guest joined session:', data.socketId);
-    updateStatus('Guest connected! Ready to share...');
+  // Server emits 'guest-joined' with { guestId, sessionId }
+  socket.on('guest-joined', async (data) => {
+    currentGuestId = data?.guestId || null;
+    console.log('👤 Guest joined session:', currentGuestId);
+    updateStatus('Guest connected! Click Start Screen Sharing');
   });
   
   socket.on('offer', async (data) => {
@@ -104,27 +108,52 @@ async function startScreenShare() {
     const primarySource = sources[0];
     
     // Create media stream from screen capture
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: primarySource.id,
-          minWidth: 1280,
-          maxWidth: 1920,
-          minHeight: 720,
-          maxHeight: 1080,
-          minFrameRate: 15,
-          maxFrameRate: 30
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: primarySource.id,
+            minWidth: 1280,
+            maxWidth: 1920,
+            minHeight: 720,
+            maxHeight: 1080,
+            minFrameRate: 15,
+            maxFrameRate: 30
+          }
         }
+      });
+    } catch (e1) {
+      console.warn('getUserMedia with desktop constraints failed, trying getDisplayMedia fallback:', e1);
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            displaySurface: 'monitor',
+            frameRate: { ideal: 30 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+      } catch (e2) {
+        throw e2;
       }
-    });
+    }
     
     localStream = stream;
     isSharing = true;
     
     console.log('✅ Screen capture started');
     console.log('Stream tracks:', stream.getTracks());
+    const vt = stream.getVideoTracks()[0];
+    if (vt) {
+      console.log('Video track settings:', vt.getSettings ? vt.getSettings() : {});
+      vt.onended = () => console.log('Host video track ended');
+      vt.onmute = () => console.log('Host video track muted');
+      vt.onunmute = () => console.log('Host video track unmuted');
+    }
     updateStatus('Screen sharing active - Creating connection...');
     
     // Create peer connection and add stream
@@ -143,6 +172,7 @@ async function startScreenShare() {
     console.log('📤 Sending offer to guest');
     socket.emit('offer', {
       sessionId: sessionId,
+      targetId: currentGuestId || undefined,
       offer: offer
     });
     
