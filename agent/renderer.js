@@ -160,10 +160,39 @@ async function startScreenShare() {
     createPeerConnection();
     
     // Add video track to peer connection
+    let videoSender = null;
     stream.getTracks().forEach(track => {
       console.log('Adding track to peer connection:', track.kind);
-      peerConnection.addTrack(track, stream);
+      const sender = peerConnection.addTrack(track, stream);
+      if (track.kind === 'video') videoSender = sender;
     });
+
+    // Prefer VP8 for maximum compatibility and set reasonable bitrate/framerate
+    try {
+      const transceivers = peerConnection.getTransceivers();
+      const videoTransceiver = transceivers.find(t => t.sender && t.sender === videoSender);
+      if (videoTransceiver && RTCRtpSender.getCapabilities) {
+        const caps = RTCRtpSender.getCapabilities('video');
+        if (caps && caps.codecs) {
+          const vp8 = caps.codecs.find(c => /VP8/i.test(c.mimeType));
+          const others = caps.codecs.filter(c => !/VP8/i.test(c.mimeType));
+          if (vp8 && videoTransceiver.setCodecPreferences) {
+            videoTransceiver.setCodecPreferences([vp8, ...others]);
+            console.log('Set codec preference to VP8 first');
+          }
+        }
+      }
+      if (videoSender) {
+        const params = videoSender.getParameters();
+        params.encodings = params.encodings || [{}];
+        params.encodings[0].maxBitrate = 2_000_000; // 2 Mbps
+        params.encodings[0].maxFramerate = 30;
+        await videoSender.setParameters(params);
+        console.log('Applied video sender parameters');
+      }
+    } catch (e) {
+      console.log('Codec/encoding preference not applied (non-fatal):', e);
+    }
     
     // Create and send offer
     const offer = await peerConnection.createOffer();
