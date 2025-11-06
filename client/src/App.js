@@ -1337,7 +1337,15 @@ function App() {
           if (attempts >= maxAttempts) {
             clearInterval(watchdog);
             const statusText = popup.document.getElementById('statusText');
-            if (statusText) statusText.textContent = 'If the video is still not visible, click Retry or check that the host is sharing.';
+            if (statusText) statusText.textContent = 'If the video is still not visible, requesting reconnect...';
+            // If ICE is connected but we still have no frames, request renegotiation
+            try {
+              const pc = peerConnectionRef.current;
+              if (pc && (pc.iceConnectionState === 'connected' || pc.connectionState === 'connected')) {
+                console.log('Requesting renegotiation from host');
+                socket?.emit('renegotiate', { sessionId: sessionIdRef.current, targetId: remoteSocketIdRef.current });
+              }
+            } catch(_) {}
           }
         }, 2000);
       } catch(e) { /* noop */ }

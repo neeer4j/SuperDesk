@@ -153,6 +153,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Optional renegotiation forwarding (helps recover stuck playback)
+  socket.on('renegotiate', (payload) => {
+    const { sessionId, targetId } = payload || {};
+    const message = { type: 'renegotiate', from: socket.id, sessionId };
+    if (targetId) {
+      socket.to(targetId).emit('renegotiate', message);
+    } else if (sessionId) {
+      socket.to(sessionId).emit('renegotiate', message);
+    }
+  });
+
   // Screen sharing events
   socket.on('start-screen-share', (sessionId) => {
     socket.to(sessionId).emit('screen-share-started');

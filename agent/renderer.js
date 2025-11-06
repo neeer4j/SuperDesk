@@ -20,6 +20,16 @@ const iceServers = {
       urls: 'turn:openrelay.metered.ca:80',
       username: 'openrelayproject',
       credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
     }
   ]
 };
@@ -67,6 +77,28 @@ function connectToServer() {
   socket.on('ice-candidate', async (data) => {
     console.log('📨 Received ICE candidate');
     await handleIceCandidate(data);
+  });
+
+  // Handle renegotiation requests from guest
+  socket.on('renegotiate', async (data) => {
+    console.log('🔄 Renegotiation requested by guest');
+    try {
+      if (!peerConnection) {
+        console.log('No peer connection, creating a new one');
+        createPeerConnection();
+      }
+      // Recreate an offer based on existing tracks/state
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      socket.emit('offer', {
+        sessionId,
+        targetId: currentGuestId || undefined,
+        offer
+      });
+      console.log('📤 Sent renegotiation offer to guest');
+    } catch (e) {
+      console.error('Renegotiation error:', e);
+    }
   });
   
   socket.on('disconnect', () => {
