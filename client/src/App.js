@@ -436,10 +436,9 @@ function App() {
   }, [remoteStream, remoteDesktopWindow]); // Include both dependencies
 
   const initializePeerConnection = () => {
-    const pc = new RTCPeerConnection(servers);
+  const pc = new RTCPeerConnection(servers);
     
-    // Optimize for desktop streaming
-    const senders = [];
+  // Optimize for desktop streaming
 
     // If we're the guest (no local stream), proactively indicate we want to receive
     try {
