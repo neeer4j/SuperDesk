@@ -1913,6 +1913,29 @@ function App() {
                 {remoteStream ? 'Open Desktop Viewer' : 'Waiting for Host...'}
               </Button>
 
+              {remoteStream && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Inline Preview (muted)
+                  </Typography>
+                  <Box
+                    component="video"
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    controls
+                    sx={{
+                      width: '100%',
+                      maxWidth: 520,
+                      borderRadius: 2,
+                      border: '1px solid rgba(0,0,0,0.12)',
+                      backgroundColor: 'black'
+                    }}
+                  />
+                </Box>
+              )}
+
               <Box display="flex" justifyContent="center" gap={2} flexWrap="wrap">
                 <Chip 
                   label={remoteStream ? 'Stream: Ready' : 'Stream: Waiting'} 
