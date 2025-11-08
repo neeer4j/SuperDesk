@@ -170,6 +170,57 @@ function App() {
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
   const remoteScreenRef = useRef(null);
+  const outboundStatsIntervalRef = useRef(null);
+
+  const logLocalVideoDiagnostics = (label) => {
+    const stream = localStreamRef.current;
+    const track = stream?.getVideoTracks?.()[0] || null;
+    if (!track) {
+      console.log(`[diagnostics][local-track] ${label}: no video track`);
+      return;
+    }
+    try {
+      const settings = track.getSettings ? track.getSettings() : {};
+      console.log(`[diagnostics][local-track] ${label}`, {
+        readyState: track.readyState,
+        muted: track.muted,
+        enabled: track.enabled,
+        label: track.label,
+        settings
+      });
+    } catch (e) {
+      console.log(`[diagnostics][local-track] ${label}: settings unavailable`, e);
+    }
+  };
+
+  const startOutboundStatsLogger = (pc) => {
+    if (!pc) return;
+    if (outboundStatsIntervalRef.current) return;
+    outboundStatsIntervalRef.current = setInterval(async () => {
+      try {
+        const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
+        if (!sender) {
+          console.log('[diagnostics][outbound] video sender not ready');
+          return;
+        }
+        const stats = await sender.getStats();
+        stats.forEach((report) => {
+          if (report.type === 'outbound-rtp' && report.kind === 'video') {
+            console.log('[diagnostics][outbound]', {
+              bytesSent: report.bytesSent,
+              framesEncoded: report.framesEncoded,
+              frameWidth: report.frameWidth,
+              frameHeight: report.frameHeight,
+              packetsSent: report.packetsSent,
+              qualityLimitationReason: report.qualityLimitationReason
+            });
+          }
+        });
+      } catch (error) {
+        console.log('[diagnostics][outbound] stats error', error);
+      }
+    }, 3000);
+  };
 
   useEffect(() => {
     // Expose internals for debugging via DevTools console
@@ -187,6 +238,13 @@ function App() {
       }
     };
   }, [remoteStream]);
+
+  useEffect(() => () => {
+    if (outboundStatsIntervalRef.current) {
+      clearInterval(outboundStatsIntervalRef.current);
+      outboundStatsIntervalRef.current = null;
+    }
+  }, []);
 
   const servers = {
     iceServers: [
@@ -371,6 +429,7 @@ function App() {
         localStream.getTracks().forEach(track => track.stop());
         setLocalStream(null);
       }
+      localStreamRef.current = null;
     });
 
     newSocket.on('remote-control-enabled', () => {
@@ -608,6 +667,7 @@ function App() {
       });
       setLocalStream(stream);
       localStreamRef.current = stream; // Store in ref for event handlers
+      logLocalVideoDiagnostics('after getDisplayMedia');
       setIsHost(true); // Mark as host
       setScreenSharing(true); // Mark as screen sharing from start
 
@@ -619,6 +679,8 @@ function App() {
       stream.getTracks().forEach(track => {
         pc.addTrack(track, stream);
       });
+      logLocalVideoDiagnostics('after addTrack');
+      startOutboundStatsLogger(pc);
 
       // Create data channel for file transfer and control
       const dataChannel = pc.createDataChannel('control');
@@ -642,6 +704,17 @@ function App() {
         alert('Screen sharing ended. Session will be terminated.');
         endSession();
       };
+      const hostVideoTrack = stream.getVideoTracks()[0];
+      if (hostVideoTrack) {
+        hostVideoTrack.onmute = () => {
+          console.log('[diagnostics][local-track] mute event fired');
+          logLocalVideoDiagnostics('onmute');
+        };
+        hostVideoTrack.onunmute = () => {
+          console.log('[diagnostics][local-track] unmute event fired');
+          logLocalVideoDiagnostics('onunmute');
+        };
+      }
 
       if (socket) {
         socket.emit('create-session');
@@ -795,6 +868,11 @@ function App() {
       if (dataChannel) {
         dataChannel.close();
         setDataChannel(null);
+      }
+
+      if (outboundStatsIntervalRef.current) {
+        clearInterval(outboundStatsIntervalRef.current);
+        outboundStatsIntervalRef.current = null;
       }
       
       setSessionId('');
