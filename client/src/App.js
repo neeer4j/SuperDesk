@@ -21,34 +21,17 @@ import {
   Paper,
   Alert,
   Chip,
-  Badge,
   CircularProgress,
-  LinearProgress,
-  Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Snackbar,
-  IconButton
+  LinearProgress
 } from '@mui/material';
 
 import {
   DesktopWindows,
   VideoCall,
-  Share,
   Person,
-  Group,
   CheckCircle,
   Cancel,
-  Warning,
   CloudUpload,
-  Download,
-  Settings,
   PowerSettingsNew,
   Computer,
   TouchApp,
@@ -125,15 +108,12 @@ function App() {
   const [localStream, setLocalStream] = useState(null);
   const [peerConnection, setPeerConnection] = useState(null);
   const [dataChannel, setDataChannel] = useState(null);
-  const [remoteSocketId, setRemoteSocketIdState] = useState(null);
   const [fileTransfer, setFileTransfer] = useState({ progress: 0, active: false });
   const [connectionError, setConnectionError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isHost, setIsHost] = useState(false);
   const [remoteControlEnabled, setRemoteControlEnabled] = useState(false);
-  const [connectedUsers, setConnectedUsers] = useState([]);
   const [screenShareRequested, setScreenShareRequested] = useState(false);
-  const [pendingScreenRequests, setPendingScreenRequests] = useState([]);
   const [remoteDesktopWindow, setRemoteDesktopWindow] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
   
@@ -152,7 +132,6 @@ function App() {
 
   const setRemoteSocketId = (value) => {
     remoteSocketIdRef.current = value;
-    setRemoteSocketIdState(value);
   };
   
   // Toggle dark/light mode
@@ -166,7 +145,6 @@ function App() {
   const remoteSocketIdRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
-  const audioRef = useRef(null);
   const fileInputRef = useRef(null);
   const outboundStatsIntervalRef = useRef(null);
 
@@ -290,8 +268,7 @@ function App() {
       // Screen sharing event handlers
       newSocket.on('screen-share-requested', (data) => {
         const { requesterId } = data;
-        setPendingScreenRequests(prev => [...prev, requesterId]);
-        alert('Someone wants to request screen sharing permission!');
+        alert(`Screen share requested by ${requesterId}`);
       });
 
       // Guest joined - host needs to send offer
@@ -410,7 +387,6 @@ function App() {
     newSocket.on('user-left', (userId) => {
       console.log('👤 User left session:', userId);
       alert('User left the session');
-      setConnectedUsers(prev => prev.filter(user => user !== userId));
     });
 
     newSocket.on('session-ended', () => {
@@ -421,8 +397,7 @@ function App() {
       setRemoteStream(null);
       setIsHost(false);
       setRemoteSocketId(null);
-      setRemoteControlEnabled(false);
-      setConnectedUsers([]);
+  setRemoteControlEnabled(false);
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         setLocalStream(null);
@@ -458,6 +433,7 @@ function App() {
     });
 
     return () => newSocket.close();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update popup window when remoteStream changes (ONLY for cases where stream arrives AFTER popup opens)
@@ -829,9 +805,7 @@ function App() {
       setIsHost(false);
       setRemoteSocketId(null);
   setRemoteControlEnabled(false);
-  setConnectedUsers([]);
-      setScreenShareRequested(false);
-      setPendingScreenRequests([]);
+  setScreenShareRequested(false);
       setFileTransfer({ progress: 0, active: false });
       
       alert('Session ended successfully!');
