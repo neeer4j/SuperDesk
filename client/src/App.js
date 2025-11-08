@@ -171,6 +171,23 @@ function App() {
   const fileInputRef = useRef(null);
   const remoteScreenRef = useRef(null);
 
+  useEffect(() => {
+    // Expose internals for debugging via DevTools console
+    window.superdeskDebug = {
+      getSessionId: () => sessionIdRef.current,
+      getPeerConnection: () => peerConnectionRef.current,
+      getLocalStream: () => localStreamRef.current,
+      getRemoteStream: () => remoteStream,
+      getVideoElement: () => videoRef.current
+    };
+
+    return () => {
+      if (window.superdeskDebug) {
+        delete window.superdeskDebug;
+      }
+    };
+  }, [remoteStream]);
+
   const servers = {
     iceServers: [
       // Google's free STUN servers
