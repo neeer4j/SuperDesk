@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 import config from './config';
 import './App.css';
@@ -132,7 +132,6 @@ function App() {
   const [isHost, setIsHost] = useState(false);
   const [remoteControlEnabled, setRemoteControlEnabled] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState([]);
-  const [screenSharing, setScreenSharing] = useState(false);
   const [screenShareRequested, setScreenShareRequested] = useState(false);
   const [pendingScreenRequests, setPendingScreenRequests] = useState([]);
   const [remoteDesktopWindow, setRemoteDesktopWindow] = useState(null);
@@ -169,7 +168,6 @@ function App() {
   const localStreamRef = useRef(null);
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
-  const remoteScreenRef = useRef(null);
   const outboundStatsIntervalRef = useRef(null);
 
   const logLocalVideoDiagnostics = (label) => {
@@ -462,22 +460,6 @@ function App() {
     return () => newSocket.close();
   }, []);
 
-  // Update popup when remote stream changes
-  // Auto-open remote desktop when guest receives stream
-  useEffect(() => {
-    if (remoteStream && !isHost && (!remoteDesktopWindow || remoteDesktopWindow.closed)) {
-      // Automatically open remote desktop viewer for guests ONLY if not already open
-      console.log('🚀 Auto-opening remote desktop for guest');
-      setTimeout(() => {
-        openRemoteDesktop();
-        // Enable remote control by default
-        setTimeout(() => {
-          enableRemoteControl();
-        }, 1000);
-      }, 1000);
-    }
-  }, [remoteStream, isHost]);
-
   // Update popup window when remoteStream changes (ONLY for cases where stream arrives AFTER popup opens)
   useEffect(() => {
     console.log('🔄 useEffect triggered - remoteStream changed');
@@ -668,8 +650,7 @@ function App() {
       setLocalStream(stream);
       localStreamRef.current = stream; // Store in ref for event handlers
       logLocalVideoDiagnostics('after getDisplayMedia');
-      setIsHost(true); // Mark as host
-      setScreenSharing(true); // Mark as screen sharing from start
+  setIsHost(true); // Mark as host
 
       const pc = initializePeerConnection();
       setPeerConnection(pc); // CRITICAL: Store peer connection in state
@@ -798,54 +779,21 @@ function App() {
   };
 
   // Remote Control Functions
-  const enableRemoteControl = () => {
+  const enableRemoteControl = useCallback(() => {
     setRemoteControlEnabled(true);
     if (socket) {
       socket.emit('enable-remote-control', { sessionId });
     }
     alert('Remote control enabled! Click on the screen to control the remote PC.');
-  };
+  }, [socket, sessionId]);
 
-  const disableRemoteControl = () => {
+  const disableRemoteControl = useCallback(() => {
     setRemoteControlEnabled(false);
     if (socket) {
       socket.emit('disable-remote-control', { sessionId });
     }
     alert('Remote control disabled.');
-  };
-
-  const handleMouseEvent = (event) => {
-    if (!remoteControlEnabled || !socket) return;
-    
-    const rect = remoteScreenRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const x = ((event.clientX - rect.left) / rect.width) * 1920; // Assume 1920x1080 remote screen
-    const y = ((event.clientY - rect.top) / rect.height) * 1080;
-
-    socket.emit('mouse-event', {
-      sessionId,
-      type: event.type,
-      x: Math.round(x),
-      y: Math.round(y),
-      button: event.button
-    });
-  };
-
-  const handleKeyboardEvent = (event) => {
-    if (!remoteControlEnabled || !socket) return;
-    
-    event.preventDefault();
-    socket.emit('keyboard-event', {
-      sessionId,
-      type: event.type,
-      key: event.key,
-      keyCode: event.keyCode,
-      ctrlKey: event.ctrlKey,
-      shiftKey: event.shiftKey,
-      altKey: event.altKey
-    });
-  };
+  }, [socket, sessionId]);
 
   // Session Management
   const endSession = () => {
@@ -880,9 +828,8 @@ function App() {
       setRemoteStream(null);
       setIsHost(false);
       setRemoteSocketId(null);
-      setRemoteControlEnabled(false);
-      setConnectedUsers([]);
-      setScreenSharing(false);
+  setRemoteControlEnabled(false);
+  setConnectedUsers([]);
       setScreenShareRequested(false);
       setPendingScreenRequests([]);
       setFileTransfer({ progress: 0, active: false });
@@ -903,106 +850,8 @@ function App() {
     }
   };
 
-  const startScreenShare = async () => {
-    try {
-      // Get screen capture
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          cursor: 'always',
-          displaySurface: 'monitor'
-        },
-        audio: true
-      });
-
-      // Replace video track in peer connection
-      if (peerConnection && localStream) {
-        const videoTrack = screenStream.getVideoTracks()[0];
-        const sender = peerConnection.getSenders().find(s => 
-          s.track && s.track.kind === 'video'
-        );
-        
-        if (sender) {
-          await sender.replaceTrack(videoTrack);
-        }
-      }
-
-      setScreenSharing(true);
-      
-      // Notify other participants
-      if (socket) {
-        socket.emit('screen-share-started', sessionId);
-      }
-
-      // Handle when user stops sharing (browser stop button)
-      screenStream.getVideoTracks()[0].onended = () => {
-        stopScreenShare();
-      };
-
-      alert('Screen sharing started! Others can now see your screen.');
-    } catch (error) {
-      console.error('Error starting screen share:', error);
-      alert('Could not start screen sharing: ' + error.message);
-    }
-  };
-
-  const stopScreenShare = async () => {
-    try {
-      // Get camera stream back
-      const cameraStream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
-      });
-
-      // Replace screen track with camera track
-      if (peerConnection) {
-        const videoTrack = cameraStream.getVideoTracks()[0];
-        const sender = peerConnection.getSenders().find(s => 
-          s.track && s.track.kind === 'video'
-        );
-        
-        if (sender) {
-          await sender.replaceTrack(videoTrack);
-        }
-      }
-
-      setLocalStream(cameraStream);
-      setScreenSharing(false);
-      
-      // Notify other participants
-      if (socket) {
-        socket.emit('screen-share-stopped', sessionId);
-      }
-
-      alert('Screen sharing stopped. Back to camera view.');
-    } catch (error) {
-      console.error('Error stopping screen share:', error);
-    }
-  };
-
-  const approveScreenRequest = (requesterId) => {
-    if (socket) {
-      socket.emit('approve-screen-request', { 
-        sessionId, 
-        requesterId 
-      });
-    }
-    setPendingScreenRequests(prev => prev.filter(id => id !== requesterId));
-    alert('Screen share request approved!');
-  };
-
-  const denyScreenRequest = (requesterId) => {
-    if (socket) {
-      socket.emit('deny-screen-request', { 
-        sessionId, 
-        requesterId 
-      });
-    }
-    setPendingScreenRequests(prev => prev.filter(id => id !== requesterId));
-    alert('Screen share request denied.');
-  };
-
   // Remote Desktop Popup
-  const openRemoteDesktop = () => {
+  const openRemoteDesktop = useCallback(() => {
     console.log('=== OPEN REMOTE DESKTOP CLICKED ===');
     console.log('Session ID (state):', sessionId);
     console.log('Session ID (ref):', sessionIdRef.current);
@@ -1489,11 +1338,36 @@ function App() {
             }
           }
           break;
+        default:
+          console.log('Unhandled popup message:', event.data);
+          break;
       }
     };
 
     window.addEventListener('message', handlePopupMessage);
-  };
+  }, [
+    disableRemoteControl,
+    enableRemoteControl,
+    isHost,
+    peerConnection,
+    remoteDesktopWindow,
+    remoteStream,
+    sessionId,
+    socket
+  ]);
+
+  // Update popup when remote stream changes; auto-open for guests
+  useEffect(() => {
+    if (remoteStream && !isHost && (!remoteDesktopWindow || remoteDesktopWindow.closed)) {
+      console.log('🚀 Auto-opening remote desktop for guest');
+      setTimeout(() => {
+        openRemoteDesktop();
+        setTimeout(() => {
+          enableRemoteControl();
+        }, 1000);
+      }, 1000);
+    }
+  }, [remoteStream, isHost, remoteDesktopWindow, openRemoteDesktop, enableRemoteControl]);
 
   const handleOffer = async (payload) => {
     console.log('=== RECEIVED OFFER ===');
