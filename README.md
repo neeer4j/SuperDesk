@@ -2,6 +2,10 @@
 
 SuperDesk is a comprehensive remote desktop access web application designed for personal use on Windows platforms. It provides secure, real-time screen sharing, bidirectional audio communication, camera access, and file transfer capabilities.
 
+## 🚀 Quick Start
+
+Run `start-dev.bat` to launch both server and client automatically! The server will start on port 3001 and the client on port 3000.
+
 ## 🚀 Features
 
 - **Web-based Client Interface** - Access from any modern browser
