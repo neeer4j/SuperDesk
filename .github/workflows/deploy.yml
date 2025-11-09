@@ -11,9 +11,6 @@ jobs:
   # Build and test the client
   client-build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./client
     
     steps:
     - uses: actions/checkout@v3
@@ -23,13 +20,13 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: client/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install dependencies
-      run: npm ci
+      run: npm run install:all
     
     - name: Build client
-      run: npm run build
+      run: cd client && npm run build
       env:
         REACT_APP_SERVER_URL: ${{ secrets.REACT_APP_SERVER_URL }}
     
@@ -42,9 +39,6 @@ jobs:
   # Test the server
   server-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./server
     
     steps:
     - uses: actions/checkout@v3
@@ -54,13 +48,14 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: server/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install dependencies
-      run: npm ci
+      run: npm run install:all
     
     - name: Start server for testing
       run: |
+        cd server
         npm start &
         sleep 5
         curl -f http://localhost:3001/health || exit 1
