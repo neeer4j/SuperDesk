@@ -237,6 +237,8 @@ function App() {
   }, []);
 
   const [forceRelay, setForceRelay] = useState(false);
+  // Track if we've already tried automatic relay fallback this session
+  const relayAutoTriedRef = useRef(false);
   const servers = {
     iceServers: [
       // Google's free STUN servers
@@ -650,6 +652,22 @@ function App() {
             console.log('🔎 ICE diagnostics summary (guest):', candidateStats);
           } catch (_) {}
         });
+
+        // Auto relay fallback: only attempt once, only if not already forcing relay, and not yet connected
+        if (!relayAutoTriedRef.current && !forceRelay && state === 'failed') {
+          relayAutoTriedRef.current = true;
+          console.log('🛠️ Auto relay fallback triggered: enabling relay-only and requesting renegotiation');
+          setForceRelay(true);
+          const activeSocket = socketRef.current;
+          // Ask host to renegotiate so we get a fresh offer while in relay-only mode
+          activeSocket?.emit('renegotiate', { sessionId: sessionIdRef.current, targetId: remoteSocketIdRef.current });
+          if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
+            try {
+              const overlay = remoteDesktopWindow.document.getElementById('statusOverlay');
+              if (overlay) overlay.textContent = 'Retrying with TURN relay...';
+            } catch(_) {}
+          }
+        }
       }
     };
 
