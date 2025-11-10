@@ -12,6 +12,7 @@
   "dependencies": {
     "electron": "^28.0.0",
     "node-global-key-listener": "^0.1.1",
+    "robotjs": "^0.6.0",
     "screenshot-desktop": "^1.15.3",
     "socket.io-client": "^4.7.4"
   },

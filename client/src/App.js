@@ -113,7 +113,7 @@ function App() {
   const [isHost, setIsHost] = useState(false);
   const [remoteControlEnabled, setRemoteControlEnabled] = useState(false);
   const [screenShareRequested, setScreenShareRequested] = useState(false);
-  const [remoteDesktopWindow, setRemoteDesktopWindow] = useState(null);
+  const [remoteDesktopWindow, setRemoteDesktopWindowState] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
   
   // Create theme based on current mode
@@ -139,7 +139,13 @@ function App() {
   };
   
   const videoRef = useRef(null);
+  const remoteDesktopWindowRef = useRef(null);
+  const isHostRef = useRef(false);
   const sessionIdRef = useRef('');
+  const setRemoteDesktopWindow = useCallback((value) => {
+    remoteDesktopWindowRef.current = value;
+    setRemoteDesktopWindowState(value);
+  }, []);
   const joinSessionIdRef = useRef('');
   const remoteSocketIdRef = useRef(null);
   const socketRef = useRef(null);
@@ -218,6 +224,10 @@ function App() {
       }
     };
   }, [remoteStream]);
+
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
 
   useEffect(() => () => {
     if (outboundStatsIntervalRef.current) {
@@ -403,7 +413,11 @@ function App() {
       setRemoteStream(null);
       setIsHost(false);
       setRemoteSocketId(null);
-  setRemoteControlEnabled(false);
+      setRemoteControlEnabled(false);
+      if (remoteDesktopWindowRef.current && !remoteDesktopWindowRef.current.closed) {
+        remoteDesktopWindowRef.current.close();
+      }
+      setRemoteDesktopWindow(null);
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         setLocalStream(null);
@@ -412,12 +426,21 @@ function App() {
     });
 
       newSocket.on('remote-control-enabled', () => {
-      alert('Remote control has been enabled by the host');
+      setRemoteControlEnabled(true);
+      if (isHostRef.current) {
+        alert('Guest remote control enabled. You can disable it any time from the dashboard.');
+      } else {
+        alert('Remote control has been enabled by the host');
+      }
     });
 
       newSocket.on('remote-control-disabled', () => {
-      alert('Remote control has been disabled by the host');
       setRemoteControlEnabled(false);
+      if (isHostRef.current) {
+        alert('Guest remote control disabled.');
+      } else {
+        alert('Remote control has been disabled by the host');
+      }
     });
 
       newSocket.on('offer', async (data) => {
@@ -1065,6 +1088,11 @@ function App() {
     }
 
     console.log('Popup created successfully');
+    try {
+      popup.remoteControlEnabled = remoteControlEnabled;
+    } catch (error) {
+      console.log('Unable to prime popup remote control state:', error);
+    }
     // Don't set state yet - wait until we're done setting up
 
   // Create the popup content
@@ -1251,33 +1279,35 @@ function App() {
             }
           }, 800);
           
-          function toggleRemoteControl() {
-            remoteControlEnabled = !remoteControlEnabled;
+          function applyRemoteControlState(enabled) {
+            remoteControlEnabled = !!enabled;
             window.remoteControlEnabled = remoteControlEnabled;
             const btn = document.getElementById('toggleControl');
             const remoteVideoElement = document.getElementById('remoteVideo');
             const status = document.getElementById('statusOverlay');
-            
+
+            if (!btn || !remoteVideoElement || !status) {
+              return;
+            }
+
             if (remoteControlEnabled) {
               btn.textContent = 'Disable Control';
               btn.classList.add('active');
               remoteVideoElement.style.cursor = 'crosshair';
               status.textContent = '🖱️ Remote Control Active';
-              
-              // Notify parent window
-              if (parentWindow && !parentWindow.closed) {
-                parentWindow.postMessage({ type: 'enableRemoteControl' }, '*');
-              }
             } else {
               btn.textContent = 'Enable Control';
               btn.classList.remove('active');
               remoteVideoElement.style.cursor = 'default';
               status.textContent = '👁️ View Only';
-              
-              // Notify parent window
-              if (parentWindow && !parentWindow.closed) {
-                parentWindow.postMessage({ type: 'disableRemoteControl' }, '*');
-              }
+            }
+          }
+
+          function toggleRemoteControl() {
+            applyRemoteControlState(!remoteControlEnabled);
+
+            if (parentWindow && !parentWindow.closed) {
+              parentWindow.postMessage({ type: remoteControlEnabled ? 'enableRemoteControl' : 'disableRemoteControl' }, '*');
             }
           }
           
@@ -1316,6 +1346,17 @@ function App() {
             }, '*');
           }
           
+          window.addEventListener('message', function(event) {
+            const message = event.data;
+            if (!message || typeof message !== 'object') {
+              return;
+            }
+
+            if (message.type === 'syncRemoteControlState') {
+              applyRemoteControlState(message.enabled);
+            }
+          });
+
           // Add event listeners
           var remoteVideoElement = document.getElementById('remoteVideo');
           remoteVideoElement.addEventListener('mousedown', handleMouseEvent);
@@ -1335,7 +1376,7 @@ function App() {
           });
           
           // Initialize
-          document.getElementById('statusOverlay').textContent = '👁️ View Only';
+          applyRemoteControlState(remoteControlEnabled);
         </script>
       </body>
       </html>
@@ -1538,6 +1579,18 @@ function App() {
       }, 1000);
     }
   }, [remoteStream, isHost, remoteDesktopWindow, openRemoteDesktop, enableRemoteControl]);
+
+  useEffect(() => {
+    const popup = remoteDesktopWindow;
+    if (!popup || popup.closed) {
+      return;
+    }
+    try {
+      popup.postMessage({ type: 'syncRemoteControlState', enabled: remoteControlEnabled }, '*');
+    } catch (error) {
+      console.log('Failed to sync remote control state to popup:', error);
+    }
+  }, [remoteControlEnabled, remoteDesktopWindow]);
 
   const handleOffer = async (payload) => {
     console.log('=== RECEIVED OFFER ===');

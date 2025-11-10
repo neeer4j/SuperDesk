@@ -1,5 +1,6 @@
 const io = require('socket.io-client');
 const { ipcRenderer } = require('electron');
+const robot = require('robotjs');
 
 let socket;
 let peerConnection;
@@ -8,6 +9,13 @@ let sessionId;
 let currentGuestId = null; // target guest for directed signaling
 let isSharing = false;
 let pendingIceCandidates = []; // Buffer for early ICE candidates
+let remoteControlEnabled = false;
+let screenSize = robot.getScreenSize();
+let captureDimensions = { width: screenSize.width, height: screenSize.height };
+const activeKeys = new Set();
+
+const REMOTE_REFERENCE_WIDTH = 1920;
+const REMOTE_REFERENCE_HEIGHT = 1080;
 
 // Server URL - use local server for development
 const SERVER_URL = 'http://localhost:3001';
@@ -84,6 +92,22 @@ function connectToServer() {
     await handleIceCandidate(data);
   });
 
+  socket.on('remote-control-enabled', () => {
+    remoteControlEnabled = true;
+    updateStatus('Remote control enabled');
+    console.log('🎯 Remote control enabled');
+  });
+
+  socket.on('remote-control-disabled', () => {
+    remoteControlEnabled = false;
+    releaseActiveKeys();
+    updateStatus('Remote control disabled');
+    console.log('🚫 Remote control disabled');
+  });
+
+  socket.on('mouse-event', handleRemoteMouseEvent);
+  socket.on('keyboard-event', handleRemoteKeyboardEvent);
+
   // Handle renegotiation requests from guest
   socket.on('renegotiate', async (data) => {
     console.log('🔄 Renegotiation requested by guest');
@@ -108,6 +132,8 @@ function connectToServer() {
   
   socket.on('disconnect', () => {
     console.log('❌ Disconnected from server');
+    remoteControlEnabled = false;
+    releaseActiveKeys();
     updateStatus('Disconnected from server');
   });
   
@@ -115,6 +141,197 @@ function connectToServer() {
     console.error('Socket error:', error);
     updateStatus('Error: ' + error);
   });
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function updateCaptureMetrics(stream) {
+  try {
+    const track = stream?.getVideoTracks?.()[0];
+    if (track && track.getSettings) {
+      const settings = track.getSettings();
+      if (settings.width && settings.height) {
+        captureDimensions = {
+          width: settings.width,
+          height: settings.height
+        };
+        console.log('🎯 Capture dimensions updated:', captureDimensions);
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn('Unable to read capture settings:', error);
+  }
+  captureDimensions = { width: screenSize.width, height: screenSize.height };
+}
+
+const KEY_CODE_MAP = {
+  Backquote: 'grave',
+  Minus: 'minus',
+  Equal: 'equals',
+  BracketLeft: 'leftbracket',
+  BracketRight: 'rightbracket',
+  Backslash: 'backslash',
+  Semicolon: 'semicolon',
+  Quote: 'quote',
+  Comma: 'comma',
+  Period: 'period',
+  Slash: 'slash',
+  Space: 'space',
+  Enter: 'enter',
+  NumpadEnter: 'enter',
+  Tab: 'tab',
+  Backspace: 'backspace',
+  Delete: 'delete',
+  Escape: 'escape',
+  CapsLock: 'capslock',
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  Home: 'home',
+  End: 'end',
+  PageUp: 'pageup',
+  PageDown: 'pagedown',
+  Insert: 'insert',
+  ControlLeft: 'control',
+  ControlRight: 'control',
+  ShiftLeft: 'shift',
+  ShiftRight: 'shift',
+  AltLeft: 'alt',
+  AltRight: 'alt',
+  MetaLeft: 'command',
+  MetaRight: 'command',
+  Pause: 'pause',
+  ScrollLock: 'scrolllock',
+  PrintScreen: 'printscreen'
+};
+
+function translateCoordinates(x, y) {
+  const width = captureDimensions.width || screenSize.width;
+  const height = captureDimensions.height || screenSize.height;
+  const clampedX = clamp(x, 0, REMOTE_REFERENCE_WIDTH);
+  const clampedY = clamp(y, 0, REMOTE_REFERENCE_HEIGHT);
+  return {
+    x: Math.round((clampedX / REMOTE_REFERENCE_WIDTH) * width),
+    y: Math.round((clampedY / REMOTE_REFERENCE_HEIGHT) * height)
+  };
+}
+
+function mapMouseButton(buttonIndex = 0) {
+  if (buttonIndex === 2) return 'right';
+  if (buttonIndex === 1) return 'middle';
+  return 'left';
+}
+
+function handleRemoteMouseEvent(data = {}) {
+  if (!remoteControlEnabled) return;
+  const { type, x, y, button } = data;
+  if (typeof x !== 'number' || typeof y !== 'number') return;
+
+  const coordinates = translateCoordinates(x, y);
+
+  try {
+    switch (type) {
+      case 'mousemove':
+        robot.moveMouse(coordinates.x, coordinates.y);
+        break;
+      case 'mousedown':
+        robot.moveMouse(coordinates.x, coordinates.y);
+        robot.mouseToggle('down', mapMouseButton(button));
+        break;
+      case 'mouseup':
+        robot.moveMouse(coordinates.x, coordinates.y);
+        robot.mouseToggle('up', mapMouseButton(button));
+        break;
+      default:
+        break;
+    }
+  } catch (error) {
+    console.error('Mouse control error:', error);
+  }
+}
+
+function toRobotKey(code, key) {
+  if (code && code.startsWith('Key')) {
+    return code.slice(3).toLowerCase();
+  }
+  if (code && code.startsWith('Digit')) {
+    return code.slice(5);
+  }
+  if (code && code.startsWith('Numpad')) {
+    const suffix = code.slice(6);
+    if (/^[0-9]$/.test(suffix)) {
+      return `numpad_${suffix}`;
+    }
+    switch (suffix.toLowerCase()) {
+      case 'add':
+        return 'numpad_add';
+      case 'subtract':
+        return 'numpad_subtract';
+      case 'multiply':
+        return 'numpad_multiply';
+      case 'divide':
+        return 'numpad_divide';
+      case 'decimal':
+        return 'numpad_decimal';
+      case 'enter':
+        return 'enter';
+      default:
+        break;
+    }
+  }
+  if (code && /^F[1-9][0-2]?$/.test(code)) {
+    return code.toLowerCase();
+  }
+
+  if (code && KEY_CODE_MAP[code]) {
+    return KEY_CODE_MAP[code];
+  }
+  if (key && KEY_CODE_MAP[key]) {
+    return KEY_CODE_MAP[key];
+  }
+  if (key && key.length === 1) {
+    return key.toLowerCase();
+  }
+  return null;
+}
+
+function handleRemoteKeyboardEvent(data = {}) {
+  if (!remoteControlEnabled) return;
+  const { type, key, code } = data;
+  const robotKey = toRobotKey(code, key);
+
+  if (!robotKey) {
+    console.log('Unmapped keyboard event:', data);
+    return;
+  }
+
+  try {
+    if (type === 'keydown') {
+      if (activeKeys.has(robotKey)) return;
+      robot.keyToggle(robotKey, 'down');
+      activeKeys.add(robotKey);
+    } else if (type === 'keyup') {
+      robot.keyToggle(robotKey, 'up');
+      activeKeys.delete(robotKey);
+    }
+  } catch (error) {
+    console.error('Keyboard control error:', error);
+  }
+}
+
+function releaseActiveKeys() {
+  activeKeys.forEach((robotKey) => {
+    try {
+      robot.keyToggle(robotKey, 'up');
+    } catch (error) {
+      console.error('Failed to release key:', robotKey, error);
+    }
+  });
+  activeKeys.clear();
 }
 
 // Start screen sharing
@@ -176,8 +393,11 @@ async function startScreenShare() {
       }
     }
     
+    screenSize = robot.getScreenSize();
     localStream = stream;
     isSharing = true;
+
+    updateCaptureMetrics(stream);
     
     console.log('✅ Screen capture started');
     console.log('Stream tracks:', stream.getTracks());
@@ -434,6 +654,10 @@ async function handleIceCandidate(data) {
 
 // Stop screen sharing
 function stopScreenShare() {
+  remoteControlEnabled = false;
+  releaseActiveKeys();
+  captureDimensions = { width: screenSize.width, height: screenSize.height };
+
   if (localStream) {
     localStream.getTracks().forEach(track => track.stop());
     localStream = null;
@@ -505,10 +729,12 @@ async function startTestPattern() {
     }
     draw();
 
-    const stream = canvas.captureStream(30);
+  const stream = canvas.captureStream(30);
 
-    localStream = stream;
-    isSharing = true;
+  screenSize = robot.getScreenSize();
+  captureDimensions = { width, height };
+  localStream = stream;
+  isSharing = true;
     createPeerConnection();
     let videoSender = null;
     stream.getTracks().forEach(track => {
