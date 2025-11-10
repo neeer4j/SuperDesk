@@ -1,5 +1,5 @@
 const io = require('socket.io-client');
-const electron = require('electron');
+const { ipcRenderer } = require('electron');
 
 let socket;
 let peerConnection;
@@ -7,9 +7,10 @@ let localStream;
 let sessionId;
 let currentGuestId = null; // target guest for directed signaling
 let isSharing = false;
+let pendingIceCandidates = []; // Buffer for early ICE candidates
 
-// Server URL - matches the deployed server
-const SERVER_URL = 'https://superdesk-7m7f.onrender.com';
+// Server URL - use local server for development
+const SERVER_URL = 'http://localhost:3001';
 
 // ICE servers configuration
 const iceServers = {
@@ -70,12 +71,16 @@ function connectToServer() {
   });
   
   socket.on('answer', async (data) => {
-    console.log('📨 Received answer from guest');
+    console.log('📨 ===== RECEIVED ANSWER FROM GUEST =====');
+    console.log('Answer data:', data);
     await handleAnswer(data);
   });
   
   socket.on('ice-candidate', async (data) => {
-    console.log('📨 Received ICE candidate');
+    console.log('📨 Received ICE candidate from guest');
+    console.log('Current peer connection state:', peerConnection?.connectionState);
+    console.log('Current signaling state:', peerConnection?.signalingState);
+    console.log('Remote description set?', !!peerConnection?.remoteDescription);
     await handleIceCandidate(data);
   });
 
@@ -123,11 +128,8 @@ async function startScreenShare() {
     updateStatus('Getting screen sources...');
     document.getElementById('startBtn').disabled = true;
     
-    // Get desktop sources using Electron's desktopCapturer
-    const sources = await electron.desktopCapturer.getSources({
-      types: ['screen'],
-      thumbnailSize: { width: 1920, height: 1080 }
-    });
+    // Get desktop sources using IPC to communicate with main process
+    const sources = await ipcRenderer.invoke('get-sources');
     
     if (sources.length === 0) {
       throw new Error('No screen sources available');
@@ -182,8 +184,17 @@ async function startScreenShare() {
     const vt = stream.getVideoTracks()[0];
     if (vt) {
       console.log('Video track settings:', vt.getSettings ? vt.getSettings() : {});
+      console.log('Video track state:', {
+        enabled: vt.enabled,
+        muted: vt.muted,
+        readyState: vt.readyState,
+        label: vt.label
+      });
       vt.onended = () => console.log('Host video track ended');
-      vt.onmute = () => console.log('Host video track muted');
+      vt.onmute = () => {
+        console.warn('⚠️ Host video track muted!');
+        console.log('Track state:', { enabled: vt.enabled, readyState: vt.readyState });
+      };
       vt.onunmute = () => console.log('Host video track unmuted');
     }
     updateStatus('Screen sharing active - Creating connection...');
@@ -194,7 +205,11 @@ async function startScreenShare() {
     // Add video track to peer connection
     let videoSender = null;
     stream.getTracks().forEach(track => {
-      console.log('Adding track to peer connection:', track.kind);
+      console.log('Adding track to peer connection:', track.kind, {
+        enabled: track.enabled,
+        muted: track.muted,
+        readyState: track.readyState
+      });
       const sender = peerConnection.addTrack(track, stream);
       if (track.kind === 'video') videoSender = sender;
     });
@@ -261,28 +276,68 @@ function createPeerConnection() {
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
       console.log('📤 Sending ICE candidate');
+      console.log('Candidate details:', event.candidate);
       socket.emit('ice-candidate', {
         sessionId: sessionId,
         targetId: currentGuestId || undefined,
         candidate: event.candidate
       });
+    } else {
+      console.log('✅ All ICE candidates have been sent');
     }
   };
   
   peerConnection.onconnectionstatechange = () => {
     console.log('Connection state:', peerConnection.connectionState);
+    console.log('Full connection details:', {
+      connectionState: peerConnection.connectionState,
+      iceConnectionState: peerConnection.iceConnectionState,
+      iceGatheringState: peerConnection.iceGatheringState,
+      signalingState: peerConnection.signalingState
+    });
     updateStatus('Connection: ' + peerConnection.connectionState);
     
     if (peerConnection.connectionState === 'connected') {
       updateStatus('✅ Connected! Guest is viewing your screen');
+    } else if (peerConnection.connectionState === 'failed') {
+      console.error('❌ Connection failed!');
+      updateStatus('❌ Connection failed - trying to reconnect...');
     }
   };
   
   peerConnection.oniceconnectionstatechange = () => {
     console.log('ICE connection state:', peerConnection.iceConnectionState);
+    console.log('ICE gathering state:', peerConnection.iceGatheringState);
     
     if (peerConnection.iceConnectionState === 'connected') {
       updateStatus('✅ Streaming desktop to guest');
+      
+      // Start monitoring video stats
+      const statsInterval = setInterval(async () => {
+        if (!peerConnection || peerConnection.connectionState === 'closed') {
+          clearInterval(statsInterval);
+          return;
+        }
+        
+        try {
+          const stats = await peerConnection.getStats();
+          stats.forEach(report => {
+            if (report.type === 'outbound-rtp' && report.kind === 'video') {
+              console.log('📊 Video stats:', {
+                bytesSent: report.bytesSent,
+                packetsSent: report.packetsSent,
+                framesEncoded: report.framesEncoded,
+                timestamp: report.timestamp
+              });
+            }
+          });
+        } catch (e) {
+          console.error('Error getting stats:', e);
+        }
+      }, 5000); // Check every 5 seconds
+    } else if (peerConnection.iceConnectionState === 'failed') {
+      console.error('❌ ICE connection failed!');
+      updateStatus('❌ ICE connection failed');
     }
   };
   
@@ -317,10 +372,38 @@ async function handleOffer(data) {
 // Handle answer from guest
 async function handleAnswer(data) {
   try {
+    console.log('=== HANDLING ANSWER ===');
+    console.log('Answer data:', data);
+    console.log('Current peer connection state:', peerConnection?.connectionState);
+    console.log('Current signaling state:', peerConnection?.signalingState);
+    
+    if (!peerConnection) {
+      console.error('❌ No peer connection to handle answer!');
+      return;
+    }
+    
     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
     console.log('✅ Answer set successfully');
+    console.log('New signaling state:', peerConnection.signalingState);
+    console.log('Local description:', peerConnection.localDescription ? 'Set' : 'Not set');
+    console.log('Remote description:', peerConnection.remoteDescription ? 'Set' : 'Not set');
+
+    // Process any buffered ICE candidates
+    if (pendingIceCandidates.length > 0) {
+      console.log(`Processing ${pendingIceCandidates.length} buffered ICE candidates...`);
+      for (const candidate of pendingIceCandidates) {
+        try {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log('✅ Buffered ICE candidate added');
+        } catch (error) {
+          console.error('Error adding buffered ICE candidate:', error);
+        }
+      }
+      // Clear the buffer
+      pendingIceCandidates = [];
+    }
   } catch (error) {
-    console.error('Error handling answer:', error);
+    console.error('❌ Error handling answer:', error);
     updateStatus('Error handling answer: ' + error.message);
   }
 }
@@ -328,10 +411,24 @@ async function handleAnswer(data) {
 // Handle ICE candidate
 async function handleIceCandidate(data) {
   try {
+    console.log('handleIceCandidate called');
+    console.log('Peer connection exists?', !!peerConnection);
+    console.log('Remote description exists?', !!peerConnection?.remoteDescription);
+    console.log('Signaling state:', peerConnection?.signalingState);
+    
+    // If the remote description is not set, buffer the candidate
+    if (!peerConnection || !peerConnection.remoteDescription) {
+      console.log('⚠️ Remote description not set. Buffering ICE candidate. (Buffer size:', pendingIceCandidates.length + 1, ')');
+      pendingIceCandidates.push(data.candidate);
+      return;
+    }
+    
+    console.log('Attempting to add ICE candidate immediately...');
     await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-    console.log('✅ ICE candidate added');
+    console.log('✅ ICE candidate added successfully');
   } catch (error) {
-    console.error('Error adding ICE candidate:', error);
+    console.error('❌ Error adding ICE candidate:', error);
+    console.error('Candidate data:', data.candidate);
   }
 }
 

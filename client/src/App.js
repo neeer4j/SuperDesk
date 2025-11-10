@@ -100,7 +100,6 @@ const createAppTheme = (mode) => createTheme({
 });
 
 function App() {
-  const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [sessionId, setSessionIdState] = useState('');
   const [joinSessionId, setJoinSessionIdState] = useState('');
@@ -143,11 +142,13 @@ function App() {
   const sessionIdRef = useRef('');
   const joinSessionIdRef = useRef('');
   const remoteSocketIdRef = useRef(null);
+  const socketRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
   const fileInputRef = useRef(null);
   const outboundStatsIntervalRef = useRef(null);
   const recoverScreenShareRef = useRef(null);
+  const pendingIceCandidatesRef = useRef([]); // Buffer for ICE candidates that arrive before peer connection is ready
   const restartingCaptureRef = useRef(false);
   const lastRecoveryAttemptRef = useRef(0);
 
@@ -331,68 +332,70 @@ function App() {
         alert('Host stopped screen sharing.');
       });
 
-      setSocket(newSocket);    newSocket.on('connect', () => {
+  socketRef.current = newSocket;
+
+      newSocket.on('connect', () => {
       setConnected(true);
       setConnectionError(null);
       setLoading(false);
       console.log('Connected to signaling server via', newSocket.io.engine.transport.name);
     });
 
-    newSocket.on('disconnect', () => {
+      newSocket.on('disconnect', () => {
       setConnected(false);
       console.log('Disconnected from signaling server');
     });
 
-    newSocket.on('connect_error', (error) => {
+      newSocket.on('connect_error', (error) => {
       console.error('Connection error:', error);
       setConnected(false);
       setLoading(false);
       setConnectionError(`Failed to connect to server: ${config.server}. ${error.message || 'Unknown error'}`);
     });
 
-    newSocket.on('reconnect', (attemptNumber) => {
+      newSocket.on('reconnect', (attemptNumber) => {
       console.log('Reconnected after', attemptNumber, 'attempts');
       setConnected(true);
       setConnectionError(null);
     });
 
-    newSocket.on('reconnect_error', (error) => {
+      newSocket.on('reconnect_error', (error) => {
       console.error('Reconnection error:', error);
       setConnectionError(`Reconnection failed: ${error.message || 'Unknown error'}`);
     });
 
-    newSocket.io.on('error', (error) => {
+      newSocket.io.on('error', (error) => {
       console.error('Socket.io error:', error);
       setConnectionError(`Socket error: ${error.message || 'Unknown error'}`);
     });
 
-    newSocket.on('session-created', (id) => {
+      newSocket.on('session-created', (id) => {
       setSessionId(id);
       setIsHost(true);
       console.log('✅ Session created:', id);
     });
 
-    newSocket.on('session-joined', (id) => {
+      newSocket.on('session-joined', (id) => {
       console.log('✅ Successfully joined session:', id);
       alert(`Successfully joined session: ${id}`);
     });
 
-    newSocket.on('session-error', (error) => {
+      newSocket.on('session-error', (error) => {
       console.error('❌ Session error:', error);
       alert(`Session error: ${error}`);
     });
 
-    newSocket.on('user-joined', (userId) => {
+      newSocket.on('user-joined', (userId) => {
       console.log('👤 User joined session:', userId);
       alert('Another user joined the session!');
     });
 
-    newSocket.on('user-left', (userId) => {
+      newSocket.on('user-left', (userId) => {
       console.log('👤 User left session:', userId);
       alert('User left the session');
     });
 
-    newSocket.on('session-ended', () => {
+      newSocket.on('session-ended', () => {
       alert('Session has been ended by the host');
       // Clean up
       setSessionId('');
@@ -408,34 +411,37 @@ function App() {
       localStreamRef.current = null;
     });
 
-    newSocket.on('remote-control-enabled', () => {
+      newSocket.on('remote-control-enabled', () => {
       alert('Remote control has been enabled by the host');
     });
 
-    newSocket.on('remote-control-disabled', () => {
+      newSocket.on('remote-control-disabled', () => {
       alert('Remote control has been disabled by the host');
       setRemoteControlEnabled(false);
     });
 
-    newSocket.on('offer', async (data) => {
+      newSocket.on('offer', async (data) => {
       console.log('📨 RECEIVED OFFER from server');
       console.log('Offer data:', data);
       await handleOffer(data);
     });
 
-    newSocket.on('answer', async (data) => {
+      newSocket.on('answer', async (data) => {
       console.log('📨 RECEIVED ANSWER from server');
       console.log('Answer data:', data);
       await handleAnswer(data);
     });
 
-    newSocket.on('ice-candidate', (data) => {
+      newSocket.on('ice-candidate', (data) => {
       console.log('📨 RECEIVED ICE CANDIDATE from server');
       console.log('Candidate:', data.candidate);
       handleIceCandidate(data);
     });
 
-    return () => newSocket.close();
+    return () => {
+      socketRef.current = null;
+      newSocket.close();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -488,12 +494,19 @@ function App() {
     }
     
     pc.onicecandidate = (event) => {
-      if (event.candidate && socket) {
-        socket.emit('ice-candidate', {
+      const activeSocket = socketRef.current;
+      if (event.candidate && activeSocket) {
+        console.log('📤 Sending ICE candidate to host');
+        console.log('Candidate details:', event.candidate);
+        activeSocket.emit('ice-candidate', {
           sessionId: sessionIdRef.current,
           targetId: remoteSocketIdRef.current,
           candidate: event.candidate
         });
+      } else if (event.candidate && !activeSocket) {
+        console.warn('⚠️ ICE candidate generated but socket not ready yet, buffering implicitly handled by host');
+      } else if (!event.candidate) {
+        console.log('✅ All ICE candidates have been sent (guest)');
       }
     };
 
@@ -504,21 +517,30 @@ function App() {
         kind: t.kind,
         label: t.label,
         enabled: t.enabled,
-        readyState: t.readyState
+        readyState: t.readyState,
+        muted: t.muted
       })));
       console.log('Current isHost value:', isHost);
       console.log('Current sessionId value:', sessionId);
       console.log('Remote socket ID:', remoteSocketIdRef.current);
       
       const receivedStream = event.streams[0];
-      setRemoteStream(receivedStream);
-
-      // Track diagnostics
+      
+      // Explicitly enable all tracks
       receivedStream.getTracks().forEach(track => {
+        console.log(`Enabling track: ${track.kind}, current enabled: ${track.enabled}, muted: ${track.muted}`);
+        track.enabled = true;
         track.onended = () => console.log(`[remote track ended] kind=${track.kind}`);
-        track.onmute = () => console.log(`[remote track muted] kind=${track.kind}`);
-        track.onunmute = () => console.log(`[remote track unmuted] kind=${track.kind}`);
+        track.onmute = () => {
+          console.log(`[remote track muted] kind=${track.kind}`);
+          console.log('Track details:', { enabled: track.enabled, readyState: track.readyState, muted: track.muted });
+        };
+        track.onunmute = () => {
+          console.log(`[remote track unmuted] kind=${track.kind}`);
+        };
       });
+      
+      setRemoteStream(receivedStream);
       
       if (videoRef.current) {
         videoRef.current.srcObject = receivedStream;
@@ -544,6 +566,12 @@ function App() {
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
       console.log('[pc.connectionState]', state);
+      console.log('Full connection details:', {
+        connectionState: pc.connectionState,
+        iceConnectionState: pc.iceConnectionState,
+        iceGatheringState: pc.iceGatheringState,
+        signalingState: pc.signalingState
+      });
       if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
         const overlay = remoteDesktopWindow.document.getElementById('statusOverlay');
         if (overlay) overlay.textContent = `Connection: ${state}`;
@@ -553,9 +581,28 @@ function App() {
     pc.oniceconnectionstatechange = () => {
       const state = pc.iceConnectionState;
       console.log('[pc.iceConnectionState]', state);
+      console.log('ICE gathering state:', pc.iceGatheringState);
+      
+      // Log local and remote descriptions
+      console.log('Local description:', pc.localDescription ? 'Set' : 'Not set');
+      console.log('Remote description:', pc.remoteDescription ? 'Set' : 'Not set');
+      
       if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
         const overlay = remoteDesktopWindow.document.getElementById('statusOverlay');
         if (overlay) overlay.textContent = `ICE: ${state}`;
+      }
+      
+      // If ICE connection fails, log more details
+      if (state === 'failed' || state === 'disconnected') {
+        console.error('❌ ICE connection issue detected');
+        console.log('Checking ICE candidates...');
+        pc.getStats().then(stats => {
+          stats.forEach(report => {
+            if (report.type === 'candidate-pair' || report.type === 'local-candidate' || report.type === 'remote-candidate') {
+              console.log('ICE report:', report);
+            }
+          });
+        });
       }
     };
 
@@ -677,8 +724,11 @@ function App() {
         };
       }
 
-      if (socket) {
-        socket.emit('create-session');
+      const activeSocket = socketRef.current;
+      if (activeSocket) {
+        activeSocket.emit('create-session');
+      } else {
+        console.error('❌ Socket not ready - cannot create session');
       }
     } catch (error) {
       console.error('Error starting session:', error);
@@ -737,10 +787,13 @@ function App() {
       }
 
       // Emit join-session to server
-      if (socket) {
+      const activeSocket = socketRef.current;
+      if (activeSocket) {
         console.log('Emitting join-session event for:', sessionIdToJoin);
-        socket.emit('join-session', sessionIdToJoin);
+        activeSocket.emit('join-session', sessionIdToJoin);
         alert(`Joining session ${sessionIdToJoin}...\n\nWaiting for host to send their screen.\nThe popup will open automatically when ready.`);
+      } else {
+        console.error('❌ Socket not ready - cannot join session');
       }
     } catch (error) {
       console.error('Error joining session:', error);
@@ -761,19 +814,25 @@ function App() {
   // Remote Control Functions
   const enableRemoteControl = useCallback(() => {
     setRemoteControlEnabled(true);
-    if (socket) {
-      socket.emit('enable-remote-control', { sessionId });
+    const activeSocket = socketRef.current;
+    if (activeSocket) {
+      activeSocket.emit('enable-remote-control', { sessionId });
+    } else {
+      console.warn('⚠️ Cannot enable remote control - socket not ready');
     }
     alert('Remote control enabled! Click on the screen to control the remote PC.');
-  }, [socket, sessionId]);
+  }, [sessionId]);
 
   const disableRemoteControl = useCallback(() => {
     setRemoteControlEnabled(false);
-    if (socket) {
-      socket.emit('disable-remote-control', { sessionId });
+    const activeSocket = socketRef.current;
+    if (activeSocket) {
+      activeSocket.emit('disable-remote-control', { sessionId });
+    } else {
+      console.warn('⚠️ Cannot disable remote control - socket not ready');
     }
     alert('Remote control disabled.');
-  }, [socket, sessionId]);
+  }, [sessionId]);
 
   // Session Management
   const endSession = useCallback(() => {
@@ -781,8 +840,11 @@ function App() {
       return;
     }
 
-    if (socket) {
-      socket.emit('end-session', sessionId);
+    const activeSocket = socketRef.current;
+    if (activeSocket) {
+      activeSocket.emit('end-session', sessionId);
+    } else {
+      console.warn('⚠️ Cannot end session - socket not ready');
     }
 
     // Clean up local resources
@@ -817,7 +879,7 @@ function App() {
     restartingCaptureRef.current = false;
 
     alert('Session ended successfully!');
-  }, [dataChannel, localStream, peerConnection, sessionId, socket]);
+  }, [dataChannel, localStream, peerConnection, sessionId]);
 
   const recoverScreenShare = useCallback(async () => {
     if (!isHost) return;
@@ -943,13 +1005,16 @@ function App() {
 
   // Screen Sharing Functions
   const requestScreenShare = () => {
-    if (socket && sessionId) {
-      socket.emit('request-screen-share', { 
+    const activeSocket = socketRef.current;
+    if (activeSocket && sessionId) {
+      activeSocket.emit('request-screen-share', { 
         sessionId, 
-        requesterId: socket.id 
+        requesterId: activeSocket.id 
       });
       setScreenShareRequested(true);
       alert('Screen share request sent to host!');
+    } else {
+      console.warn('⚠️ Cannot request screen share - socket not ready or no session');
     }
   };
 
@@ -1389,7 +1454,8 @@ function App() {
               const pc = peerConnectionRef.current;
               if (pc && (pc.iceConnectionState === 'connected' || pc.connectionState === 'connected')) {
                 console.log('Requesting renegotiation from host');
-                socket?.emit('renegotiate', { sessionId: sessionIdRef.current, targetId: remoteSocketIdRef.current });
+                const activeSocket = socketRef.current;
+                activeSocket?.emit('renegotiate', { sessionId: sessionIdRef.current, targetId: remoteSocketIdRef.current });
               }
             } catch(_) {}
           }
@@ -1409,16 +1475,18 @@ function App() {
           disableRemoteControl();
           break;
         case 'mouseEvent':
-          if (socket && sessionId) {
-            socket.emit('mouse-event', {
+          const activeSocket = socketRef.current;
+          if (activeSocket && sessionId) {
+            activeSocket.emit('mouse-event', {
               sessionId,
               ...event.data.event
             });
           }
           break;
         case 'keyboardEvent':
-          if (socket && sessionId) {
-            socket.emit('keyboard-event', {
+          const activeSocket2 = socketRef.current;
+          if (activeSocket2 && sessionId) {
+            activeSocket2.emit('keyboard-event', {
               sessionId,
               ...event.data.event
             });
@@ -1455,8 +1523,7 @@ function App() {
     peerConnection,
     remoteDesktopWindow,
     remoteStream,
-    sessionId,
-    socket
+    sessionId
   ]);
 
   // Update popup when remote stream changes; auto-open for guests
@@ -1513,19 +1580,37 @@ function App() {
       console.log('Setting remote description...');
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       console.log('Remote description set successfully');
+      
+      // Process any buffered ICE candidates now that remote description is set
+      if (pendingIceCandidatesRef.current.length > 0) {
+        console.log(`📦 Processing ${pendingIceCandidatesRef.current.length} buffered ICE candidates`);
+        for (const candidate of pendingIceCandidatesRef.current) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log('✅ Buffered ICE candidate added');
+          } catch (err) {
+            console.error('❌ Error adding buffered ICE candidate:', err);
+          }
+        }
+        pendingIceCandidatesRef.current = []; // Clear the buffer
+      }
+      
       console.log('Creating answer...');
       const answer = await pc.createAnswer();
       console.log('Answer created:', answer);
       console.log('Setting local description...');
       await pc.setLocalDescription(answer);
       
-      if (socket) {
+      const activeSocket = socketRef.current;
+      if (activeSocket) {
         console.log('Sending answer back to host');
-        socket.emit('answer', {
+        activeSocket.emit('answer', {
           sessionId: sessionIdRef.current,
           targetId: remoteSocketIdRef.current,
           answer
         });
+      } else {
+        console.error('❌ Socket not ready - cannot send answer back to host');
       }
       console.log('=== OFFER HANDLING COMPLETE ===');
     } catch (error) {
@@ -1554,20 +1639,36 @@ function App() {
       return;
     }
 
-    if (!peerConnection) {
+    const pc = peerConnectionRef.current || peerConnection;
+    
+    if (!pc) {
       console.error('No peer connection available to handle answer');
       return;
     }
     
     try {
-      await peerConnection.setRemoteDescription(answer);
+      await pc.setRemoteDescription(answer);
       console.log('Successfully set remote description from answer');
+      
+      // Process any buffered ICE candidates now that remote description is set (HOST SIDE)
+      if (pendingIceCandidatesRef.current.length > 0) {
+        console.log(`📦 Processing ${pendingIceCandidatesRef.current.length} buffered ICE candidates (host)`);
+        for (const candidate of pendingIceCandidatesRef.current) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log('✅ Buffered ICE candidate added (host)');
+          } catch (err) {
+            console.error('❌ Error adding buffered ICE candidate (host):', err);
+          }
+        }
+        pendingIceCandidatesRef.current = []; // Clear the buffer
+      }
     } catch (error) {
       console.error('Error handling answer:', error);
     }
   };
 
-  const handleIceCandidate = (payload) => {
+  const handleIceCandidate = async (payload) => {
     if (!payload) {
       console.warn('Received empty ICE candidate payload');
       return;
@@ -1585,8 +1686,31 @@ function App() {
       return;
     }
 
-    if (peerConnection) {
-      peerConnection.addIceCandidate(candidate);
+    const pc = peerConnectionRef.current || peerConnection;
+    
+    if (!pc) {
+      console.warn('⏸️ Peer connection not ready yet, buffering ICE candidate');
+      pendingIceCandidatesRef.current.push(candidate);
+      return;
+    }
+
+    // Check if remote description is set before adding ICE candidate
+    if (!pc.remoteDescription) {
+      console.warn('⏸️ Remote description not set yet, buffering ICE candidate');
+      pendingIceCandidatesRef.current.push(candidate);
+      return;
+    }
+
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      console.log('✅ ICE candidate added successfully');
+    } catch (error) {
+      console.error('❌ Error adding ICE candidate:', error);
+      // If it fails due to timing, buffer it
+      if (error.message.includes('remote description')) {
+        console.warn('⏸️ Buffering candidate due to timing issue');
+        pendingIceCandidatesRef.current.push(candidate);
+      }
     }
   };
 

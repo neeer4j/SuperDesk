@@ -1,8 +1,8 @@
 // Environment configuration for different deployment scenarios
 const config = {
   development: {
-    // Prefer remote signaling server by default to avoid needing a local server during dev
-    server: process.env.REACT_APP_SERVER_URL || 'https://superdesk-7m7f.onrender.com',
+    // Use local signaling server for development
+    server: process.env.REACT_APP_SERVER_URL || 'http://localhost:3001',
     client: 'http://localhost:3000',
   },
   production: {

@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -28,6 +28,15 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Handle 'get-sources' request from the renderer process
+  ipcMain.handle('get-sources', async () => {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width: 1920, height: 1080 }
+    });
+    return sources;
+  });
+
   createWindow();
 
   app.on('activate', () => {
