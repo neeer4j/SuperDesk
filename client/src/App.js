@@ -1200,6 +1200,11 @@ function App() {
             height: 100%;
             object-fit: contain;
             cursor: crosshair;
+            /* Avoid browser media gestures interfering with control */
+            user-select: none;
+            -webkit-user-drag: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
           }
           
           .remote-video.controllable {
@@ -1337,6 +1342,11 @@ function App() {
           
           function handleMouseEvent(event) {
             if (!remoteControlEnabled || !parentWindow || parentWindow.closed) return;
+            // Prevent default media behaviors (e.g., dblclick fullscreen/pause in some UIs)
+            if (event.type === 'dblclick' || event.type === 'click') {
+              event.preventDefault();
+              event.stopPropagation();
+            }
             
             const rect = event.target.getBoundingClientRect();
             const x = ((event.clientX - rect.left) / rect.width) * 1920;
@@ -1383,6 +1393,14 @@ function App() {
 
           // Add event listeners
           var remoteVideoElement = document.getElementById('remoteVideo');
+          // Attempt to auto-resume if paused by browser default actions
+          remoteVideoElement.addEventListener('pause', function() {
+            try { this.play().catch(()=>{}); } catch(_){}
+          });
+          // Suppress context menu and double-click fullscreen/pause side-effects
+          remoteVideoElement.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+          remoteVideoElement.addEventListener('dblclick', function(e){ e.preventDefault(); e.stopPropagation(); });
+          remoteVideoElement.addEventListener('click', function(e){ if (remoteControlEnabled) { e.preventDefault(); e.stopPropagation(); } });
           remoteVideoElement.addEventListener('mousedown', handleMouseEvent);
           remoteVideoElement.addEventListener('mouseup', handleMouseEvent);
           remoteVideoElement.addEventListener('mousemove', handleMouseEvent);
