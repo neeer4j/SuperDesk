@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
-import config from './config';
+import config, { fetchIceServers } from './config';
 import './App.css';
 
 // Material UI imports
@@ -239,31 +239,17 @@ function App() {
   const [forceRelay, setForceRelay] = useState(false);
   // Track if we've already tried automatic relay fallback this session
   const relayAutoTriedRef = useRef(false);
-  const servers = {
-    iceServers: [
-      // Google's free STUN servers
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      // Free public TURN servers for NAT traversal
-      {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-      }
-    ],
-    iceCandidatePoolSize: 10
-  };
+  const [iceServers, setIceServers] = useState([]);
+
+  // Fetch dynamic ICE servers on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const servers = await fetchIceServers();
+      if (!cancelled) setIceServers(servers);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     // Initialize socket connection with fallback options to bypass ad blockers
@@ -505,9 +491,10 @@ function App() {
   }, [remoteStream, remoteDesktopWindow]); // Include both dependencies
 
   const initializePeerConnection = () => {
-  const config = forceRelay ? { ...servers, iceTransportPolicy: 'relay' } : servers;
-  console.log('Creating RTCPeerConnection with config:', config);
-  const pc = new RTCPeerConnection(config);
+  const baseConfig = { iceServers, iceCandidatePoolSize: 10 };
+  const configPc = forceRelay ? { ...baseConfig, iceTransportPolicy: 'relay' } : baseConfig;
+  console.log('Creating RTCPeerConnection with config:', configPc);
+  const pc = new RTCPeerConnection(configPc);
 
   // ICE diagnostics (guest)
   const candidateStats = { host: 0, srflx: 0, relay: 0, prflx: 0, tcp: 0, udp: 0 };

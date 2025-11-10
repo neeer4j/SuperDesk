@@ -13,28 +13,33 @@ let remoteControlEnabled = false;
 // Server URL - use Render deployment
 const SERVER_URL = 'https://superdesk-7m7f.onrender.com';
 
-// ICE servers configuration
-const iceServers = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
+// ICE servers configuration (dynamic fetch from server)
+let iceServers = { iceServers: [] };
+
+async function loadIceServers() {
+  try {
+    const resp = await fetch(`${SERVER_URL}/api/webrtc-config`);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (Array.isArray(data.iceServers)) {
+        iceServers = { iceServers: data.iceServers };
+        console.log('Loaded ICE servers from server:', iceServers);
+        return;
+      }
     }
-  ]
-};
+  } catch (e) {
+    console.warn('Failed to load ICE servers from server, using fallback');
+  }
+  iceServers = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    ]
+  };
+}
 
 // Connect to signaling server
 function connectToServer() {
@@ -43,9 +48,11 @@ function connectToServer() {
     transports: ['websocket', 'polling']
   });
   
-  socket.on('connect', () => {
+  socket.on('connect', async () => {
     console.log('✅ Agent connected to server');
     updateStatus('Connected to server');
+    // Load ICE servers from backend for best cross-network success
+    await loadIceServers();
     
     // Create a new session as HOST
     socket.emit('create-session');

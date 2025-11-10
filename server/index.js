@@ -336,6 +336,45 @@ app.get('/api/info', (req, res) => {
   });
 });
 
+// WebRTC ICE servers configuration endpoint
+// Configure via env:
+//   TURN_URLS: comma-separated list of TURN urls, e.g. "turn:turn1.example.com:3478,turns:turn1.example.com:5349"
+//   TURN_USERNAME, TURN_CREDENTIAL: credentials for the TURN server(s)
+app.get('/api/webrtc-config', (req, res) => {
+  const defaultStun = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ];
+
+  const turnUrls = (process.env.TURN_URLS || '')
+    .split(',')
+    .map(u => u.trim())
+    .filter(Boolean);
+
+  let iceServers = [...defaultStun];
+
+  if (turnUrls.length && process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+    iceServers = [
+      ...iceServers,
+      ...turnUrls.map(url => ({
+        urls: url,
+        username: process.env.TURN_USERNAME,
+        credential: process.env.TURN_CREDENTIAL,
+      }))
+    ];
+  } else {
+    // Fallback to public TURN (limited reliability)
+    iceServers = [
+      ...iceServers,
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    ];
+  }
+
+  res.json({ iceServers });
+});
+
 // Socket.io test endpoint to check if socket.io is accessible
 app.get('/socket-test', (req, res) => {
   res.json({
