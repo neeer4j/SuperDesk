@@ -1564,7 +1564,9 @@ function App() {
     peerConnection,
     remoteDesktopWindow,
     remoteStream,
-    sessionId
+    sessionId,
+    remoteControlEnabled,
+    setRemoteDesktopWindow
   ]);
 
   // Popup window now requires manual user click - no auto-open
