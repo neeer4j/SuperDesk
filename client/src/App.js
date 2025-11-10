@@ -503,7 +503,22 @@ function App() {
 
   const initializePeerConnection = () => {
   const pc = new RTCPeerConnection(servers);
-    
+
+  // ICE diagnostics (guest)
+  const candidateStats = { host: 0, srflx: 0, relay: 0, prflx: 0, tcp: 0, udp: 0 };
+  const parseCandidate = (candObj) => {
+    try {
+      const cand = candObj?.candidate || '';
+      if (!cand.startsWith('candidate:')) return;
+      const parts = cand.split(' ');
+      const proto = (parts[2] || '').toLowerCase();
+      const typIndex = parts.indexOf('typ');
+      const typ = typIndex > -1 ? (parts[typIndex + 1] || '').toLowerCase() : '';
+      if (typ && candidateStats[typ] !== undefined) candidateStats[typ]++;
+      if (proto === 'tcp') candidateStats.tcp++;
+      if (proto === 'udp') candidateStats.udp++;
+    } catch (_) {}
+  };
   // Optimize for desktop streaming
 
     // If we're the guest (no local stream), proactively indicate we want to receive
@@ -521,6 +536,7 @@ function App() {
       if (event.candidate && activeSocket) {
         console.log('📤 Sending ICE candidate to host');
         console.log('Candidate details:', event.candidate);
+        parseCandidate(event.candidate);
         activeSocket.emit('ice-candidate', {
           sessionId: sessionIdRef.current,
           targetId: remoteSocketIdRef.current,
@@ -528,8 +544,10 @@ function App() {
         });
       } else if (event.candidate && !activeSocket) {
         console.warn('⚠️ ICE candidate generated but socket not ready yet, buffering implicitly handled by host');
+        parseCandidate(event.candidate);
       } else if (!event.candidate) {
         console.log('✅ All ICE candidates have been sent (guest)');
+        console.log('🔍 ICE candidate summary (guest):', candidateStats);
       }
     };
 
@@ -625,6 +643,9 @@ function App() {
               console.log('ICE report:', report);
             }
           });
+          try {
+            console.log('🔎 ICE diagnostics summary (guest):', candidateStats);
+          } catch (_) {}
         });
       }
     };
