@@ -147,8 +147,11 @@ function App() {
   const localStreamRef = useRef(null);
   const fileInputRef = useRef(null);
   const outboundStatsIntervalRef = useRef(null);
+  const recoverScreenShareRef = useRef(null);
+  const restartingCaptureRef = useRef(false);
+  const lastRecoveryAttemptRef = useRef(0);
 
-  const logLocalVideoDiagnostics = (label) => {
+  const logLocalVideoDiagnostics = useCallback((label) => {
     const stream = localStreamRef.current;
     const track = stream?.getVideoTracks?.()[0] || null;
     if (!track) {
@@ -167,7 +170,7 @@ function App() {
     } catch (e) {
       console.log(`[diagnostics][local-track] ${label}: settings unavailable`, e);
     }
-  };
+    }, []);
 
   const startOutboundStatsLogger = (pc) => {
     if (!pc) return;
@@ -666,6 +669,7 @@ function App() {
         hostVideoTrack.onmute = () => {
           console.log('[diagnostics][local-track] mute event fired');
           logLocalVideoDiagnostics('onmute');
+          recoverScreenShareRef.current?.();
         };
         hostVideoTrack.onunmute = () => {
           console.log('[diagnostics][local-track] unmute event fired');
@@ -772,45 +776,170 @@ function App() {
   }, [socket, sessionId]);
 
   // Session Management
-  const endSession = () => {
-    if (window.confirm('Are you sure you want to end this session?')) {
-      if (socket) {
-        socket.emit('end-session', sessionId);
-      }
-      
-      // Clean up local resources
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        setLocalStream(null);
-      }
-      
-      if (peerConnection) {
-        peerConnection.close();
-        setPeerConnection(null);
-      }
-      
-      if (dataChannel) {
-        dataChannel.close();
-        setDataChannel(null);
+  const endSession = useCallback(() => {
+    if (!window.confirm('Are you sure you want to end this session?')) {
+      return;
+    }
+
+    if (socket) {
+      socket.emit('end-session', sessionId);
+    }
+
+    // Clean up local resources
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop());
+      setLocalStream(null);
+    }
+
+    if (peerConnection) {
+      peerConnection.close();
+      setPeerConnection(null);
+    }
+
+    if (dataChannel) {
+      dataChannel.close();
+      setDataChannel(null);
+    }
+
+    if (outboundStatsIntervalRef.current) {
+      clearInterval(outboundStatsIntervalRef.current);
+      outboundStatsIntervalRef.current = null;
+    }
+
+    setSessionId('');
+    setJoinSessionId('');
+    setRemoteStream(null);
+    setIsHost(false);
+    setRemoteSocketId(null);
+    setRemoteControlEnabled(false);
+    setScreenShareRequested(false);
+    setFileTransfer({ progress: 0, active: false });
+    restartingCaptureRef.current = false;
+
+    alert('Session ended successfully!');
+  }, [dataChannel, localStream, peerConnection, sessionId, socket]);
+
+  const recoverScreenShare = useCallback(async () => {
+    if (!isHost) return;
+
+    const pc = peerConnectionRef.current;
+    if (!pc) {
+      console.log('[capture-recovery] Peer connection unavailable; skipping recovery');
+      return;
+    }
+
+    const videoSender = pc.getSenders().find((sender) => sender.track && sender.track.kind === 'video');
+    if (!videoSender) {
+      console.log('[capture-recovery] Video sender not ready; skipping recovery');
+      return;
+    }
+
+    if (restartingCaptureRef.current) {
+      console.log('[capture-recovery] Recovery already in progress');
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastRecoveryAttemptRef.current < 5000) {
+      console.log('[capture-recovery] Recent recovery attempt detected; throttling');
+      return;
+    }
+
+    restartingCaptureRef.current = true;
+    lastRecoveryAttemptRef.current = now;
+
+    try {
+      console.log('[capture-recovery] Attempting to re-acquire display capture');
+      const newStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: 'always',
+          displaySurface: 'monitor',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
+        },
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          systemAudio: 'include'
+        }
+      });
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (!newVideoTrack) {
+        console.error('[capture-recovery] Display capture returned no video track');
+        newStream.getTracks().forEach((track) => track.stop());
+        return;
       }
 
-      if (outboundStatsIntervalRef.current) {
-        clearInterval(outboundStatsIntervalRef.current);
-        outboundStatsIntervalRef.current = null;
+      await videoSender.replaceTrack(newVideoTrack);
+
+      const audioSender = pc.getSenders().find((sender) => sender.track && sender.track.kind === 'audio');
+      const newAudioTrack = newStream.getAudioTracks()[0] || null;
+
+      if (newAudioTrack) {
+        if (audioSender) {
+          await audioSender.replaceTrack(newAudioTrack);
+        } else {
+          pc.addTrack(newAudioTrack, newStream);
+        }
       }
-      
-      setSessionId('');
-      setJoinSessionId('');
-      setRemoteStream(null);
-      setIsHost(false);
-      setRemoteSocketId(null);
-  setRemoteControlEnabled(false);
-  setScreenShareRequested(false);
-      setFileTransfer({ progress: 0, active: false });
-      
-      alert('Session ended successfully!');
+
+      const previousStream = localStreamRef.current;
+      const mergedStream = new MediaStream();
+      mergedStream.addTrack(newVideoTrack);
+      if (newAudioTrack) {
+        mergedStream.addTrack(newAudioTrack);
+      } else if (previousStream) {
+        previousStream.getAudioTracks().forEach((track) => mergedStream.addTrack(track));
+      }
+
+      setLocalStream(mergedStream);
+      localStreamRef.current = mergedStream;
+
+      if (previousStream && previousStream !== mergedStream) {
+        previousStream.getVideoTracks().forEach((track) => track.stop());
+        if (newAudioTrack) {
+          previousStream.getAudioTracks().forEach((track) => track.stop());
+        }
+      }
+
+      logLocalVideoDiagnostics('after capture recovery');
+
+      newVideoTrack.onmute = () => {
+        console.log('[diagnostics][local-track] mute event fired (recovered)');
+        logLocalVideoDiagnostics('onmute (recovered)');
+        recoverScreenShareRef.current?.();
+      };
+
+      newVideoTrack.onunmute = () => {
+        console.log('[diagnostics][local-track] unmute event fired (recovered)');
+        logLocalVideoDiagnostics('onunmute (recovered)');
+      };
+
+      newVideoTrack.onended = () => {
+        alert('Screen sharing ended. Session will be terminated.');
+        endSession();
+      };
+
+      console.log('[capture-recovery] Screen capture restarted successfully');
+    } catch (error) {
+      console.error('[capture-recovery] Failed to recover screen capture', error);
+      alert('Screen capture was interrupted and could not be restored automatically. Please start the session again.');
+    } finally {
+      restartingCaptureRef.current = false;
     }
-  };
+  }, [endSession, isHost, logLocalVideoDiagnostics, setLocalStream]);
+
+  useEffect(() => {
+    recoverScreenShareRef.current = recoverScreenShare;
+    return () => {
+      if (recoverScreenShareRef.current === recoverScreenShare) {
+        recoverScreenShareRef.current = null;
+      }
+    };
+  }, [recoverScreenShare]);
 
   // Screen Sharing Functions
   const requestScreenShare = () => {
