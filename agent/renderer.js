@@ -10,8 +10,8 @@ let isSharing = false;
 let pendingIceCandidates = []; // Buffer for early ICE candidates
 let remoteControlEnabled = false;
 
-// Server URL - use local server for development
-const SERVER_URL = 'http://localhost:3001';
+// Server URL - use Render deployment
+const SERVER_URL = 'https://superdesk-7m7f.onrender.com';
 
 // ICE servers configuration
 const iceServers = {
