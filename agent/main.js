@@ -138,11 +138,14 @@ function releaseActiveKeys() {
 }
 
 ipcMain.on('robot-refresh-screen-size', () => {
+  console.log('[robot] refresh-screen-size requested');
   refreshScreenSize();
+  console.log('[robot] screenSize now:', screenSize);
 });
 
 ipcMain.on('robot-set-enabled', (_event, enabled) => {
   remoteControlEnabled = !!enabled;
+  console.log('[robot] set-enabled:', remoteControlEnabled);
   if (!remoteControlEnabled) {
     releaseActiveKeys();
   }
@@ -158,6 +161,10 @@ ipcMain.on('robot-mouse-event', (_event, data = {}) => {
   const coords = translateCoordinates(x, y);
 
   try {
+    // Debug: log a small sample of events
+    if (Math.random() < 0.02) {
+      console.log('[robot] mouse', { type, x, y, mapped: coords, button });
+    }
     switch (type) {
       case 'mousemove':
         robot.moveMouse(coords.x, coords.y);
@@ -189,6 +196,9 @@ ipcMain.on('robot-keyboard-event', (_event, data = {}) => {
   }
 
   try {
+    if (Math.random() < 0.05) {
+      console.log('[robot] key', { type, key, code, robotKey });
+    }
     if (type === 'keydown') {
       if (activeKeys.has(robotKey)) return;
       robot.keyToggle(robotKey, 'down');
