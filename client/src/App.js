@@ -236,6 +236,7 @@ function App() {
     }
   }, []);
 
+  const [forceRelay, setForceRelay] = useState(false);
   const servers = {
     iceServers: [
       // Google's free STUN servers
@@ -502,7 +503,9 @@ function App() {
   }, [remoteStream, remoteDesktopWindow]); // Include both dependencies
 
   const initializePeerConnection = () => {
-  const pc = new RTCPeerConnection(servers);
+  const config = forceRelay ? { ...servers, iceTransportPolicy: 'relay' } : servers;
+  console.log('Creating RTCPeerConnection with config:', config);
+  const pc = new RTCPeerConnection(config);
 
   // ICE diagnostics (guest)
   const candidateStats = { host: 0, srflx: 0, relay: 0, prflx: 0, tcp: 0, udp: 0 };
@@ -2123,6 +2126,18 @@ function App() {
                   )}
                 </Box>
                 <Box display="flex" gap={1}>
+                  {/* Force Relay Toggle (Guest) */}
+                  {!isHost && (
+                    <Button 
+                      onClick={() => { setForceRelay(v => !v); }}
+                      variant={forceRelay ? 'contained' : 'outlined'}
+                      color={forceRelay ? 'warning' : 'primary'}
+                      size="small"
+                      title="Route media via TURN relay for restrictive networks"
+                    >
+                      {forceRelay ? 'Relay ON' : 'Relay OFF'}
+                    </Button>
+                  )}
                   {!isHost && (
                     <Button 
                       onClick={remoteControlEnabled ? disableRemoteControl : enableRemoteControl} 
