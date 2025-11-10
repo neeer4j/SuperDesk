@@ -1567,18 +1567,7 @@ function App() {
     sessionId
   ]);
 
-  // Update popup when remote stream changes; auto-open for guests
-  useEffect(() => {
-    if (remoteStream && !isHost && (!remoteDesktopWindow || remoteDesktopWindow.closed)) {
-      console.log('🚀 Auto-opening remote desktop for guest');
-      setTimeout(() => {
-        openRemoteDesktop();
-        setTimeout(() => {
-          enableRemoteControl();
-        }, 1000);
-      }, 1000);
-    }
-  }, [remoteStream, isHost, remoteDesktopWindow, openRemoteDesktop, enableRemoteControl]);
+  // Popup window now requires manual user click - no auto-open
 
   useEffect(() => {
     const popup = remoteDesktopWindow;
