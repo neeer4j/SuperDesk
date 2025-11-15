@@ -27,6 +27,23 @@ How it works now
 - `server/index.js` loads `turn-provider.js` automatically. If Cloudflare vars are present, the server fetches fresh TURN creds for every `/api/webrtc-config` request.
 - If Cloudflare is not configured, it falls back to static `TURN_URLS` / `TURN_USERNAME` / `TURN_CREDENTIAL` values, then to the public OpenRelay service.
 
+Using Cloudflare TURN Server with static credentials
+If your Cloudflare account doesn’t expose the RealtimeKit API (or you prefer static credentials), you can still use Cloudflare’s Anycast TURN servers.
+
+1. In the Cloudflare dashboard open **Realtime → TURN Server** (or request access from support if the menu is hidden).
+2. Create TURN credentials (username/password). Cloudflare’s docs sometimes call this “Create User” in the TURN section.
+3. Configure the following endpoints in `TURN_URLS` (comma separated):
+   - `turn:turn.cloudflare.com:3478` (primary UDP/TCP)
+   - `turn:turn.cloudflare.com:53`
+   - `turn:turn.cloudflare.com:80`
+   - `turns:turn.cloudflare.com:5349` (primary TLS)
+   - `turns:turn.cloudflare.com:443`
+4. Set `TURN_USERNAME` / `TURN_CREDENTIAL` to the values you generated.
+5. Remove `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` (or leave them empty) so the server prefers your static config.
+6. Redeploy and hit `/api/webrtc-config` — the response should list the Cloudflare Anycast TURN entries with your username/credential.
+
+These static TURN entries work with any WebRTC stack and keep traffic within Cloudflare’s Anycast network.
+
 Custom providers
 1. Copy `turn-provider.example.js` to `turn-provider.js` and edit `getTurnServers()` to call your provider.
 2. Ensure whatever env vars you need are defined.
