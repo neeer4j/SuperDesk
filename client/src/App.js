@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 import config, { fetchIceServers } from './config';
 import './App.css';
+import LandingPage from './LandingPage';
+import FeaturesPage from './FeaturesPage';
 
 // Material UI imports
 import { 
@@ -100,6 +102,7 @@ const createAppTheme = (mode) => createTheme({
 });
 
 function App() {
+  const [currentPage, setCurrentPage] = useState('landing'); // 'landing', 'features', 'session'
   const [connected, setConnected] = useState(false);
   const [sessionId, setSessionIdState] = useState('');
   const [joinSessionId, setJoinSessionIdState] = useState('');
@@ -1915,33 +1918,66 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ flexGrow: 1, minHeight: '100vh', backgroundColor: 'background.default' }}>
-        <AppBar position="static" elevation={2}>
+      {currentPage === 'landing' ? (
+        <LandingPage 
+          onGetStarted={() => setCurrentPage('session')} 
+          onViewFeatures={() => setCurrentPage('features')}
+          darkMode={darkMode}
+        />
+      ) : currentPage === 'features' ? (
+        <FeaturesPage
+          onBack={() => setCurrentPage('landing')}
+          onGetStarted={() => setCurrentPage('session')}
+          darkMode={darkMode}
+        />
+      ) : (
+      <Box sx={{ 
+        flexGrow: 1, 
+        minHeight: '100vh', 
+        background: '#0a0a0a'
+      }}>
+        <AppBar 
+          position="static" 
+          elevation={0}
+          sx={{
+            background: 'rgba(10, 10, 10, 0.8)',
+            backdropFilter: 'blur(10px)',
+            borderBottom: '1px solid rgba(139, 92, 246, 0.2)'
+          }}
+        >
           <Toolbar>
-            <DesktopWindows sx={{ mr: 2 }} />
+            <DesktopWindows sx={{ mr: 2, color: '#8b5cf6' }} />
             <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="h6" component="div">
+              <Typography variant="h6" component="div" sx={{ color: '#fff' }}>
                 SuperDesk Remote Desktop
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                Seamless Remote Access • Crystal Clear Desktop Sharing • Full System Control
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                Secure • Fast • Reliable
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
               <Button
                 color="inherit"
-                onClick={toggleTheme}
-                startIcon={darkMode ? <Brightness7 /> : <Brightness4 />}
-                sx={{ textTransform: 'none', color: 'white' }}
+                onClick={() => setCurrentPage('landing')}
+                sx={{ 
+                  textTransform: 'none', 
+                  color: 'white',
+                  borderColor: 'rgba(139, 92, 246, 0.3)',
+                  '&:hover': {
+                    background: 'rgba(139, 92, 246, 0.1)'
+                  }
+                }}
               >
-                {darkMode ? 'Light' : 'Dark'}
+                ← Home
               </Button>
               <Chip 
                 icon={connected ? <CheckCircle /> : <Cancel />}
                 label={connected ? 'Connected' : 'Disconnected'}
-                color={connected ? 'success' : 'error'}
-                variant="outlined"
-                sx={{ color: 'white', borderColor: 'white' }}
+                sx={{ 
+                  background: connected ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                  color: connected ? '#22c55e' : '#ef4444',
+                  border: `1px solid ${connected ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                }}
               />
             </Box>
           </Toolbar>
@@ -1982,7 +2018,18 @@ function App() {
 
           {/* Popup Permission Warning Banner */}
           {!isHost && sessionId && (
-            <Alert severity="info" sx={{ mb: 3 }}>
+            <Alert 
+              severity="info" 
+              sx={{ 
+                mb: 3,
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                '& .MuiAlert-icon': {
+                  color: '#3b82f6'
+                }
+              }}
+            >
               <Typography variant="body2">
                 <strong>📌 Important:</strong> Remote desktop will open in a new window. 
                 Please <strong>allow popups</strong> for this site if prompted by your browser.
@@ -1991,12 +2038,21 @@ function App() {
           )}
 
           {loading && (
-            <Paper sx={{ p: 4, textAlign: 'center' }}>
-              <CircularProgress size={60} sx={{ mb: 2 }} />
-              <Typography variant="h5" gutterBottom>
+            <Paper 
+              sx={{ 
+                p: 4, 
+                textAlign: 'center',
+                background: 'rgba(20, 20, 20, 0.6)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
+                borderRadius: '16px'
+              }}
+            >
+              <CircularProgress size={60} sx={{ mb: 2, color: '#8b5cf6' }} />
+              <Typography variant="h5" gutterBottom sx={{ color: '#fff' }}>
                 Connecting to SuperDesk Server...
               </Typography>
-              <Typography variant="body1" color="text.secondary">
+              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
                 Server: {config.server}
               </Typography>
             </Paper>
@@ -2005,13 +2061,27 @@ function App() {
           {connectionError && (
             <Alert 
               severity="error" 
-              sx={{ mb: 3 }}
+              sx={{ 
+                mb: 3,
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                '& .MuiAlert-icon': {
+                  color: '#ef4444'
+                }
+              }}
               action={
                 <Button 
-                  color="inherit" 
                   size="small" 
                   onClick={() => window.location.reload()}
                   startIcon={<PowerSettingsNew />}
+                  sx={{
+                    color: '#ef4444',
+                    borderColor: 'rgba(239, 68, 68, 0.5)',
+                    '&:hover': {
+                      background: 'rgba(239, 68, 68, 0.1)'
+                    }
+                  }}
                 >
                   Retry
                 </Button>
@@ -2033,7 +2103,18 @@ function App() {
           )}
 
           {!connected && !loading && !connectionError && (
-            <Alert severity="warning" sx={{ mb: 3 }}>
+            <Alert 
+              severity="warning" 
+              sx={{ 
+                mb: 3,
+                background: 'rgba(245, 158, 11, 0.1)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                '& .MuiAlert-icon': {
+                  color: '#f59e0b'
+                }
+              }}
+            >
               <Typography variant="h6" gutterBottom>
                 Connection Issue Detected
               </Typography>
@@ -2046,10 +2127,18 @@ function App() {
                 <li>Check browser console for errors</li>
               </Box>
               <Button 
-                variant="contained" 
+                variant="outlined"
                 onClick={() => window.location.reload()}
                 startIcon={<PowerSettingsNew />}
-                sx={{ mt: 2 }}
+                sx={{ 
+                  mt: 2,
+                  color: '#f59e0b',
+                  borderColor: 'rgba(245, 158, 11, 0.5)',
+                  '&:hover': {
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    borderColor: '#f59e0b'
+                  }
+                }}
               >
                 Retry Connection
               </Button>
@@ -2057,115 +2146,300 @@ function App() {
           )}
 
           {sessionId && (
-            <Alert severity="success" sx={{ mb: 3 }}>
+            <Alert 
+              severity="success" 
+              sx={{ 
+                mb: 3,
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                '& .MuiAlert-icon': {
+                  color: '#22c55e'
+                }
+              }}
+            >
               <Typography variant="h6" gutterBottom>
                 Session Active
               </Typography>
               <Typography variant="body1">
-                Session ID: <Chip label={sessionId} color="primary" size="small" sx={{ mx: 1 }} />
+                Session ID: <Chip 
+                  label={sessionId} 
+                  size="small" 
+                  sx={{ 
+                    mx: 1,
+                    background: 'rgba(139, 92, 246, 0.2)',
+                    color: '#8b5cf6',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    fontFamily: 'monospace',
+                    fontWeight: 600
+                  }} 
+                />
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                 Share this ID with others to join your session
               </Typography>
             </Alert>
           )}
 
-          <Grid container spacing={3}>
+          {/* Render-style Session Cards */}
+          <Box sx={{ maxWidth: '1000px', mx: 'auto', mt: 4 }}>
             {/* Host Session Card */}
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <ScreenShare sx={{ mr: 1, color: 'primary.main' }} />
-                    <Typography variant="h6">Share My Desktop</Typography>
+            <Card sx={{
+              background: 'rgba(15, 15, 15, 0.8)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '12px',
+              mb: 3,
+              overflow: 'hidden',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                borderColor: 'rgba(139, 92, 246, 0.3)',
+                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
+              }
+            }}>
+              <CardContent sx={{ p: 4 }}>
+                <Box display="flex" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap" gap={3}>
+                  <Box flex={1} minWidth="280px">
+                    <Box display="flex" alignItems="center" mb={1.5}>
+                      <Box sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '8px',
+                        background: 'rgba(139, 92, 246, 0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mr: 2
+                      }}>
+                        <ScreenShare sx={{ color: '#8b5cf6', fontSize: '1.5rem' }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: '1.25rem' }}>
+                        Share Your Desktop
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6, mb: 2 }}>
+                      Start hosting a session to share your screen with others. They'll be able to view and optionally control your desktop remotely.
+                    </Typography>
+                    <Box display="flex" gap={1} flexWrap="wrap">
+                      <Chip 
+                        size="small" 
+                        label="Desktop Sharing" 
+                        sx={{ 
+                          background: 'rgba(139, 92, 246, 0.1)', 
+                          color: '#8b5cf6',
+                          border: '1px solid rgba(139, 92, 246, 0.2)',
+                          fontSize: '0.75rem'
+                        }} 
+                      />
+                      <Chip 
+                        size="small" 
+                        label="Audio Support" 
+                        sx={{ 
+                          background: 'rgba(59, 130, 246, 0.1)', 
+                          color: '#3b82f6',
+                          border: '1px solid rgba(59, 130, 246, 0.2)',
+                          fontSize: '0.75rem'
+                        }} 
+                      />
+                      <Chip 
+                        size="small" 
+                        label="File Transfer" 
+                        sx={{ 
+                          background: 'rgba(34, 197, 94, 0.1)', 
+                          color: '#22c55e',
+                          border: '1px solid rgba(34, 197, 94, 0.2)',
+                          fontSize: '0.75rem'
+                        }} 
+                      />
+                    </Box>
                   </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Start a new session to share your desktop with others
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button 
-                    variant="contained"
-                    startIcon={<DesktopWindows />}
-                    onClick={startSession} 
-                    disabled={!connected}
-                    fullWidth
-                    size="large"
-                  >
-                    Start Session
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Button 
+                      variant="contained"
+                      startIcon={<DesktopWindows />}
+                      onClick={startSession} 
+                      disabled={!connected}
+                      sx={{
+                        px: 3,
+                        py: 1.25,
+                        borderRadius: '8px',
+                        background: '#8b5cf6',
+                        color: 'white',
+                        textTransform: 'none',
+                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        boxShadow: 'none',
+                        '&:hover': {
+                          background: '#7c3aed',
+                          boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
+                        },
+                        '&:disabled': {
+                          background: 'rgba(100, 100, 100, 0.2)',
+                          color: 'rgba(255, 255, 255, 0.3)'
+                        }
+                      }}
+                    >
+                      Start Hosting
+                    </Button>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
 
             {/* Join Session Card */}
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <TouchApp sx={{ mr: 1, color: 'secondary.main' }} />
-                    <Typography variant="h6">Join Remote Session</Typography>
+            <Card sx={{
+              background: 'rgba(15, 15, 15, 0.8)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                borderColor: 'rgba(59, 130, 246, 0.3)',
+                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
+              }
+            }}>
+              <CardContent sx={{ p: 4 }}>
+                <Box display="flex" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap" gap={3}>
+                  <Box flex={1} minWidth="280px">
+                    <Box display="flex" alignItems="center" mb={1.5}>
+                      <Box sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '8px',
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mr: 2
+                      }}>
+                        <TouchApp sx={{ color: '#3b82f6', fontSize: '1.5rem' }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: '1.25rem' }}>
+                        Join Remote Desktop
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6, mb: 3 }}>
+                      Connect to someone else's desktop session by entering their session ID below.
+                    </Typography>
+                    <Box display="flex" gap={2} alignItems="flex-end" flexWrap="wrap">
+                      <TextField
+                        label="Session ID"
+                        variant="outlined"
+                        value={joinSessionId}
+                        onChange={(e) => setJoinSessionId(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleJoinClick();
+                          }
+                        }}
+                        placeholder="e.g., abc-def-123"
+                        disabled={!connected}
+                        sx={{
+                          flex: 1,
+                          minWidth: '250px',
+                          '& .MuiOutlinedInput-root': {
+                            color: '#fff',
+                            background: 'rgba(30, 30, 30, 0.6)',
+                            borderRadius: '8px',
+                            '& fieldset': {
+                              borderColor: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            '&:hover fieldset': {
+                              borderColor: 'rgba(59, 130, 246, 0.4)'
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: '#3b82f6',
+                              borderWidth: '2px'
+                            }
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            fontSize: '0.9rem'
+                          },
+                          '& .MuiInputLabel-root.Mui-focused': {
+                            color: '#3b82f6'
+                          }
+                        }}
+                      />
+                      <Button 
+                        variant="contained"
+                        startIcon={<Person />}
+                        onClick={handleJoinClick}
+                        disabled={!connected || !joinSessionId.trim()}
+                        sx={{
+                          px: 3,
+                          py: 1.5,
+                          borderRadius: '8px',
+                          background: '#3b82f6',
+                          color: 'white',
+                          textTransform: 'none',
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          boxShadow: 'none',
+                          '&:hover': {
+                            background: '#2563eb',
+                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)'
+                          },
+                          '&:disabled': {
+                            background: 'rgba(100, 100, 100, 0.2)',
+                            color: 'rgba(255, 255, 255, 0.3)'
+                          }
+                        }}
+                      >
+                        Connect
+                      </Button>
+                    </Box>
                   </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Enter a session ID to connect to someone's desktop
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    label="Session ID"
-                    variant="outlined"
-                    value={joinSessionId}
-                    onChange={(e) => setJoinSessionId(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleJoinClick();
-                      }
-                    }}
-                    placeholder="Enter session ID"
-                    size="medium"
-                    sx={{ mb: 2 }}
-                    disabled={!connected}
-                  />
-                </CardContent>
-                <CardActions>
-                  <Button 
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<Person />}
-                    onClick={handleJoinClick}
-                    disabled={!connected || !joinSessionId.trim()}
-                    fullWidth
-                    size="large"
-                  >
-                    Join Session
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          </Grid>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
 
           {/* Session Management Controls - Simplified */}
           {sessionId && (
-            <Paper sx={{ mt: 3, p: 2 }}>
+            <Paper sx={{ 
+              mt: 3, 
+              p: 2.5,
+              background: 'rgba(20, 20, 20, 0.6)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+              borderRadius: '12px'
+            }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
                 <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
                   <Chip 
                     icon={<Computer />} 
                     label={`${sessionId.substring(0, 8)}...`} 
                     size="small"
-                    color="primary" 
+                    sx={{
+                      background: 'rgba(139, 92, 246, 0.2)',
+                      color: '#8b5cf6',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      fontFamily: 'monospace',
+                      fontWeight: 600
+                    }}
                   />
                   <Chip 
                     icon={<Person />} 
                     label={isHost ? 'Host' : 'Guest'} 
                     size="small"
-                    color={isHost ? 'success' : 'secondary'}
+                    sx={{
+                      background: isHost ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                      color: isHost ? '#22c55e' : '#3b82f6',
+                      border: `1px solid ${isHost ? 'rgba(34, 197, 94, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                    }}
                   />
                   {!isHost && remoteControlEnabled && (
                     <Chip 
                       icon={<TouchApp />} 
                       label="Control ON" 
                       size="small"
-                      color="success"
+                      sx={{
+                        background: 'rgba(34, 197, 94, 0.2)',
+                        color: '#22c55e',
+                        border: '1px solid rgba(34, 197, 94, 0.3)'
+                      }}
                     />
                   )}
                 </Box>
@@ -2175,9 +2449,27 @@ function App() {
                     <Button 
                       onClick={() => { setForceRelay(v => !v); }}
                       variant={forceRelay ? 'contained' : 'outlined'}
-                      color={forceRelay ? 'warning' : 'primary'}
                       size="small"
                       title="Route media via TURN relay for restrictive networks"
+                      sx={{
+                        textTransform: 'none',
+                        borderRadius: '8px',
+                        ...(forceRelay ? {
+                          background: 'rgba(245, 158, 11, 0.2)',
+                          color: '#f59e0b',
+                          border: '1px solid rgba(245, 158, 11, 0.3)',
+                          '&:hover': {
+                            background: 'rgba(245, 158, 11, 0.3)'
+                          }
+                        } : {
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          borderColor: 'rgba(139, 92, 246, 0.3)',
+                          '&:hover': {
+                            borderColor: 'rgba(139, 92, 246, 0.5)',
+                            background: 'rgba(139, 92, 246, 0.1)'
+                          }
+                        })
+                      }}
                     >
                       {forceRelay ? 'Relay ON' : 'Relay OFF'}
                     </Button>
@@ -2185,20 +2477,40 @@ function App() {
                   {!isHost && (
                     <Button 
                       onClick={remoteControlEnabled ? disableRemoteControl : enableRemoteControl} 
-                      variant={remoteControlEnabled ? "outlined" : "contained"}
+                      variant="outlined"
                       startIcon={remoteControlEnabled ? <Cancel /> : <TouchApp />}
-                      color={remoteControlEnabled ? "error" : "primary"}
                       size="small"
+                      sx={{
+                        textTransform: 'none',
+                        borderRadius: '8px',
+                        color: remoteControlEnabled ? '#ef4444' : 'white',
+                        borderColor: remoteControlEnabled ? 'rgba(239, 68, 68, 0.5)' : 'rgba(139, 92, 246, 0.5)',
+                        background: remoteControlEnabled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(139, 92, 246, 0.1)',
+                        '&:hover': {
+                          borderColor: remoteControlEnabled ? '#ef4444' : '#8b5cf6',
+                          background: remoteControlEnabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(139, 92, 246, 0.2)'
+                        }
+                      }}
                     >
                       {remoteControlEnabled ? 'Disable' : 'Enable'} Control
                     </Button>
                   )}
                   <Button 
                     onClick={endSession} 
-                    variant="outlined" 
-                    color="error" 
+                    variant="outlined"
                     startIcon={<PowerSettingsNew />}
                     size="small"
+                    sx={{
+                      textTransform: 'none',
+                      borderRadius: '8px',
+                      color: '#ef4444',
+                      borderColor: 'rgba(239, 68, 68, 0.5)',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      '&:hover': {
+                        borderColor: '#ef4444',
+                        background: 'rgba(239, 68, 68, 0.2)'
+                      }
+                    }}
                   >
                     End
                   </Button>
@@ -2286,15 +2598,34 @@ function App() {
 
           {/* File Transfer - Simplified */}
           {sessionId && (
-            <Paper sx={{ mt: 3, p: 2 }}>
+            <Paper sx={{ 
+              mt: 3, 
+              p: 2.5,
+              background: 'rgba(20, 20, 20, 0.6)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              borderRadius: '12px'
+            }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
                 <Box display="flex" alignItems="center" gap={1}>
-                  <CloudUpload />
-                  <Typography variant="body1" fontWeight="bold">File Transfer</Typography>
+                  <CloudUpload sx={{ color: '#3b82f6' }} />
+                  <Typography variant="body1" fontWeight="bold" sx={{ color: 'white' }}>
+                    File Transfer
+                  </Typography>
                   <Chip 
                     label={dataChannel && dataChannel.readyState === 'open' ? 'Ready' : 'Not Ready'} 
                     size="small"
-                    color={dataChannel && dataChannel.readyState === 'open' ? 'success' : 'default'}
+                    sx={{
+                      background: dataChannel && dataChannel.readyState === 'open' 
+                        ? 'rgba(34, 197, 94, 0.2)' 
+                        : 'rgba(100, 100, 100, 0.2)',
+                      color: dataChannel && dataChannel.readyState === 'open' 
+                        ? '#22c55e' 
+                        : 'rgba(255, 255, 255, 0.5)',
+                      border: `1px solid ${dataChannel && dataChannel.readyState === 'open' 
+                        ? 'rgba(34, 197, 94, 0.3)' 
+                        : 'rgba(100, 100, 100, 0.3)'}`
+                    }}
                   />
                 </Box>
                 <input 
@@ -2307,21 +2638,49 @@ function App() {
                 <Button 
                   onClick={() => fileInputRef.current?.click()}
                   disabled={!dataChannel || dataChannel.readyState !== 'open'}
-                  variant="contained"
+                  variant="outlined"
                   startIcon={<CloudUpload />}
                   size="small"
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: '8px',
+                    color: (!dataChannel || dataChannel.readyState !== 'open') 
+                      ? 'rgba(255, 255, 255, 0.3)' 
+                      : 'white',
+                    borderColor: (!dataChannel || dataChannel.readyState !== 'open') 
+                      ? 'rgba(59, 130, 246, 0.2)' 
+                      : 'rgba(59, 130, 246, 0.5)',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    '&:hover': {
+                      borderColor: '#3b82f6',
+                      background: 'rgba(59, 130, 246, 0.2)'
+                    },
+                    '&.Mui-disabled': {
+                      color: 'rgba(255, 255, 255, 0.2)',
+                      borderColor: 'rgba(59, 130, 246, 0.1)'
+                    }
+                  }}
                 >
                   Send File (Max 10MB)
                 </Button>
               </Box>
               {fileTransfer.active && (
                 <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" gutterBottom>
+                  <Typography variant="body2" gutterBottom sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                     Uploading: {Math.round(fileTransfer.progress)}%
                   </Typography>
                   <LinearProgress 
                     variant="determinate" 
-                    value={fileTransfer.progress} 
+                    value={fileTransfer.progress}
+                    sx={{
+                      height: 8,
+                      borderRadius: '4px',
+                      backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                      '& .MuiLinearProgress-bar': {
+                        background: 'linear-gradient(90deg, #8b5cf6, #3b82f6)',
+                        borderRadius: '4px'
+                      }
+                    }}
                   />
                 </Box>
               )}
@@ -2330,11 +2689,29 @@ function App() {
 
           {/* Host Status - Simplified */}
           {isHost && sessionId && (
-            <Paper sx={{ mt: 3, p: 2 }}>
+            <Paper sx={{ 
+              mt: 3, 
+              p: 2.5,
+              background: 'rgba(20, 20, 20, 0.6)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+              borderRadius: '12px'
+            }}>
               <Box display="flex" alignItems="center" gap={1}>
-                <Computer />
-                <Typography variant="body1">
-                  Sharing desktop - Session: <Chip label={sessionId.substring(0, 12) + '...'} size="small" color="primary" />
+                <Computer sx={{ color: '#8b5cf6' }} />
+                <Typography variant="body1" sx={{ color: 'white' }}>
+                  Sharing desktop - Session: {' '}
+                  <Chip 
+                    label={sessionId.substring(0, 12) + '...'} 
+                    size="small"
+                    sx={{
+                      background: 'rgba(139, 92, 246, 0.2)',
+                      color: '#8b5cf6',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      fontFamily: 'monospace',
+                      fontWeight: 600
+                    }}
+                  />
                 </Typography>
               </Box>
             </Paper>
@@ -2342,6 +2719,7 @@ function App() {
         {/* Vercel build fix */}
         </Container>
       </Box>
+      )}
     </ThemeProvider>
   );
 }
