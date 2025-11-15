@@ -56,6 +56,7 @@ module.exports = {
       }
 
       const data = await resp.json();
+      console.log('[TURN] Raw Cloudflare response:', JSON.stringify(data, null, 2));
       const result = data.result || data;
       const payload = result.credentials || result;
       if (!payload || (!payload.urls && !payload.turn_urls && !payload.ice_servers && !payload.uris)) {
