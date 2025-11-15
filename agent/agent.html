@@ -24,11 +24,24 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
+        .logo-header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .logo-header img {
+            max-width: 300px;
+            width: 80%;
+            height: auto;
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
         h1 {
             text-align: center;
             margin-bottom: 10px;
             font-size: 2.5em;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            display: none; /* Hide text title when logo is present */
         }
         
         .subtitle {
@@ -160,6 +173,9 @@
 </head>
 <body>
     <div class="container">
+        <div class="logo-header">
+            <img src="assets/superdesk.png" alt="SuperDesk Logo">
+        </div>
         <h1>🖥️ SuperDesk Agent</h1>
         <div class="subtitle">HOST - Share Your Desktop</div>
 
