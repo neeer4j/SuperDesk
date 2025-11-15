@@ -57,8 +57,13 @@ module.exports = {
 
       const data = await resp.json();
       console.log('[TURN] Raw Cloudflare response:', JSON.stringify(data, null, 2));
+      
+      // Handle different response structures:
+      // 1. TURN key API: { "iceServers": { "urls": [...], "username": "...", "credential": "..." } }
+      // 2. Legacy Realtime: { "result": { "credentials": { ... } } }
       const result = data.result || data;
-      const payload = result.credentials || result;
+      const payload = result.credentials || result.iceServers || result;
+      
       if (!payload || (!payload.urls && !payload.turn_urls && !payload.ice_servers && !payload.uris)) {
         const msg = `Unexpected Cloudflare TURN response shape: ${JSON.stringify(data)}`;
         console.warn(msg);

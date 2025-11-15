@@ -85,8 +85,13 @@ async function fetchCloudflareTurnServers(ttlSeconds = 3600) {
   }
 
   const data = await resp.json();
+  
+  // Handle different response structures:
+  // 1. TURN key API: { "iceServers": { "urls": [...], "username": "...", "credential": "..." } }
+  // 2. Legacy Realtime: { "result": { "credentials": { ... } } }
   const result = data.result || data;
-  const payload = result.credentials || result;
+  const payload = result.credentials || result.iceServers || result;
+  
   const urls = payload.uris || payload.urls || payload.turn_urls || payload.ice_servers || [];
   const username = payload.username || payload.user || payload.auth?.username;
   const credential = payload.password || payload.credential || payload.auth?.password;
