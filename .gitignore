@@ -105,4 +105,3 @@ screen-*.png
 temp/
 tmp/
 node_modules
-server/turn-provider.js
