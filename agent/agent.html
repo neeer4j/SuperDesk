@@ -8,54 +8,58 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             background: linear-gradient(135deg, #0a006f 0%, #1a0a9f 100%);
             color: white;
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .container {
-            max-width: 600px;
-            margin: 0 auto;
+            width: 100%;
+            max-width: 580px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 15px;
-            padding: 30px;
+            padding: 20px;
             backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         .logo-header {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .logo-header img {
-            max-width: 300px;
-            width: 80%;
+            max-width: 250px;
+            width: 70%;
             height: auto;
             filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
         }
 
         h1 {
             text-align: center;
-            margin-bottom: 10px;
-            font-size: 2.5em;
+            margin-bottom: 8px;
+            font-size: 2em;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
             display: none; /* Hide text title when logo is present */
         }
         
         .subtitle {
             text-align: center;
-            margin-bottom: 30px;
-            font-size: 1.2em;
+            margin-bottom: 15px;
+            font-size: 1em;
             opacity: 0.9;
         }
 
         .session-panel {
             background: rgba(255, 255, 255, 0.15);
             border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
             border: 2px solid rgba(255, 255, 255, 0.3);
             text-align: center;
         }
@@ -79,8 +83,8 @@
         .status-panel {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
@@ -88,8 +92,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            font-size: 16px;
+            margin-bottom: 8px;
+            font-size: 15px;
         }
 
         .status-text {
@@ -100,16 +104,16 @@
         .controls {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
         }
 
         button {
-            padding: 15px 20px;
+            padding: 12px 18px;
             border: none;
             border-radius: 8px;
             background: linear-gradient(45deg, #4CAF50, #45a049);
             color: white;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
