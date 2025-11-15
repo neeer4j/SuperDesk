@@ -52,8 +52,9 @@ module.exports = {
       // Data shape may be { result: { username, password, urls: [...] } } or { username, password, urls }
       const result = data.result || data;
       if (!result || (!result.urls && !result.turn_urls && !result.ice_servers)) {
-        console.warn('Unexpected Cloudflare TURN response shape', data);
-        return null;
+        const msg = `Unexpected Cloudflare TURN response shape: ${JSON.stringify(data)}`;
+        console.warn(msg);
+        throw new Error(msg);
       }
 
       // Normalize possible field names
@@ -61,9 +62,10 @@ module.exports = {
       const username = result.username || result.user || result.auth?.username;
       const credential = result.password || result.credential || result.auth?.password;
 
-      if (!Array.isArray(urls) || !username || !credential) {
-        console.warn('Incomplete Cloudflare TURN response, skipping', { urls, username, credential });
-        return null;
+      if (!Array.isArray(urls) || !urls.length || !username || !credential) {
+        const msg = `Incomplete Cloudflare TURN response: ${JSON.stringify({ urls, username, credential })}`;
+        console.warn(msg);
+        throw new Error(msg);
       }
 
       const servers = urls.map(u => ({ urls: u, username, credential }));
