@@ -1,21 +1,52 @@
 # SuperDesk - Remote Desktop Access Software
 
-SuperDesk is a comprehensive remote desktop access web application designed for personal use on Windows platforms. It provides secure, real-time screen sharing, bidirectional audio communication, camera access, and file transfer capabilities.
+
+SuperDesk is a modern remote desktop access platform for Windows, featuring:
+- Secure, real-time screen sharing (WebRTC with TURN/STUN support)
+- Bidirectional audio and camera streaming
+- File transfer (max 10MB per file)
+- Windows desktop agent for full control
+- End-to-end encrypted peer-to-peer connections
+- Cloud signaling and TURN relay (Cloudflare or OpenRelay)
+
+**TURN/STUN Support:**
+SuperDesk uses dynamic TURN/STUN server configuration for maximum connectivity, including:
+- Cloudflare Realtime TURN (if configured via environment variables)
+- OpenRelay public TURN servers as fallback
+- Google STUN servers
+TURN credentials are fetched securely by the backend and provided to both web and desktop clients.
+
+**Security:**
+- All signaling and media connections use HTTPS/WSS and DTLS-SRTP
+- File transfers are validated and limited to 10MB
+- WebRTC peer connections are secured and ephemeral
+- Authentication and access control are recommended for production
+
+**Deployment:**
+- Web client: React (Create React App), deployable to Vercel or any static host
+- Backend: Node.js (Express + Socket.io), deployable to Render, Railway, or any Node host
+- Desktop agent: Electron app for Windows, packaged with electron-builder
+
+**License & Usage:**
+SuperDesk is currently free to use for personal/non-commercial purposes. If you wish to use, modify, or redistribute SuperDesk for commercial purposes, please contact the authors for licensing options. (See LICENSE for details.)
+
+---
 
 ## 🚀 Quick Start
 
 Run `start-dev.bat` to launch both server and client automatically! The server will start on port 3001 and the client on port 3000.
 
-## 🚀 Features
 
-- **Web-based Client Interface** - Access from any modern browser
-- **Windows Desktop Agent** - Lightweight Electron-based screen capture agent
-- **Real-time Screen Sharing** - High-quality screen streaming via WebRTC
-- **Bidirectional Audio** - Two-way audio communication with echo cancellation
-- **Camera Video Access** - Optional camera sharing from client
-- **File Transfer** - Secure file sharing with 10MB size limit
-- **Secure Connections** - WebRTC peer-to-peer with WebSocket signaling
-- **Session Management** - Easy session creation and joining with unique IDs
+## 🚀 Features
+- **Web-based Client Interface** – Access from any modern browser
+- **Windows Desktop Agent** – Electron-based screen capture and control
+- **Real-time Screen Sharing** – WebRTC with TURN/STUN relay
+- **Bidirectional Audio** – Two-way audio with echo cancellation
+- **Camera Video Access** – Optional camera sharing
+- **File Transfer** – Secure, 10MB per file limit
+- **Secure Connections** – Encrypted peer-to-peer (DTLS-SRTP)
+- **Session Management** – Easy session creation/joining with unique IDs
+
 
 ## 🏗 Architecture
 
@@ -25,13 +56,14 @@ Run `start-dev.bat` to launch both server and client automatically! The server w
 │   Web Client    │◄────────────────►│  Node.js Server │◄───────────────►│ Desktop Agent   │
 │   (React App)   │                  │  (Express+IO)   │                 │  (Electron)     │
 └─────────────────┘                  └─────────────────┘                 └─────────────────┘
-        │                                      │                                   │
-        │                                      │                                   │
-    Browser                              WebSocket Server                   Windows Desktop
-   - WebRTC                             - Session Management                 - Screen Capture
+    │                                      │                                   │
+    │                                      │                                   │
+  Browser                              WebSocket Server                   Windows Desktop
+   - WebRTC (TURN/STUN)                 - Session Management                 - Screen Capture
    - File Upload                        - Signaling Relay                   - Input Simulation
    - Audio/Video                        - File Transfer Hub                 - Audio Capture
 ```
+
 
 ## 📁 Project Structure
 
@@ -54,10 +86,25 @@ SuperDesk/
 │   ├── agent.html        # Agent UI interface
 │   ├── assets/           # App icons and resources
 │   └── package.json      # Agent dependencies
-├── shared/                 # Common utilities and constants
+├── shared/                 # Common utilities and types
 │   └── index.js          # Shared constants and utilities
 ├── .vscode/
 │   └── tasks.json        # VS Code development tasks
+
+---
+
+## 🌐 Environment & TURN Configuration
+
+- **TURN/STUN servers** are configured dynamically by the backend (`server/turn-provider.js`).
+- By default, the backend will use public OpenRelay and Google STUN servers.
+- For production, you can set up Cloudflare Realtime TURN by providing the following environment variables:
+  - `CLOUDFLARE_TURN_KEY_ID` and `CLOUDFLARE_TURN_KEY_API_TOKEN` (preferred)
+  - or `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` (legacy)
+- The backend exposes `/api/webrtc-config` for clients to fetch the current ICE server list.
+
+## 🔒 License
+
+This project is licensed under the MIT License (see LICENSE). For commercial use, please contact the authors for permission. SuperDesk is a personal project and not affiliated with any company.
 └── package.json          # Root workspace configuration
 ```
 
