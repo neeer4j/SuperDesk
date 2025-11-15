@@ -228,8 +228,8 @@ function createWindow() {
   // Load the agent interface
   mainWindow.loadFile('agent.html');
 
-  // Open DevTools to see console logs
-  mainWindow.webContents.openDevTools();
+  // Open DevTools only in development mode (optional)
+  // mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', () => {
     mainWindow = null;
