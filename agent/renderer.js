@@ -41,6 +41,28 @@ async function loadIceServers() {
   };
 }
 
+// Cap an RTCRtpSender to a maximum bitrate in Mbps (safe helper)
+async function capSenderToMbps(sender, mbps) {
+  if (!sender || typeof sender.getParameters !== 'function') return false;
+  if (typeof sender.setParameters !== 'function') {
+    console.warn('RTCRtpSender.setParameters not supported in this engine.');
+    return false;
+  }
+  try {
+    const params = sender.getParameters();
+    if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+    const bps = Math.floor(mbps * 1_000_000);
+    for (const enc of params.encodings) {
+      enc.maxBitrate = bps;
+    }
+    await sender.setParameters(params);
+    return true;
+  } catch (err) {
+    console.warn('Failed to set sender parameters:', err);
+    return false;
+  }
+}
+
 // Connect to signaling server
 function connectToServer() {
   console.log('Connecting to server:', SERVER_URL);
@@ -268,12 +290,13 @@ async function startScreenShare() {
         }
       }
       if (videoSender) {
-        const params = videoSender.getParameters();
-        params.encodings = params.encodings || [{}];
-        params.encodings[0].maxBitrate = 2_000_000; // 2 Mbps
-        params.encodings[0].maxFramerate = 30;
-        await videoSender.setParameters(params);
-        console.log('Applied video sender parameters');
+        // Use helper to set a robust max bitrate (2 Mbps)
+        try {
+          await capSenderToMbps(videoSender, 2);
+          console.log('Applied video sender parameters (capped to 2 Mbps)');
+        } catch (e) {
+          console.warn('Failed to apply cap to video sender:', e);
+        }
       }
     } catch (e) {
       console.log('Codec/encoding preference not applied (non-fatal):', e);
@@ -561,13 +584,10 @@ async function startTestPattern() {
 
     try {
       if (videoSender) {
-        const params = videoSender.getParameters();
-        params.encodings = params.encodings || [{}];
-        params.encodings[0].maxBitrate = 1_500_000;
-        params.encodings[0].maxFramerate = 30;
-        await videoSender.setParameters(params);
+        // Cap test pattern sender to 1.5 Mbps
+        await capSenderToMbps(videoSender, 1.5);
       }
-    } catch {}
+    } catch (e) { console.warn('Failed to cap test pattern sender:', e); }
 
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);

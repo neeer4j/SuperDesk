@@ -6,6 +6,25 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
+// Load local .env in development if present (safe - won't crash if dotenv isn't installed)
+try {
+  require('dotenv').config();
+} catch (e) {
+  // dotenv not installed or .env not present - that's fine for production where env vars are set externally
+}
+
+// Optional TURN provider integration (e.g., Cloudflare). If you add `server/turn-provider.js`
+// that module should export async function getTurnServers(ttlSeconds) returning an array of
+// { urls, username, credential } objects or null.
+let turnProvider = null;
+try {
+  turnProvider = require('./turn-provider');
+  console.log('turn-provider loaded');
+} catch (e) {
+  // not fatal - continue using static env or fallback TURNs
+  // console.log('turn-provider not found, using static TURN env or fallback');
+}
+
 const app = express();
 const server = http.createServer(app);
 
@@ -345,34 +364,57 @@ app.get('/api/webrtc-config', (req, res) => {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
   ];
+  (async () => {
+    try {
+      // If an external provider implementation exists, prefer ephemeral creds from it
+      if (turnProvider && typeof turnProvider.getTurnServers === 'function') {
+        try {
+          const providerServers = await turnProvider.getTurnServers();
+          if (providerServers && providerServers.length) {
+            const iceServers = [...defaultStun, ...providerServers];
+            res.json({ iceServers });
+            return;
+          }
+        } catch (err) {
+          console.error('TURN provider error:', err);
+          // fall through to env/static fallback
+        }
+      }
 
-  const turnUrls = (process.env.TURN_URLS || '')
-    .split(',')
-    .map(u => u.trim())
-    .filter(Boolean);
+      // Static env-based TURN configuration (legacy / simple setup)
+      const turnUrls = (process.env.TURN_URLS || '')
+        .split(',')
+        .map(u => u.trim())
+        .filter(Boolean);
 
-  let iceServers = [...defaultStun];
+      let iceServers = [...defaultStun];
 
-  if (turnUrls.length && process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
-    iceServers = [
-      ...iceServers,
-      ...turnUrls.map(url => ({
-        urls: url,
-        username: process.env.TURN_USERNAME,
-        credential: process.env.TURN_CREDENTIAL,
-      }))
-    ];
-  } else {
-    // Fallback to public TURN (limited reliability)
-    iceServers = [
-      ...iceServers,
-      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-    ];
-  }
+      if (turnUrls.length && process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+        iceServers = [
+          ...iceServers,
+          ...turnUrls.map(url => ({
+            urls: url,
+            username: process.env.TURN_USERNAME,
+            credential: process.env.TURN_CREDENTIAL,
+          }))
+        ];
+      } else {
+        // Fallback to public TURN (limited reliability)
+        iceServers = [
+          ...iceServers,
+          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+        ];
+      }
 
-  res.json({ iceServers });
+      res.json({ iceServers });
+    } catch (err) {
+      console.error('Error in /api/webrtc-config handler:', err);
+      // Best-effort fallback
+      res.json({ iceServers: defaultStun });
+    }
+  })();
 });
 
 // Socket.io test endpoint to check if socket.io is accessible

@@ -208,6 +208,28 @@ function App() {
     }, 3000);
   };
 
+  // Cap an RTCRtpSender to a maximum bitrate in Mbps (safe helper)
+  async function capSenderToMbps(sender, mbps) {
+    if (!sender || typeof sender.getParameters !== 'function') return false;
+    if (typeof sender.setParameters !== 'function') {
+      console.warn('RTCRtpSender.setParameters not supported in this engine.');
+      return false;
+    }
+    try {
+      const params = sender.getParameters();
+      if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+      const bps = Math.floor(mbps * 1_000_000);
+      for (const enc of params.encodings) {
+        enc.maxBitrate = bps;
+      }
+      await sender.setParameters(params);
+      return true;
+    } catch (err) {
+      console.warn('Failed to set sender parameters:', err);
+      return false;
+    }
+  }
+
   useEffect(() => {
     // Expose internals for debugging via DevTools console
     window.superdeskDebug = {
@@ -687,14 +709,8 @@ function App() {
         const senders = pc.getSenders();
         for (const sender of senders) {
           if (sender.track && sender.track.kind === 'video') {
-            const params = sender.getParameters();
-            if (params.encodings) {
-              params.encodings.forEach(encoding => {
-                encoding.maxBitrate = 2000000; // 2 Mbps for good quality
-                encoding.maxFramerate = 30;
-              });
-              await sender.setParameters(params);
-            }
+            // Cap outgoing video sender to 2 Mbps (re-apply after renegotiation)
+            await capSenderToMbps(sender, 2);
           }
         }
       } catch (error) {
@@ -734,10 +750,15 @@ function App() {
       setPeerConnection(pc); // CRITICAL: Store peer connection in state
       peerConnectionRef.current = pc; // Store in ref for event handlers
       
-      // Add local stream to peer connection
+      // Add local stream to peer connection and cap video sender
+      let videoSender = null;
       stream.getTracks().forEach(track => {
-        pc.addTrack(track, stream);
+        const sender = pc.addTrack(track, stream);
+        if (track.kind === 'video') videoSender = sender;
       });
+      if (videoSender) {
+        try { await capSenderToMbps(videoSender, 2); } catch (e) { console.warn('capSenderToMbps failed:', e); }
+      }
       logLocalVideoDiagnostics('after addTrack');
       startOutboundStatsLogger(pc);
 
