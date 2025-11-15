@@ -44,7 +44,7 @@ module.exports = {
       const resp = await fetchFn(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
+          'Authorization': `Bearer ${bearerToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ ttl: ttlSeconds })
