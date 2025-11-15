@@ -8,6 +8,8 @@
     "dev:server": "cd server && npm run dev",
     "dev:agent": "cd agent && npm run dev",
     "build:client": "cd client && npm run build",
+    "build": "npm run build:client",
+    "vercel-build": "npm run build:client",
     "build:server": "cd server && npm run build",
     "build:agent": "cd agent && npm run build",
     "start:client": "cd client && npm start",
