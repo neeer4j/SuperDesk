@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, desktopCapturer } = require('electron');
 const path = require('path');
 const robot = require('robotjs');
 
+// Enable @electron/remote
+require('@electron/remote/main').initialize();
+
 let mainWindow;
 
 // robotjs is not context-aware; keep legacy behavior so native module loads
@@ -214,19 +217,24 @@ ipcMain.on('robot-keyboard-event', (_event, data = {}) => {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 650,
-    height: 750,
-    resizable: false,
-    maximizable: false,
-    fullscreenable: false,
+    width: 1200,
+    height: 800,
+    minWidth: 1000,
+    minHeight: 700,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
-    title: 'SuperDesk Agent - Host'
+    title: 'SuperDesk Agent'
   });
+
+  // Enable @electron/remote for this window
+  require('@electron/remote/main').enable(mainWindow.webContents);
 
   // Load the agent interface
   mainWindow.loadFile('agent.html');
