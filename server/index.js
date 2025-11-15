@@ -17,12 +17,20 @@ try {
 // that module should export async function getTurnServers(ttlSeconds) returning an array of
 // { urls, username, credential } objects or null.
 let turnProvider = null;
+const turnDiagnostics = {
+  providerLoaded: false,
+  lastProviderAttempt: null,
+  lastProviderSuccess: null,
+  lastProviderError: null,
+  lastResponseSource: 'unknown',
+};
+
 try {
   turnProvider = require('./turn-provider');
-  console.log('turn-provider loaded');
+  turnDiagnostics.providerLoaded = true;
+  console.log('[TURN] turn-provider module loaded');
 } catch (e) {
-  // not fatal - continue using static env or fallback TURNs
-  // console.log('turn-provider not found, using static TURN env or fallback');
+  console.log('[TURN] turn-provider module not found, using env/fallback');
 }
 
 const app = express();
@@ -364,21 +372,43 @@ app.get('/api/webrtc-config', (req, res) => {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
   ];
+  const requestLabel = `[TURN cfg ${new Date().toISOString()}]`;
+
   (async () => {
     try {
       // If an external provider implementation exists, prefer ephemeral creds from it
       if (turnProvider && typeof turnProvider.getTurnServers === 'function') {
+        turnDiagnostics.lastProviderAttempt = new Date().toISOString();
+        console.log(`${requestLabel} requesting credentials from TURN provider`);
         try {
           const providerServers = await turnProvider.getTurnServers();
           if (providerServers && providerServers.length) {
             const iceServers = [...defaultStun, ...providerServers];
+            turnDiagnostics.lastProviderSuccess = {
+              at: new Date().toISOString(),
+              count: providerServers.length,
+            };
+            turnDiagnostics.lastResponseSource = 'provider';
+            console.log(`${requestLabel} provider returned ${providerServers.length} servers`);
             res.json({ iceServers });
             return;
           }
+
+          turnDiagnostics.lastProviderError = {
+            at: new Date().toISOString(),
+            message: 'Provider returned no servers',
+          };
+          console.warn(`${requestLabel} provider returned no servers, falling back`);
         } catch (err) {
-          console.error('TURN provider error:', err);
+          turnDiagnostics.lastProviderError = {
+            at: new Date().toISOString(),
+            message: err?.message || 'Unknown TURN provider error',
+          };
+          console.error(`${requestLabel} TURN provider error:`, err);
           // fall through to env/static fallback
         }
+      } else {
+        console.log(`${requestLabel} no external TURN provider detected (using env/fallback)`);
       }
 
       // Static env-based TURN configuration (legacy / simple setup)
@@ -398,6 +428,8 @@ app.get('/api/webrtc-config', (req, res) => {
             credential: process.env.TURN_CREDENTIAL,
           }))
         ];
+        turnDiagnostics.lastResponseSource = 'static-env';
+        console.log(`${requestLabel} using static TURN env configuration (${turnUrls.length} urls)`);
       } else {
         // Fallback to public TURN (limited reliability)
         iceServers = [
@@ -406,15 +438,35 @@ app.get('/api/webrtc-config', (req, res) => {
           { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
           { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
         ];
+        turnDiagnostics.lastResponseSource = 'public-fallback';
+        console.warn(`${requestLabel} falling back to public OpenRelay TURN`);
       }
 
       res.json({ iceServers });
     } catch (err) {
       console.error('Error in /api/webrtc-config handler:', err);
       // Best-effort fallback
+      turnDiagnostics.lastResponseSource = 'error';
       res.json({ iceServers: defaultStun });
     }
   })();
+});
+
+app.get('/api/webrtc-diagnostics', (req, res) => {
+  res.json({
+    providerLoaded: turnDiagnostics.providerLoaded,
+    lastProviderAttempt: turnDiagnostics.lastProviderAttempt,
+    lastProviderSuccess: turnDiagnostics.lastProviderSuccess,
+    lastProviderError: turnDiagnostics.lastProviderError,
+    lastResponseSource: turnDiagnostics.lastResponseSource,
+    env: {
+      CLOUDFLARE_ACCOUNT_ID: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID),
+      CLOUDFLARE_API_TOKEN: Boolean(process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY),
+      TURN_URLS: Boolean((process.env.TURN_URLS || '').trim()),
+      TURN_USERNAME: Boolean(process.env.TURN_USERNAME),
+      TURN_CREDENTIAL: Boolean(process.env.TURN_CREDENTIAL),
+    }
+  });
 });
 
 // Socket.io test endpoint to check if socket.io is accessible
