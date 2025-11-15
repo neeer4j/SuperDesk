@@ -26,6 +26,9 @@ const turnDiagnostics = {
 };
 
 try {
+  // Adding environment variables for Cloudflare diagnostics
+  turnDiagnostics.env = {};
+
   turnProvider = require('./turn-provider');
   turnDiagnostics.providerLoaded = true;
   console.log('[TURN] turn-provider module loaded');
@@ -546,16 +549,18 @@ app.get('/api/webrtc-diagnostics', (req, res) => {
     lastProviderSuccess: turnDiagnostics.lastProviderSuccess,
     lastProviderError: turnDiagnostics.lastProviderError,
     lastResponseSource: turnDiagnostics.lastResponseSource,
-    env: {
-      CLOUDFLARE_ACCOUNT_ID: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID),
-      CLOUDFLARE_API_TOKEN: Boolean(process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY),
-      TURN_URLS: Boolean((process.env.TURN_URLS || '').trim()),
-      TURN_USERNAME: Boolean(process.env.TURN_USERNAME),
-      TURN_CREDENTIAL: Boolean(process.env.TURN_CREDENTIAL),
-    }
+    env: turnDiagnostics.env
   });
 });
 
+// Populate the Cloudflare environment variables for diagnostics
+turnDiagnostics.env.CLOUDFLARE_ACCOUNT_ID = Boolean(process.env.CLOUDFLARE_ACCOUNT_ID || process.env.ACCOUNT_ID);
+turnDiagnostics.env.CLOUDFLARE_API_TOKEN = Boolean(process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY);
+turnDiagnostics.env.CLOUDFLARE_TURN_KEY_ID = Boolean(process.env.CLOUDFLARE_TURN_KEY_ID || process.env.TURN_KEY_ID);
+turnDiagnostics.env.CLOUDFLARE_TURN_KEY_API_TOKEN = Boolean(process.env.CLOUDFLARE_TURN_KEY_API_TOKEN || process.env.CLOUDFLARE_TURN_KEY_TOKEN || process.env.TURN_KEY_API_TOKEN);
+turnDiagnostics.env.TURN_URLS = Boolean(process.env.TURN_URLS);
+turnDiagnostics.env.TURN_USERNAME = Boolean(process.env.TURN_USERNAME);
+turnDiagnostics.env.TURN_CREDENTIAL = Boolean(process.env.TURN_CREDENTIAL);
 // Socket.io test endpoint to check if socket.io is accessible
 app.get('/socket-test', (req, res) => {
   res.json({
