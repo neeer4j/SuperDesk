@@ -214,8 +214,11 @@ ipcMain.on('robot-keyboard-event', (_event, data = {}) => {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 700,
+    width: 650,
+    height: 750,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
