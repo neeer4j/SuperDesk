@@ -2,9 +2,9 @@
 // Cloudflare Realtime TURN provider implementation (template)
 // Copy of this file may contain secrets via env vars - DO NOT commit real secrets to git.
 
-// Required env variables:
-// CLOUDFLARE_ACCOUNT_ID - your Cloudflare account id
-// CLOUDFLARE_API_TOKEN  - a scoped API token with permission to mint realtime TURN credentials
+// Supported env variables:
+// - CLOUDFLARE_TURN_KEY_ID / CLOUDFLARE_TURN_KEY_API_TOKEN (preferred for rtc.live.cloudflare.com)
+// - CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN (legacy /realtime/turn-credentials endpoint)
 
 // This implementation attempts to use global fetch (Node 18+). If not available, it will try to require 'node-fetch'.
 
@@ -22,16 +22,23 @@ module.exports = {
   // Request ephemeral TURN credentials from Cloudflare Realtime API
   // Returns an array of objects: { urls: 'turn:...', username: '...', credential: '...' }
   async getTurnServers(ttlSeconds = 3600) {
+    const turnKeyId = process.env.CLOUDFLARE_TURN_KEY_ID || process.env.TURN_KEY_ID;
+    const turnKeyToken = process.env.CLOUDFLARE_TURN_KEY_API_TOKEN || process.env.CLOUDFLARE_TURN_KEY_TOKEN || process.env.TURN_KEY_API_TOKEN;
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY;
 
-    if (!accountId || !apiToken) {
-      console.log('Cloudflare TURN provider not configured: missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN');
+    const hasTurnKey = Boolean(turnKeyId && turnKeyToken);
+    const hasLegacyRealtime = Boolean(accountId && apiToken);
+
+    if (!hasTurnKey && !hasLegacyRealtime) {
+      console.log('Cloudflare TURN provider not configured: set TURN key env or account-level env');
       return null;
     }
 
-    // Cloudflare Realtime TURN credentials endpoint (illustrative - verify with current CF docs)
-    const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/realtime/turn-credentials`;
+    const url = hasTurnKey
+      ? `https://rtc.live.cloudflare.com/v1/turn/keys/${turnKeyId}/credentials/generate`
+      : `https://api.cloudflare.com/client/v4/accounts/${accountId}/realtime/turn-credentials`;
+    const bearerToken = hasTurnKey ? turnKeyToken : apiToken;
 
     try {
       const resp = await fetchFn(url, {
@@ -49,18 +56,18 @@ module.exports = {
       }
 
       const data = await resp.json();
-      // Data shape may be { result: { username, password, urls: [...] } } or { username, password, urls }
       const result = data.result || data;
-      if (!result || (!result.urls && !result.turn_urls && !result.ice_servers)) {
+      const payload = result.credentials || result;
+      if (!payload || (!payload.urls && !payload.turn_urls && !payload.ice_servers && !payload.uris)) {
         const msg = `Unexpected Cloudflare TURN response shape: ${JSON.stringify(data)}`;
         console.warn(msg);
         throw new Error(msg);
       }
 
       // Normalize possible field names
-      const urls = result.urls || result.turn_urls || result.ice_servers || [];
-      const username = result.username || result.user || result.auth?.username;
-      const credential = result.password || result.credential || result.auth?.password;
+      const urls = payload.uris || payload.urls || payload.turn_urls || payload.ice_servers || [];
+      const username = payload.username || payload.user || payload.auth?.username;
+      const credential = payload.password || payload.credential || payload.auth?.password;
 
       if (!Array.isArray(urls) || !urls.length || !username || !credential) {
         const msg = `Incomplete Cloudflare TURN response: ${JSON.stringify({ urls, username, credential })}`;

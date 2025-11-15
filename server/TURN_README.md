@@ -4,6 +4,18 @@ What these files are for
 - `turn-provider.js` — Cloudflare Realtime implementation (already wired into `/api/webrtc-config`).
 - `turn-provider.example.js` — reference template if you want to plug in a different provider.
 
+Using Cloudflare TURN keys (rtc.live.cloudflare.com)
+Cloudflare’s newer RTC product exposes TURN keys that you can use instead of the legacy `/realtime/turn-credentials` endpoint.
+
+1. In the Cloudflare dashboard open **Realtime → TURN Server** and click **Create TURN Key**. Copy both the TURN Key ID and the API token when prompted.
+2. Set the env vars:
+   ```
+   CLOUDFLARE_TURN_KEY_ID=your-turn-key-id
+   CLOUDFLARE_TURN_KEY_API_TOKEN=cf_turn_key_api_token
+   ```
+3. Leave the legacy `CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN` empty (or keep them as fallback).
+4. Redeploy and call `/api/webrtc-config` — the server now hits `https://rtc.live.cloudflare.com/v1/turn/keys/<id>/credentials/generate` and returns the Anycast TURN URIs with short-lived credentials.
+
 Cloudflare setup (5 minutes)
 1. Create a Cloudflare API token with the "Cloudflare Realtime / TURN" permission (Account → Workers & Pages → Realtime → API Tokens). Copy the token and account ID.
 2. Add the env vars:

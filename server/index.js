@@ -47,23 +47,30 @@ function getFetchImplementation() {
 const cloudflareFetch = getFetchImplementation();
 
 async function fetchCloudflareTurnServers(ttlSeconds = 3600) {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY;
-
-  if (!accountId || !apiToken) {
-    throw new Error('CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN missing');
-  }
-
   if (!cloudflareFetch) {
     throw new Error('Fetch implementation unavailable; install node-fetch or use Node 18+');
   }
 
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/realtime/turn-credentials`;
+  const turnKeyId = process.env.CLOUDFLARE_TURN_KEY_ID || process.env.TURN_KEY_ID;
+  const turnKeyToken = process.env.CLOUDFLARE_TURN_KEY_API_TOKEN || process.env.CLOUDFLARE_TURN_KEY_TOKEN || process.env.TURN_KEY_API_TOKEN;
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY;
+
+  const hasTurnKey = Boolean(turnKeyId && turnKeyToken);
+  const hasLegacyRealtime = Boolean(accountId && apiToken);
+
+  if (!hasTurnKey && !hasLegacyRealtime) {
+    throw new Error('Cloudflare TURN env vars missing (set TURN key or account-level credentials)');
+  }
+
+  const url = hasTurnKey
+    ? `https://rtc.live.cloudflare.com/v1/turn/keys/${turnKeyId}/credentials/generate`
+    : `https://api.cloudflare.com/client/v4/accounts/${accountId}/realtime/turn-credentials`;
 
   const resp = await cloudflareFetch(url, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiToken}`,
+      Authorization: `Bearer ${hasTurnKey ? turnKeyToken : apiToken}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ ttl: ttlSeconds })
@@ -76,9 +83,10 @@ async function fetchCloudflareTurnServers(ttlSeconds = 3600) {
 
   const data = await resp.json();
   const result = data.result || data;
-  const urls = result.urls || result.turn_urls || result.ice_servers || [];
-  const username = result.username || result.user || result.auth?.username;
-  const credential = result.password || result.credential || result.auth?.password;
+  const payload = result.credentials || result;
+  const urls = payload.uris || payload.urls || payload.turn_urls || payload.ice_servers || [];
+  const username = payload.username || payload.user || payload.auth?.username;
+  const credential = payload.password || payload.credential || payload.auth?.password;
 
   if (!Array.isArray(urls) || !urls.length || !username || !credential) {
     throw new Error(`Incomplete Cloudflare TURN response: ${JSON.stringify({ urls, username, credential })}`);
