@@ -73,10 +73,11 @@ function connectToServer() {
   socket.on('connect', async () => {
     console.log('✅ Agent connected to server');
     updateStatus('Connected to server');
-    // Load ICE servers from backend for best cross-network success
-    await loadIceServers();
-    
-    // Create a new session as HOST
+    // Load ICE servers in background so session creation is fast.
+    // Previously we awaited this which delayed the session id appearing.
+    loadIceServers().then(() => console.log('ICE servers loaded')).catch(() => console.warn('ICE load failed, using fallback'));
+
+    // Create a new session as HOST immediately so UI appears quickly
     socket.emit('create-session');
   });
   
@@ -607,3 +608,48 @@ window.startTestPattern = startTestPattern;
 // Start connection when script loads
 console.log('Agent renderer script loaded');
 connectToServer();
+// Provide safe global UI functions so inline onclicks work even when
+// the page is opened in a regular browser (no Electron APIs available).
+window.minimizeWindow = () => {
+  try {
+    const remote = require('@electron/remote');
+    remote.getCurrentWindow().minimize();
+  } catch (e) {
+    console.warn('minimizeWindow: not available outside Electron');
+  }
+};
+
+window.closeWindow = () => {
+  try {
+    const remote = require('@electron/remote');
+    remote.getCurrentWindow().close();
+  } catch (e) {
+    console.warn('closeWindow: not available outside Electron');
+  }
+};
+
+window.showMainScreen = function() {
+  const welcomeScreen = document.getElementById('welcomeScreen');
+  const mainScreen = document.getElementById('mainScreen');
+  if (!welcomeScreen || !mainScreen) return;
+  welcomeScreen.style.animation = 'fadeOut 0.25s ease-out';
+  setTimeout(() => {
+    welcomeScreen.classList.add('hidden');
+    mainScreen.classList.add('active');
+  }, 260);
+};
+
+// Attach native handlers after DOM ready when possible
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    if (typeof require === 'function') {
+      const remote = require('@electron/remote');
+      const minBtn = document.querySelector('.titlebar-button[title="Minimize"]');
+      const closeBtn = document.querySelector('.titlebar-button[title="Close"]');
+      if (minBtn) minBtn.addEventListener('click', () => remote.getCurrentWindow().minimize());
+      if (closeBtn) closeBtn.addEventListener('click', () => remote.getCurrentWindow().close());
+    }
+  } catch (e) {
+    console.warn('UI helpers (native) not attached:', e);
+  }
+});

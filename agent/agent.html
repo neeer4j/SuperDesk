@@ -3,49 +3,357 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperDesk Agent - Host</title>
+    <title>SuperDesk Agent</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 15px;
-            background: linear-gradient(135deg, #0a006f 0%, #1a0a9f 100%);
+            /* Use brand blue as primary background for a simpler, faster paint */
+            background: #0a006f;
             color: white;
             height: 100vh;
             overflow: hidden;
+            -webkit-app-region: drag;
+        }
+
+        .titlebar {
+            -webkit-app-region: drag;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .titlebar-title {
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .titlebar-controls {
+            -webkit-app-region: no-drag;
+            display: flex;
+            gap: 10px;
+        }
+
+        .titlebar-button {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 16px;
+        }
+
+        .titlebar-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .titlebar-button.close:hover {
+            background: #ef4444;
         }
 
         .container {
+            height: calc(100vh - 40px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-app-region: no-drag;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            text-align: center;
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        .welcome-screen.hidden {
+            display: none;
+        }
+
+        .logo-container {
+            margin-bottom: 60px;
+            animation: scaleIn 0.8s ease-out;
+        }
+
+        .logo-container img {
+            width: 400px;
+            max-width: 80vw;
+            filter: drop-shadow(0 10px 40px rgba(168, 85, 247, 0.4));
+        }
+
+        .welcome-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: slideUp 0.8s ease-out 0.2s both;
+        }
+
+        .welcome-subtitle {
+            font-size: 20px;
+            opacity: 0.7;
+            margin-bottom: 60px;
+            animation: slideUp 0.8s ease-out 0.4s both;
+        }
+
+        .start-button {
+            padding: 18px 60px;
+            font-size: 18px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4);
+            animation: slideUp 0.8s ease-out 0.6s both;
+        }
+
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 50px rgba(168, 85, 247, 0.6);
+        }
+
+        /* Main Screen */
+        .main-screen {
             width: 100%;
-            max-width: 580px;
+            max-width: 900px;
+            padding: 40px;
+            display: none;
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        .main-screen.active {
+            display: block;
+        }
+
+        .screen-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .screen-header h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .screen-header p {
+            font-size: 16px;
+            opacity: 0.7;
+        }
+
+        .card {
+            background: rgba(30, 27, 75, 0.6);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(168, 85, 247, 0.5);
+            box-shadow: 0 8px 32px rgba(168, 85, 247, 0.2);
+        }
+
+        .card-header {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.6;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .session-id {
+            font-size: 28px;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .session-hint {
+            font-size: 13px;
+            opacity: 0.5;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .status-row:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-size: 15px;
+            opacity: 0.7;
+        }
+
+        .status-value {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+        }
+
+        .status-indicator.disconnected {
+            background: #ef4444;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 16px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            color: white;
+            box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(168, 85, 247, 0.5);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .logo-header {
-            text-align: center;
-            margin-bottom: 8px;
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
         }
 
-        .logo-header img {
-            max-width: 250px;
-            width: 70%;
-            height: auto;
-            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        h1 {
-            text-align: center;
-            margin-bottom: 8px;
-            font-size: 2em;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            display: none; /* Hide text title when logo is present */
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .capturing {
+            animation: pulse 2s infinite;
         }
         
         .subtitle {
@@ -176,48 +484,130 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo-header">
-            <img src="assets/superdesk.png" alt="SuperDesk Logo">
-        </div>
-        <h1>🖥️ SuperDesk Agent</h1>
-        <div class="subtitle">HOST - Share Your Desktop</div>
-
-        <div class="session-panel">
-            <div class="session-label">Your Session ID:</div>
-            <div class="session-id" id="sessionId">Connecting...</div>
-        </div>
-
-        <div class="status-panel">
-            <div class="status-item">
-                <span>Status:</span>
-                <span class="status-text" id="status">Initializing...</span>
-            </div>
-        </div>
-
-        <div class="controls">
-            <button onclick="window.startScreenShare()" id="startBtn">
-                🎥 Start Screen Sharing
-            </button>
-            <button onclick="window.startTestPattern()" id="testBtn">
-                🧪 Start Test Pattern
-            </button>
-            <button onclick="window.stopScreenShare()" id="stopBtn" class="btn-stop" disabled>
-                🛑 Stop Screen Sharing
-            </button>
-        </div>
-
-        <div class="instructions">
-            <h3>📋 How to Use:</h3>
-            <ol>
-                <li>Wait for the Session ID to appear above</li>
-                <li>Share the Session ID with your guest</li>
-                <li>Click "Start Screen Sharing" when ready</li>
-                <li>Guest will see your desktop in their browser</li>
-            </ol>
+    <div class="titlebar">
+        <div class="titlebar-title">SuperDesk Agent</div>
+        <div class="titlebar-controls">
+            <button class="titlebar-button" onclick="window.minimizeWindow()" title="Minimize">─</button>
+            <button class="titlebar-button close" onclick="window.closeWindow()" title="Close">✕</button>
         </div>
     </div>
-    
+
+    <div class="container">
+        <!-- Welcome Screen -->
+        <div class="welcome-screen" id="welcomeScreen">
+            <div class="logo-container">
+                <img src="assets/superdesk.png" alt="SuperDesk">
+            </div>
+            <h1 class="welcome-title">Welcome to SuperDesk</h1>
+            <p class="welcome-subtitle">Share your desktop securely with anyone, anywhere</p>
+            <button class="start-button" onclick="window.showMainScreen()">
+                🚀 Start Sharing
+            </button>
+        </div>
+
+        <!-- Main Screen -->
+        <div class="main-screen" id="mainScreen">
+            <div class="screen-header">
+                <h2>Desktop Sharing</h2>
+                <p>Your session is ready to share</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Your Session ID</div>
+                <div class="session-id" id="sessionId">Connecting...</div>
+                <div class="session-hint">Share this ID with others to let them join</div>
+            </div>
+
+            <div class="card">
+                <div class="status-row">
+                    <span class="status-label">Connection Status</span>
+                    <span class="status-value">
+                        <span class="status-indicator disconnected" id="statusIndicator"></span>
+                        <span id="status">Initializing...</span>
+                    </span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Screen Sharing</span>
+                    <span class="status-value" id="sharingStatus">Not Started</span>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="window.startScreenShare()" id="startBtn">
+                    🎥 Start Screen Sharing
+                </button>
+                <button class="btn btn-secondary" onclick="window.startTestPattern()" id="testBtn">
+                    🧪 Test Pattern
+                </button>
+                <button class="btn btn-danger" onclick="window.stopScreenShare()" id="stopBtn" disabled>
+                    ⏹️ Stop Sharing
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="renderer.js"></script>
+    <script>
+        // Screen transition
+        window.showMainScreen = function() {
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            const mainScreen = document.getElementById('mainScreen');
+            
+            welcomeScreen.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+                welcomeScreen.classList.add('hidden');
+                mainScreen.classList.add('active');
+            }, 300);
+        };
+
+        // Window controls
+        const { ipcRenderer } = require('electron');
+        const remote = require('@electron/remote');
+
+        window.minimizeWindow = function() {
+            remote.getCurrentWindow().minimize();
+        };
+
+        window.closeWindow = function() {
+            remote.getCurrentWindow().close();
+        };
+
+        // UI update functions
+        function displaySessionId(sessionId) {
+            document.getElementById('sessionId').textContent = sessionId;
+        }
+
+        function updateStatus(status) {
+            const statusEl = document.getElementById('status');
+            const indicatorEl = document.getElementById('statusIndicator');
+            statusEl.textContent = status;
+            
+            if (status.includes('Connected') || status.includes('Ready')) {
+                indicatorEl.classList.remove('disconnected');
+                indicatorEl.classList.add('connected');
+            }
+        }
+
+        window.startScreenShare = function() {
+            document.getElementById('sharingStatus').textContent = 'Active';
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('testBtn').disabled = true;
+        };
+
+        window.stopScreenShare = function() {
+            document.getElementById('sharingStatus').textContent = 'Not Started';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('testBtn').disabled = false;
+        };
+
+        window.startTestPattern = function() {
+            document.getElementById('sharingStatus').textContent = 'Test Pattern';
+            document.getElementById('testBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('startBtn').disabled = true;
+        };
+    </script>
 </body>
 </html>
