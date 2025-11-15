@@ -32,6 +32,60 @@ try {
 } catch (e) {
   console.log('[TURN] turn-provider module not found, using env/fallback');
 }
+function getFetchImplementation() {
+  if (typeof global.fetch === 'function') {
+    return global.fetch;
+  }
+  try {
+    return require('node-fetch');
+  } catch (err) {
+    console.warn('[TURN helper] node-fetch not installed and global fetch is unavailable');
+    return null;
+  }
+}
+
+const cloudflareFetch = getFetchImplementation();
+
+async function fetchCloudflareTurnServers(ttlSeconds = 3600) {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY;
+
+  if (!accountId || !apiToken) {
+    throw new Error('CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN missing');
+  }
+
+  if (!cloudflareFetch) {
+    throw new Error('Fetch implementation unavailable; install node-fetch or use Node 18+');
+  }
+
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/realtime/turn-credentials`;
+
+  const resp = await cloudflareFetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ttl: ttlSeconds })
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Cloudflare TURN request failed: ${resp.status} ${resp.statusText} - ${text}`);
+  }
+
+  const data = await resp.json();
+  const result = data.result || data;
+  const urls = result.urls || result.turn_urls || result.ice_servers || [];
+  const username = result.username || result.user || result.auth?.username;
+  const credential = result.password || result.credential || result.auth?.password;
+
+  if (!Array.isArray(urls) || !urls.length || !username || !credential) {
+    throw new Error(`Incomplete Cloudflare TURN response: ${JSON.stringify({ urls, username, credential })}`);
+  }
+
+  return urls.map(u => ({ urls: u, username, credential }));
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -376,39 +430,64 @@ app.get('/api/webrtc-config', (req, res) => {
 
   (async () => {
     try {
-      // If an external provider implementation exists, prefer ephemeral creds from it
-      if (turnProvider && typeof turnProvider.getTurnServers === 'function') {
-        turnDiagnostics.lastProviderAttempt = new Date().toISOString();
-        console.log(`${requestLabel} requesting credentials from TURN provider`);
-        try {
-          const providerServers = await turnProvider.getTurnServers();
-          if (providerServers && providerServers.length) {
-            const iceServers = [...defaultStun, ...providerServers];
-            turnDiagnostics.lastProviderSuccess = {
-              at: new Date().toISOString(),
-              count: providerServers.length,
-            };
-            turnDiagnostics.lastResponseSource = 'provider';
-            console.log(`${requestLabel} provider returned ${providerServers.length} servers`);
-            res.json({ iceServers });
-            return;
-          }
+      turnDiagnostics.lastProviderAttempt = new Date().toISOString();
+      let providerServers = null;
+      let providerError = null;
 
-          turnDiagnostics.lastProviderError = {
-            at: new Date().toISOString(),
-            message: 'Provider returned no servers',
-          };
-          console.warn(`${requestLabel} provider returned no servers, falling back`);
+      if (turnProvider && typeof turnProvider.getTurnServers === 'function') {
+        console.log(`${requestLabel} requesting credentials from TURN provider module`);
+        try {
+          const provided = await turnProvider.getTurnServers();
+          if (provided && provided.length) {
+            providerServers = provided;
+          } else {
+            providerError = new Error('Provider module returned no servers');
+            console.warn(`${requestLabel} provider module returned no servers`);
+          }
         } catch (err) {
-          turnDiagnostics.lastProviderError = {
-            at: new Date().toISOString(),
-            message: err?.message || 'Unknown TURN provider error',
-          };
-          console.error(`${requestLabel} TURN provider error:`, err);
-          // fall through to env/static fallback
+          providerError = err;
+          console.error(`${requestLabel} TURN provider module error:`, err);
         }
       } else {
-        console.log(`${requestLabel} no external TURN provider detected (using env/fallback)`);
+        console.log(`${requestLabel} turn-provider module unavailable or lacking getTurnServers()`);
+      }
+
+      if (!providerServers) {
+        try {
+          console.log(`${requestLabel} attempting inline Cloudflare TURN fetch`);
+          const inlineServers = await fetchCloudflareTurnServers();
+          if (inlineServers && inlineServers.length) {
+            providerServers = inlineServers;
+            providerError = null;
+          }
+        } catch (err) {
+          providerError = err;
+          console.error(`${requestLabel} inline Cloudflare TURN error:`, err);
+        }
+      }
+
+      if (providerServers && providerServers.length) {
+        const iceServers = [...defaultStun, ...providerServers];
+        turnDiagnostics.lastProviderSuccess = {
+          at: new Date().toISOString(),
+          count: providerServers.length,
+        };
+        turnDiagnostics.lastResponseSource = 'provider';
+        turnDiagnostics.lastProviderError = providerError ? {
+          at: new Date().toISOString(),
+          message: providerError.message,
+        } : null;
+        console.log(`${requestLabel} provider returned ${providerServers.length} servers`);
+        res.json({ iceServers });
+        return;
+      }
+
+      if (providerError) {
+        turnDiagnostics.lastProviderError = {
+          at: new Date().toISOString(),
+          message: providerError.message,
+        };
+        console.warn(`${requestLabel} provider attempt failed:`, providerError.message);
       }
 
       // Static env-based TURN configuration (legacy / simple setup)
