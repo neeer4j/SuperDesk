@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SuperDesk Agent</title>
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -264,19 +266,6 @@
 
         .btn-primary:hover:not(:disabled) {
             background: rgba(255, 255, 255, 0.9);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.5);
         }
 
         .btn-warning {
@@ -489,23 +478,6 @@
                     
                     <button class="btn btn-primary" id="send-otp-btn">Send OTP</button>
                                 <!-- Google Sign In Button removed -->
-        .btn-google {
-            width: 100%;
-            padding: 12px 24px;
-            font-size: 14px;
-            font-weight: 600;
-            border: 1px solid #4285F4;
-            border-radius: 8px;
-            background: transparent;
-            color: #4285F4;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-google:hover {
-            background: rgba(66, 133, 244, 0.1);
-            border-color: #4285F4;
-        }
                     <button class="btn btn-warning" id="continue-bypass-btn">
                         Continue Without Auth (Testing Only)
                     </button>
@@ -643,8 +615,10 @@
     </div>
 
     <script>
-        const { ipcRenderer } = require('electron');
-        const { supabase } = require('./supabaseClient');
+        // Supabase client initialization
+        const SUPABASE_URL = 'https://srwrsgkfkzstdsiqonzi.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyd3JzZ2tma3pzdGRzaXFvbnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyODM2MzUsImV4cCI6MjA3ODg1OTYzNX0.URa75VP24G6anG_9Pyo2PqNrgNZ20DmEalcLAKezkSM';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
         let currentView = 'share';
@@ -658,8 +632,13 @@
         const otpInput = document.getElementById('otp-input');
         const userEmailDisplay = document.getElementById('user-email');
 
-        // Initialize
-        init();
+
+        // Initialize after DOM is fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
 
         async function init() {
             // Check for existing session
