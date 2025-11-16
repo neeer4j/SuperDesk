@@ -393,7 +393,8 @@ function App() {
       setConnectionError(`Socket error: ${error.message || 'Unknown error'}`);
     });
 
-      newSocket.on('session-created', (id) => {
+      newSocket.on('session-created', (data) => {
+      const id = typeof data === 'string' ? data : data.sessionId;
       setSessionId(id);
       setIsHost(true);
       console.log('✅ Session created:', id);
