@@ -1,32 +1,28 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer } = require('electron');
 const path = require('path');
-const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
+const robot = require('robotjs');
 
 // Enable @electron/remote
 require('@electron/remote/main').initialize();
 
 let mainWindow;
 
+// robotjs is not context-aware; keep legacy behavior so native module loads
+app.allowRendererProcessReuse = false;
+
 const REMOTE_REFERENCE_WIDTH = 1920;
 const REMOTE_REFERENCE_HEIGHT = 1080;
 let remoteControlEnabled = false;
-let screenSize = { width: 1920, height: 1080 };
+let screenSize = robot.getScreenSize();
 const activeKeys = new Set();
-
 
 function refreshScreenSize() {
   try {
-    // Use Electron's screen API to get the primary display size
-    const primaryDisplay = electronScreen.getPrimaryDisplay();
-    screenSize = primaryDisplay.size;
+    screenSize = robot.getScreenSize();
   } catch (error) {
     console.error('Failed to get screen size:', error);
   }
 }
-
-// Initialize screen size
-app.whenReady().then(refreshScreenSize);
-
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -47,87 +43,79 @@ function mapMouseButton(buttonIndex = 0) {
   return 'left';
 }
 
-function mapNutButton(buttonIndex = 0) {
-  if (buttonIndex === 2) return Button.RIGHT;
-  if (buttonIndex === 1) return Button.MIDDLE;
-  return Button.LEFT;
-}
-
 const KEY_CODE_MAP = {
-  Backquote: Key.Grave,
-  Minus: Key.Minus,
-  Equal: Key.Equal,
-  BracketLeft: Key.LeftBracket,
-  BracketRight: Key.RightBracket,
-  Backslash: Key.Backslash,
-  Semicolon: Key.Semicolon,
-  Quote: Key.Quote,
-  Comma: Key.Comma,
-  Period: Key.Period,
-  Slash: Key.Slash,
-  Space: Key.Space,
-  Enter: Key.Enter,
-  NumpadEnter: Key.Enter,
-  Tab: Key.Tab,
-  Backspace: Key.Backspace,
-  Delete: Key.Delete,
-  Escape: Key.Escape,
-  CapsLock: Key.CapsLock,
-  ArrowUp: Key.Up,
-  ArrowDown: Key.Down,
-  ArrowLeft: Key.Left,
-  ArrowRight: Key.Right,
-  Home: Key.Home,
-  End: Key.End,
-  PageUp: Key.PageUp,
-  PageDown: Key.PageDown,
-  Insert: Key.Insert,
-  ControlLeft: Key.LeftControl,
-  ControlRight: Key.RightControl,
-  ShiftLeft: Key.LeftShift,
-  ShiftRight: Key.RightShift,
-  AltLeft: Key.LeftAlt,
-  AltRight: Key.RightAlt,
-  MetaLeft: Key.LeftCmd,
-  MetaRight: Key.RightCmd,
-  Pause: Key.Pause,
-  ScrollLock: Key.ScrollLock,
-  PrintScreen: Key.Print
+  Backquote: 'grave',
+  Minus: 'minus',
+  Equal: 'equals',
+  BracketLeft: 'leftbracket',
+  BracketRight: 'rightbracket',
+  Backslash: 'backslash',
+  Semicolon: 'semicolon',
+  Quote: 'quote',
+  Comma: 'comma',
+  Period: 'period',
+  Slash: 'slash',
+  Space: 'space',
+  Enter: 'enter',
+  NumpadEnter: 'enter',
+  Tab: 'tab',
+  Backspace: 'backspace',
+  Delete: 'delete',
+  Escape: 'escape',
+  CapsLock: 'capslock',
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  Home: 'home',
+  End: 'end',
+  PageUp: 'pageup',
+  PageDown: 'pagedown',
+  Insert: 'insert',
+  ControlLeft: 'control',
+  ControlRight: 'control',
+  ShiftLeft: 'shift',
+  ShiftRight: 'shift',
+  AltLeft: 'alt',
+  AltRight: 'alt',
+  MetaLeft: 'command',
+  MetaRight: 'command',
+  Pause: 'pause',
+  ScrollLock: 'scrolllock',
+  PrintScreen: 'printscreen'
 };
 
-function toNutKey(code, key) {
+function toRobotKey(code, key) {
   if (code && code.startsWith('Key')) {
-    const letter = code.slice(3);
-    return Key[letter];
+    return code.slice(3).toLowerCase();
   }
   if (code && code.startsWith('Digit')) {
-    const num = code.slice(5);
-    return Key[`Num${num}`];
+    return code.slice(5);
   }
   if (code && code.startsWith('Numpad')) {
     const suffix = code.slice(6);
     if (/^[0-9]$/.test(suffix)) {
-      return Key[`NumPad${suffix}`];
+      return `numpad_${suffix}`;
     }
     switch (suffix.toLowerCase()) {
       case 'add':
-        return Key.Add;
+        return 'numpad_add';
       case 'subtract':
-        return Key.Subtract;
+        return 'numpad_subtract';
       case 'multiply':
-        return Key.Multiply;
+        return 'numpad_multiply';
       case 'divide':
-        return Key.Divide;
+        return 'numpad_divide';
       case 'decimal':
-        return Key.Decimal;
+        return 'numpad_decimal';
       case 'enter':
-        return Key.Enter;
+        return 'enter';
       default:
         break;
     }
   }
-  if (code && /^F([1-9]|1[0-2])$/.test(code)) {
-    return Key[code];
+  if (code && /^F[1-9][0-2]?$/.test(code)) {
+    return code.toLowerCase();
   }
   if (code && KEY_CODE_MAP[code]) {
     return KEY_CODE_MAP[code];
@@ -136,20 +124,19 @@ function toNutKey(code, key) {
     return KEY_CODE_MAP[key];
   }
   if (key && key.length === 1) {
-    const upper = key.toUpperCase();
-    return Key[upper] || null;
+    return key.toLowerCase();
   }
   return null;
 }
 
-async function releaseActiveKeys() {
-  for (const nutKey of activeKeys) {
+function releaseActiveKeys() {
+  activeKeys.forEach((robotKey) => {
     try {
-      await keyboard.releaseKey(nutKey);
+      robot.keyToggle(robotKey, 'up');
     } catch (error) {
-      console.error('Failed to release key:', nutKey, error);
+      console.error('Failed to release key:', robotKey, error);
     }
-  }
+  });
   activeKeys.clear();
 }
 
@@ -184,7 +171,7 @@ ipcMain.on('robot-release-keys', () => {
   releaseActiveKeys();
 });
 
-ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
+ipcMain.on('robot-mouse-event', (_event, data = {}) => {
   if (!remoteControlEnabled) return;
   const { type, x, y, button } = data;
   const coords = translateCoordinates(x, y);
@@ -196,15 +183,15 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
     }
     switch (type) {
       case 'mousemove':
-        await mouse.setPosition({ x: coords.x, y: coords.y });
+        robot.moveMouse(coords.x, coords.y);
         break;
       case 'mousedown':
-        await mouse.setPosition({ x: coords.x, y: coords.y });
-        await mouse.pressButton(mapNutButton(button));
+        robot.moveMouse(coords.x, coords.y);
+        robot.mouseToggle('down', mapMouseButton(button));
         break;
       case 'mouseup':
-        await mouse.setPosition({ x: coords.x, y: coords.y });
-        await mouse.releaseButton(mapNutButton(button));
+        robot.moveMouse(coords.x, coords.y);
+        robot.mouseToggle('up', mapMouseButton(button));
         break;
       default:
         break;
@@ -214,27 +201,27 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
   }
 });
 
-ipcMain.on('robot-keyboard-event', async (_event, data = {}) => {
+ipcMain.on('robot-keyboard-event', (_event, data = {}) => {
   if (!remoteControlEnabled) return;
   const { type, key, code } = data;
-  const nutKey = toNutKey(code, key);
+  const robotKey = toRobotKey(code, key);
 
-  if (!nutKey) {
+  if (!robotKey) {
     console.log('Unmapped keyboard event:', data);
     return;
   }
 
   try {
     if (Math.random() < 0.05) {
-      console.log('[robot] key', { type, key, code, nutKey });
+      console.log('[robot] key', { type, key, code, robotKey });
     }
     if (type === 'keydown') {
-      if (activeKeys.has(nutKey)) return;
-      await keyboard.pressKey(nutKey);
-      activeKeys.add(nutKey);
+      if (activeKeys.has(robotKey)) return;
+      robot.keyToggle(robotKey, 'down');
+      activeKeys.add(robotKey);
     } else if (type === 'keyup') {
-      await keyboard.releaseKey(nutKey);
-      activeKeys.delete(nutKey);
+      robot.keyToggle(robotKey, 'up');
+      activeKeys.delete(robotKey);
     }
   } catch (error) {
     console.error('Keyboard control error:', error);
@@ -243,10 +230,13 @@ ipcMain.on('robot-keyboard-event', async (_event, data = {}) => {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    fullscreen: true,
+    width: 1200,
+    height: 800,
+    minWidth: 1000,
+    minHeight: 700,
     frame: false,
-    transparent: false,
-    backgroundColor: '#0a006f',
+    transparent: true,
+    backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -270,19 +260,14 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    // Force quit the app when the main window is closed
-    app.quit();
-    // As a last resort, forcefully exit the process
-    process.exit(0);
   });
 }
 
 app.whenReady().then(() => {
   // Handle 'get-sources' request from the renderer process
-  // Now supports optional sourceTypes parameter (default: ['screen'])
-  ipcMain.handle('get-sources', async (event, sourceTypes = ['screen']) => {
+  ipcMain.handle('get-sources', async () => {
     const sources = await desktopCapturer.getSources({
-      types: Array.isArray(sourceTypes) ? sourceTypes : ['screen'],
+      types: ['screen'],
       thumbnailSize: { width: 1920, height: 1080 }
     });
     return sources;
@@ -300,6 +285,5 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
-    process.exit(0);
   }
 });
