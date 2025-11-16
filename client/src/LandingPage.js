@@ -485,6 +485,7 @@ function LandingPage({ onGetStarted }) {
         <Box sx={{ flex: 1 }}>
           {[
             { id: 'share', icon: '🖥️', label: 'Share Screen' },
+            { id: 'join', icon: '🔗', label: 'Join Session' },
             { id: 'friends', icon: '👥', label: 'Friends' },
             { id: 'messages', icon: '💬', label: 'Messages' },
             { id: 'files', icon: '📁', label: 'File Transfer' }
@@ -603,26 +604,75 @@ function LandingPage({ onGetStarted }) {
                 >
                   Start Sharing
                 </Button>
-                
-                <Button
-                  variant="outlined"
-                  sx={{
-                    color: 'white',
-                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                    padding: '14px 32px',
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    borderRadius: '8px',
-                    '&:hover': {
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      borderColor: 'rgba(255, 255, 255, 0.5)'
-                    }
-                  }}
-                >
-                  Join Session
-                </Button>
               </Box>
+            </Box>
+          </Box>
+        )}
+
+        {/* Join Session View */}
+        {activeView === 'join' && (
+          <Box>
+            <Typography variant="h4" sx={{ marginBottom: '24px', fontWeight: 700 }}>
+              Join Session
+            </Typography>
+            
+            <Box sx={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '32px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <Typography sx={{ fontSize: '16px', marginBottom: '24px', opacity: 0.8 }}>
+                Enter a session ID to connect to a remote desktop
+              </Typography>
+
+              <Box sx={{ marginBottom: '32px' }}>
+                <Typography sx={{ fontSize: '14px', marginBottom: '8px', opacity: 0.7 }}>
+                  Session ID
+                </Typography>
+                <input
+                  type="text"
+                  placeholder="Enter session ID (e.g. ABC123XY)"
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    fontFamily: 'monospace',
+                    textTransform: 'uppercase',
+                    outline: 'none'
+                  }}
+                  maxLength={8}
+                />
+              </Box>
+
+              <Button
+                variant="contained"
+                onClick={() => {
+                  // Implement join session logic here
+                  alert('Join session functionality will be implemented');
+                }}
+                sx={{
+                  background: 'white',
+                  color: '#09090b',
+                  padding: '14px 32px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderRadius: '8px',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 20px rgba(255, 255, 255, 0.2)'
+                  }
+                }}
+              >
+                Connect to Session
+              </Button>
             </Box>
           </Box>
         )}

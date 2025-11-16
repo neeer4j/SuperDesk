@@ -527,6 +527,10 @@
                     <span class="nav-icon">🖥️</span>
                     <span>Share Screen</span>
                 </button>
+                <button class="nav-item" data-view="join">
+                    <span class="nav-icon">🔗</span>
+                    <span>Join Session</span>
+                </button>
                 <button class="nav-item" data-view="friends">
                     <span class="nav-icon">👥</span>
                     <span>Friends</span>
@@ -578,8 +582,45 @@
                         <button class="btn btn-primary" id="start-share-btn" style="flex: 1;">
                             Start Sharing
                         </button>
-                        <button class="btn btn-secondary" id="join-session-btn" style="flex: 1;">
-                            Join Session
+                    </div>
+                </div>
+            </div>
+
+            <!-- Join Session View -->
+            <div class="content-view hidden" id="join-view">
+                <h1 class="content-title">Join Session</h1>
+                
+                <div class="content-card">
+                    <p style="font-size: 16px; margin-bottom: 24px; opacity: 0.8;">
+                        Enter a session ID to connect to a remote desktop
+                    </p>
+
+                    <div class="content-section">
+                        <div class="section-label">Session ID</div>
+                        <input 
+                            type="text" 
+                            id="join-session-input"
+                            placeholder="Enter session ID (e.g. ABC123XY)"
+                            maxlength="8"
+                            style="
+                                width: 100%;
+                                padding: 16px;
+                                background: rgba(255, 255, 255, 0.05);
+                                border: 1px solid rgba(255, 255, 255, 0.1);
+                                border-radius: 8px;
+                                color: white;
+                                font-size: 18px;
+                                font-weight: 600;
+                                font-family: monospace;
+                                text-transform: uppercase;
+                                outline: none;
+                            "
+                        />
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="connect-session-btn" style="flex: 1;">
+                            Connect to Session
                         </button>
                     </div>
                 </div>
@@ -700,13 +741,18 @@
                 }
             });
 
-            document.getElementById('join-session-btn').addEventListener('click', () => {
-                const sessionId = prompt('Enter Session ID:');
-                if (sessionId) {
-                    // This will trigger the existing join functionality
-                    if (window.joinSession) {
-                        window.joinSession(sessionId);
-                    }
+            // Join session button
+            document.getElementById('connect-session-btn').addEventListener('click', () => {
+                const sessionId = document.getElementById('join-session-input').value.trim().toUpperCase();
+                if (!sessionId) {
+                    alert('Please enter a session ID');
+                    return;
+                }
+                // This will trigger the existing join functionality
+                if (window.joinSession) {
+                    window.joinSession(sessionId);
+                } else {
+                    alert('Join session functionality will be implemented');
                 }
             });
         }
