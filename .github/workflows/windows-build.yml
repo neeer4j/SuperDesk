@@ -1,0 +1,53 @@
+name: Build Windows Agent
+
+on:
+  push:
+    branches: [ main, master, build/prepare-robotjs ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Windows build tools (optional)
+        run: |
+          choco install -y visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools"
+        shell: pwsh
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules (robotjs)
+        run: |
+          cd agent
+          npx electron-rebuild -v 27.3.5 -f -w robotjs
+        shell: pwsh
+
+      - name: Build agent (electron-builder)
+        run: |
+          cd agent
+          npm run build:ci
+        shell: pwsh
+
+      - name: Upload win-unpacked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: superdesk-agent-win-unpacked
+          path: agent\dist\win-unpacked
+
+      - name: Upload installer
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: superdesk-agent-installer
+          path: agent\dist\*.exe
