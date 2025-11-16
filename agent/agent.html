@@ -6,6 +6,8 @@
     <title>SuperDesk Agent</title>
     <!-- Supabase JS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Socket.io Client CDN -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -748,12 +750,8 @@
                     alert('Please enter a session ID');
                     return;
                 }
-                // This will trigger the existing join functionality
-                if (window.joinSession) {
-                    window.joinSession(sessionId);
-                } else {
-                    alert('Join session functionality will be implemented');
-                }
+                // Join the session
+                window.joinSession(sessionId);
             });
         }
 
@@ -873,6 +871,163 @@
             const sessionId = Math.random().toString(36).substring(2, 10).toUpperCase();
             document.getElementById('session-id').textContent = sessionId;
         }
+
+        // Join Session Implementation
+        window.joinSession = async function(sessionId) {
+            console.log('Joining session:', sessionId);
+            
+            try {
+                // Initialize socket if not already connected
+                if (!window.socket || !window.socket.connected) {
+                    const serverUrl = window.location.hostname === 'localhost' 
+                        ? 'http://localhost:3001'
+                        : 'https://superdesk-7m7f.onrender.com';
+                    
+                    window.socket = io(serverUrl);
+                    
+                    window.socket.on('connect', () => {
+                        console.log('Connected to signaling server');
+                    });
+
+                    window.socket.on('connect_error', (error) => {
+                        console.error('Connection error:', error);
+                        alert('Failed to connect to server. Please check your connection.');
+                    });
+                }
+
+                // Wait for socket connection
+                await new Promise((resolve, reject) => {
+                    if (window.socket.connected) {
+                        resolve();
+                    } else {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('Connection timeout'));
+                        }, 5000);
+
+                        window.socket.once('connect', () => {
+                            clearTimeout(timeout);
+                            resolve();
+                        });
+
+                        window.socket.once('connect_error', (error) => {
+                            clearTimeout(timeout);
+                            reject(error);
+                        });
+                    }
+                });
+
+                // Join the session
+                window.socket.emit('join-session', sessionId);
+
+                // Handle session joined confirmation
+                window.socket.once('session-joined', () => {
+                    console.log('Successfully joined session:', sessionId);
+                    alert(`Connected to session ${sessionId}. Waiting for screen sharing to start...`);
+                });
+
+                // Handle session not found
+                window.socket.once('session-error', (error) => {
+                    console.error('Session error:', error);
+                    alert(`Error: ${error}. Please check the session ID and try again.`);
+                });
+
+                // Set up WebRTC peer connection to receive remote stream
+                const peerConnection = new RTCPeerConnection({
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                });
+
+                // Handle incoming remote stream
+                peerConnection.ontrack = (event) => {
+                    console.log('Received remote track:', event.track.kind);
+                    
+                    // Create or get video element to display remote screen
+                    let remoteVideo = document.getElementById('remote-video');
+                    if (!remoteVideo) {
+                        remoteVideo = document.createElement('video');
+                        remoteVideo.id = 'remote-video';
+                        remoteVideo.autoplay = true;
+                        remoteVideo.style.cssText = `
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            object-fit: contain;
+                            background: #000;
+                            z-index: 9999;
+                        `;
+                        document.body.appendChild(remoteVideo);
+
+                        // Add close button
+                        const closeBtn = document.createElement('button');
+                        closeBtn.textContent = '✕ Close Remote View';
+                        closeBtn.style.cssText = `
+                            position: fixed;
+                            top: 20px;
+                            right: 20px;
+                            z-index: 10000;
+                            padding: 12px 24px;
+                            background: #dc2626;
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-weight: 600;
+                        `;
+                        closeBtn.onclick = () => {
+                            remoteVideo.remove();
+                            closeBtn.remove();
+                            peerConnection.close();
+                            window.socket.disconnect();
+                        };
+                        document.body.appendChild(closeBtn);
+                    }
+
+                    if (!remoteVideo.srcObject) {
+                        remoteVideo.srcObject = event.streams[0];
+                    }
+                };
+
+                // Handle ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        window.socket.emit('ice-candidate', {
+                            sessionId,
+                            candidate: event.candidate
+                        });
+                    }
+                };
+
+                // Listen for offer from host
+                window.socket.on('offer', async (data) => {
+                    console.log('Received offer from host');
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    
+                    window.socket.emit('answer', {
+                        sessionId,
+                        targetId: data.from,
+                        answer
+                    });
+                });
+
+                // Listen for ICE candidates from host
+                window.socket.on('ice-candidate', async (data) => {
+                    if (data.candidate) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error joining session:', error);
+                alert('Failed to join session: ' + error.message);
+            }
+        };
     </script>
 </body>
 </html>

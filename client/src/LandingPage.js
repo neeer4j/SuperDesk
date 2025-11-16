@@ -1,8 +1,10 @@
   // Google sign-in removed. Only OTP authentication is allowed.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Container, TextField, Button, Typography, Tabs, Tab } from '@mui/material';
 import { supabase } from './supabaseClient';
 import superdeskLogo from './assets/superdesk.png';
+import io from 'socket.io-client';
+import config, { fetchIceServers } from './config';
 
 function LandingPage({ onGetStarted }) {
   const [email, setEmail] = useState('');
@@ -11,6 +13,11 @@ function LandingPage({ onGetStarted }) {
   const [otpSent, setOtpSent] = useState(false);
   const [user, setUser] = useState(null);
   const [activeView, setActiveView] = useState('share'); // share, friends, messages, files
+  const [joinSessionId, setJoinSessionId] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState(''); // 'connecting', 'connected', 'error'
+  const socketRef = useRef(null);
+  const peerConnectionRef = useRef(null);
+  const remoteVideoRef = useRef(null);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -25,6 +32,20 @@ function LandingPage({ onGetStarted }) {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Cleanup socket and peer connection on unmount
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+    };
   }, []);
 
   const handleSendOTP = async () => {
@@ -87,6 +108,114 @@ function LandingPage({ onGetStarted }) {
     setUser(null);
     setOtpSent(false);
     setOtp('');
+  };
+
+  const handleJoinSession = async () => {
+    if (!joinSessionId || joinSessionId.length < 6) {
+      alert('Please enter a valid session ID');
+      return;
+    }
+
+    try {
+      setConnectionStatus('connecting');
+      
+      // Initialize socket connection
+      const serverUrl = config.server || 'http://localhost:3001';
+      socketRef.current = io(serverUrl);
+
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Connection timeout')), 5000);
+        
+        socketRef.current.on('connect', () => {
+          clearTimeout(timeout);
+          console.log('Connected to signaling server');
+          setConnectionStatus('connected');
+          resolve();
+        });
+
+        socketRef.current.on('connect_error', (error) => {
+          clearTimeout(timeout);
+          setConnectionStatus('error');
+          reject(error);
+        });
+      });
+
+      // Join the session
+      socketRef.current.emit('join-session', joinSessionId);
+
+      // Handle session joined
+      socketRef.current.once('session-joined', () => {
+        console.log('Successfully joined session:', joinSessionId);
+        alert(`Connected to session ${joinSessionId}. Waiting for screen share...`);
+      });
+
+      // Handle session error
+      socketRef.current.once('session-error', (error) => {
+        alert(`Error: ${error}`);
+        setConnectionStatus('error');
+        socketRef.current.disconnect();
+      });
+
+      // Set up WebRTC peer connection with dynamic ICE servers
+      const iceServers = await fetchIceServers();
+      peerConnectionRef.current = new RTCPeerConnection({ iceServers });
+
+      // Handle incoming remote stream
+      peerConnectionRef.current.ontrack = (event) => {
+        console.log('Received remote track:', event.track.kind);
+        
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+        }
+      };
+
+      // Handle ICE candidates
+      peerConnectionRef.current.onicecandidate = (event) => {
+        if (event.candidate) {
+          socketRef.current.emit('ice-candidate', {
+            sessionId: joinSessionId,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      // Listen for offer from host
+      socketRef.current.on('offer', async (data) => {
+        console.log('Received offer from host');
+        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.offer));
+        
+        const answer = await peerConnectionRef.current.createAnswer();
+        await peerConnectionRef.current.setLocalDescription(answer);
+        
+        socketRef.current.emit('answer', {
+          sessionId: joinSessionId,
+          targetId: data.from,
+          answer
+        });
+      });
+
+      // Listen for ICE candidates
+      socketRef.current.on('ice-candidate', async (data) => {
+        if (data.candidate) {
+          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+      });
+
+    } catch (error) {
+      console.error('Error joining session:', error);
+      setConnectionStatus('error');
+      alert('Failed to join session: ' + error.message);
+      
+      // Cleanup on error
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+    }
   };
 
   // Authentication Screen
@@ -633,6 +762,8 @@ function LandingPage({ onGetStarted }) {
                 <input
                   type="text"
                   placeholder="Enter session ID (e.g. ABC123XY)"
+                  value={joinSessionId}
+                  onChange={(e) => setJoinSessionId(e.target.value.toUpperCase())}
                   style={{
                     width: '100%',
                     padding: '16px',
@@ -652,27 +783,87 @@ function LandingPage({ onGetStarted }) {
 
               <Button
                 variant="contained"
-                onClick={() => {
-                  // Implement join session logic here
-                  alert('Join session functionality will be implemented');
-                }}
+                onClick={handleJoinSession}
+                disabled={connectionStatus === 'connecting'}
                 sx={{
-                  background: 'white',
+                  background: connectionStatus === 'connecting' ? 'rgba(255, 255, 255, 0.5)' : 'white',
                   color: '#09090b',
                   padding: '14px 32px',
                   fontSize: '16px',
                   fontWeight: 600,
                   textTransform: 'none',
                   borderRadius: '8px',
+                  marginBottom: '24px',
                   '&:hover': {
                     background: 'rgba(255, 255, 255, 0.9)',
                     transform: 'translateY(-2px)',
                     boxShadow: '0 8px 20px rgba(255, 255, 255, 0.2)'
+                  },
+                  '&:disabled': {
+                    background: 'rgba(255, 255, 255, 0.3)',
+                    color: 'rgba(0, 0, 0, 0.5)'
                   }
                 }}
               >
-                Connect to Session
+                {connectionStatus === 'connecting' ? 'Connecting...' : 'Connect to Session'}
               </Button>
+
+              {/* Connection Status */}
+              {connectionStatus && (
+                <Box sx={{ marginBottom: '24px', textAlign: 'center' }}>
+                  {connectionStatus === 'connecting' && (
+                    <Typography sx={{ color: '#fbbf24', fontSize: '14px' }}>
+                      🔄 Connecting to session...
+                    </Typography>
+                  )}
+                  {connectionStatus === 'connected' && (
+                    <Typography sx={{ color: '#10b981', fontSize: '14px' }}>
+                      ✅ Connected! Waiting for remote stream...
+                    </Typography>
+                  )}
+                  {connectionStatus === 'error' && (
+                    <Typography sx={{ color: '#ef4444', fontSize: '14px' }}>
+                      ❌ Connection failed. Please check the session ID and try again.
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
+              {/* Remote Video Display */}
+              <Box sx={{
+                background: '#000',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                position: 'relative',
+                paddingTop: '56.25%' // 16:9 aspect ratio
+              }}>
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
+                  }}
+                />
+                <Box sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                  pointerEvents: 'none'
+                }}>
+                  <Typography sx={{ fontSize: '48px', opacity: 0.3 }}>📺</Typography>
+                  <Typography sx={{ fontSize: '14px', opacity: 0.5 }}>
+                    Remote screen will appear here
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
           </Box>
         )}
