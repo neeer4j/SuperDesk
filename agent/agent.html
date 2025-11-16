@@ -12,599 +12,823 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0a006f;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #09090b;
             color: white;
             height: 100vh;
             overflow: hidden;
             -webkit-app-region: drag;
         }
 
+        /* Titlebar */
         .titlebar {
             -webkit-app-region: drag;
             height: 40px;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(20px);
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
         }
 
         .titlebar-title {
             font-size: 13px;
             font-weight: 500;
-            opacity: 0.8;
+            opacity: 0.7;
         }
 
         .titlebar-controls {
             -webkit-app-region: no-drag;
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
 
         .titlebar-button {
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
             border-radius: 6px;
-            background: rgba(255, 255, 255, 0.1);
+            background: transparent;
             border: none;
-            color: white;
+            color: rgba(255, 255, 255, 0.7);
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 14px;
         }
 
         .titlebar-button:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
         }
 
         .titlebar-button.close:hover {
             background: #ef4444;
+            color: white;
         }
 
-        .container {
-            height: calc(100vh - 40px);
+        /* Auth Layout */
+        .auth-container {
             display: flex;
-            align-items: center;
-            justify-content: center;
+            height: 100vh;
+            padding-top: 40px;
             -webkit-app-region: no-drag;
         }
 
-        /* Welcome Screen */
-        .welcome-screen {
-            text-align: center;
-            animation: fadeIn 0.6s ease-in-out;
-        }
-
-        .welcome-screen.hidden {
-            display: none;
-        }
-
-        .logo-container {
-            margin-bottom: 60px;
-            animation: scaleIn 0.8s ease-out;
-        }
-
-        .logo-container img {
-            width: 400px;
-            max-width: 80vw;
-            filter: drop-shadow(0 10px 40px rgba(168, 85, 247, 0.4));
-        }
-
-        .welcome-title {
-            font-size: 48px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: white;
-            animation: slideUp 0.8s ease-out 0.2s both;
-        }
-
-        .welcome-subtitle {
-            font-size: 20px;
-            color: white;
-            opacity: 0.9;
-            margin-bottom: 60px;
-            animation: slideUp 0.8s ease-out 0.4s both;
-        }
-
-        .start-button {
-            padding: 18px 60px;
-            font-size: 18px;
-            font-weight: 600;
+        .auth-left {
+            width: 50%;
             background: #0a006f;
-            border: 2px solid white;
-            border-radius: 12px;
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.2);
-            animation: slideUp 0.8s ease-out 0.6s both;
-        }
-
-        .start-button:hover {
-            transform: translateY(-2px);
-            background: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 15px 50px rgba(255, 255, 255, 0.3);
-        }
-
-        /* Main Screen */
-        .main-screen {
-            width: 100%;
-            max-width: 900px;
-            padding: 40px;
-            display: none;
-            animation: fadeIn 0.6s ease-in-out;
-        }
-
-        .main-screen.active {
-            display: block;
-        }
-
-        .screen-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .screen-header h2 {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-
-        .screen-header p {
-            font-size: 16px;
-            opacity: 0.7;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 30px;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .card:hover {
-            border-color: rgba(255, 255, 255, 0.4);
-            box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
-        }
-
-        .card-header {
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0.6;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .session-id {
-            font-size: 28px;
-            font-weight: 700;
-            font-family: 'Courier New', monospace;
-            color: white;
-            margin-bottom: 10px;
-        }
-
-        .session-hint {
-            font-size: 13px;
-            opacity: 0.5;
-        }
-
-        .status-row {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            justify-content: center;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .status-row:last-child {
-            border-bottom: none;
+        .auth-left::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            top: -250px;
+            right: -250px;
         }
 
-        .status-label {
-            font-size: 15px;
-            opacity: 0.7;
-        }
-
-        .status-value {
-            font-size: 15px;
-            font-weight: 600;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-
-        .status-indicator.connected {
-            background: #10b981;
-            box-shadow: 0 0 10px #10b981;
-        }
-
-        .status-indicator.disconnected {
-            background: #ef4444;
-        }
-
-        .button-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 30px;
-        }
-
-        .btn {
-            padding: 16px 24px;
-            font-size: 15px;
-            font-weight: 600;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        .auth-right {
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            padding: 60px;
+        }
+
+        .auth-form {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .auth-header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .auth-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .auth-subtitle {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Dashboard Layout (30/70) */
+        .dashboard-container {
+            display: none;
+            height: 100vh;
+            padding-top: 40px;
+            -webkit-app-region: no-drag;
+        }
+
+        .dashboard-sidebar {
+            width: 30%;
+            background: #0a006f;
+            padding: 24px;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .dashboard-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .sidebar-logo {
+            width: 100%;
+            max-width: 200px;
+        }
+
+        .user-info {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .user-info-label {
+            font-size: 14px;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+
+        .user-info-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .nav-menu {
+            flex: 1;
+            margin-bottom: 16px;
+        }
+
+        .nav-item {
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 8px;
+            background: transparent;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.15);
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        /* Input Styles */
+        .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: white;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Button Styles */
+        .btn {
+            width: 100%;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 16px;
         }
 
         .btn-primary {
-            background: #0a006f;
-            color: white;
-            border: 2px solid white;
-            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+            background: white;
+            color: #09090b;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            background: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 6px 30px rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
+        .btn-primary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
+            background: transparent;
             color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-warning {
+            background: transparent;
+            color: #fbbf24;
+            border: 1px solid #fbbf24;
+        }
+
+        .btn-warning:hover {
+            background: rgba(251, 191, 36, 0.1);
         }
 
         .btn-danger {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(255, 0, 0, 0.2);
+            color: white;
         }
 
         .btn-danger:hover {
-            background: rgba(239, 68, 68, 0.3);
-            border-color: rgba(239, 68, 68, 0.5);
+            background: rgba(255, 0, 0, 0.3);
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
-        @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-            }
+        .btn-text {
+            background: transparent;
+            color: rgba(255, 255, 255, 0.6);
+            border: none;
         }
 
-        @keyframes scaleIn {
-            from {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
+        .btn-text:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
         }
 
-        @keyframes slideUp {
-            from {
-                transform: translateY(30px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+        /* Content Cards */
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 32px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
+        .content-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 24px;
         }
 
-        .capturing {
-            animation: pulse 2s infinite;
-        }
-        
-        .subtitle {
-            text-align: center;
-            margin-bottom: 15px;
-            font-size: 1em;
-            opacity: 0.9;
+        .content-section {
+            margin-bottom: 32px;
         }
 
-        .session-panel {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            text-align: center;
-        }
-        
-        .session-label {
+        .section-label {
             font-size: 14px;
-            opacity: 0.8;
-            margin-bottom: 10px;
-        }
-        
-        .session-id {
-            font-size: 24px;
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 8px;
-            word-break: break-all;
+            opacity: 0.7;
+            margin-bottom: 8px;
         }
 
-        .status-panel {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .session-id {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .placeholder-content {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .placeholder-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .placeholder-text {
+            font-size: 18px;
+            opacity: 0.6;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-large {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 40px;
+            filter: drop-shadow(0 10px 40px rgba(0, 0, 0, 0.3));
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .brand-text {
+            font-size: 24px;
+            font-weight: 300;
+            opacity: 0.9;
+            line-height: 1.6;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
         .status-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: 15px;
-        }
-
-        .status-text {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        button {
-            padding: 12px 18px;
-            border: none;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 8px;
-            background: linear-gradient(45deg, #4CAF50, #45a049);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .status-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 8px;
+        }
+
+        .status-value {
+            font-size: 14px;
+            font-weight: 600;
             color: white;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
-        button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
-        }
-
-        button:disabled {
-            background: linear-gradient(45deg, #666, #444);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .btn-stop {
-            background: linear-gradient(45deg, #f44336, #d32f2f);
-            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
-        }
-        
-        .btn-stop:hover:not(:disabled) {
-            box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
-        }
-
-        .instructions {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        
-        .instructions h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-        
-        .instructions ol {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        
-        .instructions li {
-            margin-bottom: 8px;
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
-            0% { opacity: 1; }
+            0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .capturing {
-            animation: pulse 2s infinite;
         }
     </style>
 </head>
 <body>
+    <!-- Titlebar -->
     <div class="titlebar">
         <div class="titlebar-title">SuperDesk Agent</div>
         <div class="titlebar-controls">
-            <button class="titlebar-button" onclick="window.minimizeWindow()" title="Minimize">─</button>
-            <button class="titlebar-button close" onclick="window.closeWindow()" title="Close">✕</button>
+            <button class="titlebar-button" id="minimize-btn" onclick="window.appControls && window.appControls.minimize()">−</button>
+            <button class="titlebar-button" id="maximize-btn" disabled style="opacity:0.5;cursor:not-allowed;">□</button>
+            <button class="titlebar-button close" id="close-btn" onclick="window.appControls && window.appControls.close()">×</button>
         </div>
     </div>
 
-    <div class="container">
-        <!-- Welcome Screen -->
-        <div class="welcome-screen" id="welcomeScreen">
-            <div class="logo-container">
-                <img src="assets/superdesk.png" alt="SuperDesk">
+    <!-- Authentication Screen -->
+    <div class="auth-container" id="auth-screen">
+        <!-- Left Panel -->
+        <div class="auth-left">
+            <div style="position: relative; z-index: 1; text-align: center;">
+                <img src="assets/superdesk.png" alt="SuperDesk" class="logo-large">
+                <div class="brand-text">
+                    Secure remote desktop sharing<br />
+                    for modern teams
+                </div>
             </div>
-            <h1 class="welcome-title">Welcome to SuperDesk</h1>
-            <p class="welcome-subtitle">Share your desktop securely with anyone, anywhere</p>
-            <button class="start-button" onclick="window.showMainScreen()">
-                🚀 Start Sharing
-            </button>
         </div>
 
-        <!-- Main Screen -->
-        <div class="main-screen" id="mainScreen">
-            <div class="screen-header">
-                <h2>Desktop Sharing</h2>
-                <p>Your session is ready to share</p>
-            </div>
+        <!-- Right Panel -->
+        <div class="auth-right">
+            <div class="auth-form">
+                <!-- Email Step -->
+                <div id="email-step">
+                    <div class="auth-header">
+                        <h1 class="auth-title">Sign In</h1>
+                        <p class="auth-subtitle">Enter your email to receive an OTP code</p>
+                    </div>
+                    
+                    <input 
+                        type="email" 
+                        class="input-field" 
+                        id="email-input" 
+                        placeholder="name@example.com"
+                    >
+                    
+                    <button class="btn btn-primary" id="send-otp-btn">Send OTP</button>
+                    <button class="btn btn-warning" id="continue-bypass-btn">
+                        Continue Without Auth (Testing Only)
+                    </button>
 
-            <div class="card">
-                <div class="card-header">Your Session ID</div>
-                <div class="session-id" id="sessionId">Connecting...</div>
-                <div class="session-hint">Share this ID with others to let them join</div>
-            </div>
-
-            <div class="card">
-                <div class="status-row">
-                    <span class="status-label">Connection Status</span>
-                    <span class="status-value">
-                        <span class="status-indicator disconnected" id="statusIndicator"></span>
-                        <span id="status">Initializing...</span>
-                    </span>
+                    <p style="font-size: 12px; color: rgba(255, 255, 255, 0.5); text-align: center; margin-top: 24px; line-height: 1.6;">
+                        By continuing, you agree to our Terms of Service and Privacy Policy.
+                    </p>
                 </div>
-                <div class="status-row">
-                    <span class="status-label">Screen Sharing</span>
-                    <span class="status-value" id="sharingStatus">Not Started</span>
-                </div>
-            </div>
 
-            <div class="button-group">
-                <button class="btn btn-primary" onclick="window.startScreenShare()" id="startBtn">
-                    🎥 Start Screen Sharing
-                </button>
-                <button class="btn btn-secondary" onclick="window.startTestPattern()" id="testBtn">
-                    🧪 Test Pattern
-                </button>
-                <button class="btn btn-danger" onclick="window.stopScreenShare()" id="stopBtn" disabled>
-                    ⏹️ Stop Sharing
-                </button>
+                <!-- OTP Step -->
+                <div id="otp-step" class="hidden">
+                    <div class="auth-header">
+                        <h1 class="auth-title">Verify OTP</h1>
+                        <p class="auth-subtitle">Enter the OTP code sent to your email</p>
+                    </div>
+                    
+                    <input 
+                        type="text" 
+                        class="input-field" 
+                        id="otp-input" 
+                        placeholder="Enter 6-digit OTP"
+                        maxlength="6"
+                    >
+                    
+                    <button class="btn btn-primary" id="verify-otp-btn">Verify OTP</button>
+                    <button class="btn btn-text" id="back-to-email-btn">Back to Email</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="renderer.js"></script>
+    <!-- Dashboard Screen -->
+    <div class="dashboard-container" id="dashboard-screen">
+        <!-- Left Sidebar (30%) -->
+        <div class="dashboard-sidebar">
+            <div class="sidebar-header">
+                <img src="assets/superdesk.png" alt="SuperDesk" class="sidebar-logo">
+            </div>
+
+            <div class="user-info">
+                <div class="user-info-label">Signed in as</div>
+                <div class="user-info-value" id="user-email">user@example.com</div>
+            </div>
+
+            <div class="nav-menu">
+                <button class="nav-item active" data-view="share">
+                    <span class="nav-icon">🖥️</span>
+                    <span>Share Screen</span>
+                </button>
+                <button class="nav-item" data-view="friends">
+                    <span class="nav-icon">👥</span>
+                    <span>Friends</span>
+                </button>
+                <button class="nav-item" data-view="messages">
+                    <span class="nav-icon">💬</span>
+                    <span>Messages</span>
+                </button>
+                <button class="nav-item" data-view="files">
+                    <span class="nav-icon">📁</span>
+                    <span>File Transfer</span>
+                </button>
+            </div>
+
+            <button class="btn btn-danger" id="signout-btn">Sign Out</button>
+        </div>
+
+        <!-- Right Content (70%) -->
+        <div class="dashboard-content">
+            <!-- Share Screen View -->
+            <div class="content-view" id="share-view">
+                <h1 class="content-title">Share Your Screen</h1>
+                
+                <div class="content-card">
+                    <p style="font-size: 16px; margin-bottom: 24px; opacity: 0.8;">
+                        Start a remote desktop session
+                    </p>
+
+                    <div class="content-section">
+                        <div class="section-label">Session ID</div>
+                        <div class="session-id" id="session-id">GENERATING...</div>
+                    </div>
+
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-label">Connection</div>
+                            <div class="status-value">
+                                <span class="status-dot"></span>
+                                <span id="connection-status">Ready</span>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Session</div>
+                            <div class="status-value" id="session-status">Not Started</div>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="start-share-btn" style="flex: 1;">
+                            Start Sharing
+                        </button>
+                        <button class="btn btn-secondary" id="join-session-btn" style="flex: 1;">
+                            Join Session
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Friends View -->
+            <div class="content-view hidden" id="friends-view">
+                <h1 class="content-title">Friends</h1>
+                <div class="content-card placeholder-content">
+                    <div class="placeholder-icon">👥</div>
+                    <div class="placeholder-text">Friend system coming soon!</div>
+                </div>
+            </div>
+
+            <!-- Messages View -->
+            <div class="content-view hidden" id="messages-view">
+                <h1 class="content-title">Messages</h1>
+                <div class="content-card placeholder-content">
+                    <div class="placeholder-icon">💬</div>
+                    <div class="placeholder-text">Messaging system coming soon!</div>
+                </div>
+            </div>
+
+            <!-- Files View -->
+            <div class="content-view hidden" id="files-view">
+                <h1 class="content-title">File Transfer</h1>
+                <div class="content-card placeholder-content">
+                    <div class="placeholder-icon">📁</div>
+                    <div class="placeholder-text">File transfer (max 10MB) coming soon!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Screen transition
-        window.showMainScreen = function() {
-            const welcomeScreen = document.getElementById('welcomeScreen');
-            const mainScreen = document.getElementById('mainScreen');
-            
-            welcomeScreen.style.animation = 'fadeOut 0.3s ease-out';
-            setTimeout(() => {
-                welcomeScreen.classList.add('hidden');
-                mainScreen.classList.add('active');
-            }, 300);
-        };
-
-        // Window controls
         const { ipcRenderer } = require('electron');
-        const remote = require('@electron/remote');
+        const { supabase } = require('./supabaseClient');
 
-        window.minimizeWindow = function() {
-            remote.getCurrentWindow().minimize();
-        };
+        let currentUser = null;
+        let currentView = 'share';
 
-        window.closeWindow = function() {
-            remote.getCurrentWindow().close();
-        };
+        // DOM Elements
+        const authScreen = document.getElementById('auth-screen');
+        const dashboardScreen = document.getElementById('dashboard-screen');
+        const emailStep = document.getElementById('email-step');
+        const otpStep = document.getElementById('otp-step');
+        const emailInput = document.getElementById('email-input');
+        const otpInput = document.getElementById('otp-input');
+        const userEmailDisplay = document.getElementById('user-email');
 
-        // UI update functions
-        function displaySessionId(sessionId) {
-            document.getElementById('sessionId').textContent = sessionId;
+        // Initialize
+        init();
+
+        async function init() {
+            // Check for existing session
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                showDashboard();
+            }
+
+            // Listen for auth changes
+            supabase.auth.onAuthStateChange((_event, session) => {
+                if (session) {
+                    currentUser = session.user;
+                    showDashboard();
+                } else {
+                    currentUser = null;
+                    showAuth();
+                }
+            });
+
+            // Generate session ID
+            generateSessionId();
+            setupEventListeners();
         }
 
-        function updateStatus(status) {
-            const statusEl = document.getElementById('status');
-            const indicatorEl = document.getElementById('statusIndicator');
-            statusEl.textContent = status;
-            
-            if (status.includes('Connected') || status.includes('Ready')) {
-                indicatorEl.classList.remove('disconnected');
-                indicatorEl.classList.add('connected');
+        function setupEventListeners() {
+            // Titlebar controls now handled via window.appControls in HTML onclick
+
+            // Auth buttons
+            document.getElementById('send-otp-btn').addEventListener('click', sendOTP);
+            document.getElementById('verify-otp-btn').addEventListener('click', verifyOTP);
+            document.getElementById('continue-bypass-btn').addEventListener('click', continueBypass);
+            document.getElementById('back-to-email-btn').addEventListener('click', backToEmail);
+            document.getElementById('signout-btn').addEventListener('click', signOut);
+
+            // Enter key handlers
+            emailInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendOTP();
+            });
+
+            otpInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') verifyOTP();
+            });
+
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const view = item.dataset.view;
+                    switchView(view);
+                });
+            });
+
+            // Share buttons
+            document.getElementById('start-share-btn').addEventListener('click', () => {
+                // This will trigger the existing share functionality
+                if (window.startScreenShare) {
+                    window.startScreenShare();
+                }
+            });
+
+            document.getElementById('join-session-btn').addEventListener('click', () => {
+                const sessionId = prompt('Enter Session ID:');
+                if (sessionId) {
+                    // This will trigger the existing join functionality
+                    if (window.joinSession) {
+                        window.joinSession(sessionId);
+                    }
+                }
+            });
+        }
+
+        async function sendOTP() {
+            const email = emailInput.value.trim();
+            if (!email) {
+                alert('Please enter your email');
+                return;
+            }
+
+            const btn = document.getElementById('send-otp-btn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const { error } = await supabase.auth.signInWithOtp({
+                    email,
+                    options: {
+                        shouldCreateUser: true,
+                    }
+                });
+
+                if (error) throw error;
+
+                alert('Check your email for the OTP code!');
+                emailStep.classList.add('hidden');
+                otpStep.classList.remove('hidden');
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send OTP';
             }
         }
 
-        window.startScreenShare = function() {
-            document.getElementById('sharingStatus').textContent = 'Active';
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            document.getElementById('testBtn').disabled = true;
-        };
+        async function verifyOTP() {
+            const otp = otpInput.value.trim();
+            const email = emailInput.value.trim();
 
-        window.stopScreenShare = function() {
-            document.getElementById('sharingStatus').textContent = 'Not Started';
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            document.getElementById('testBtn').disabled = false;
-        };
+            if (!otp) {
+                alert('Please enter the OTP code');
+                return;
+            }
 
-        window.startTestPattern = function() {
-            document.getElementById('sharingStatus').textContent = 'Test Pattern';
-            document.getElementById('testBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            document.getElementById('startBtn').disabled = true;
-        };
+            const btn = document.getElementById('verify-otp-btn');
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            try {
+                const { error } = await supabase.auth.verifyOtp({
+                    email,
+                    token: otp,
+                    type: 'email'
+                });
+
+                if (error) throw error;
+
+                // User will be set via onAuthStateChange listener
+            } catch (error) {
+                alert('Error: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = 'Verify OTP';
+            }
+        }
+
+        function continueBypass() {
+            currentUser = { email: 'test@example.com', id: 'test-user' };
+            showDashboard();
+        }
+
+        function backToEmail() {
+            otpStep.classList.add('hidden');
+            emailStep.classList.remove('hidden');
+            otpInput.value = '';
+        }
+
+        async function signOut() {
+            await supabase.auth.signOut();
+            currentUser = null;
+            showAuth();
+        }
+
+        function showAuth() {
+            authScreen.style.display = 'flex';
+            dashboardScreen.style.display = 'none';
+            emailStep.classList.remove('hidden');
+            otpStep.classList.add('hidden');
+            emailInput.value = '';
+            otpInput.value = '';
+        }
+
+        function showDashboard() {
+            authScreen.style.display = 'none';
+            dashboardScreen.style.display = 'flex';
+            userEmailDisplay.textContent = currentUser?.email || 'user@example.com';
+        }
+
+        function switchView(view) {
+            currentView = view;
+
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.view === view) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Update content views
+            document.querySelectorAll('.content-view').forEach(v => {
+                v.classList.add('hidden');
+            });
+            document.getElementById(`${view}-view`).classList.remove('hidden');
+        }
+
+        function generateSessionId() {
+            const sessionId = Math.random().toString(36).substring(2, 10).toUpperCase();
+            document.getElementById('session-id').textContent = sessionId;
+        }
     </script>
 </body>
 </html>

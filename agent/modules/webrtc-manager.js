@@ -60,10 +60,13 @@ class WebRTCManager {
     return this.peerConnection;
   }
 
-  async startScreenShare() {
+  async startScreenShare(shareType = 'screen') {
     try {
+      // Get available sources based on share type
+      const sourceTypes = shareType === 'window' ? ['window'] : ['screen'];
+      
       const sources = await window.electron.desktopCapturer.getSources({
-        types: ['screen'],
+        types: sourceTypes,
         thumbnailSize: { width: 1920, height: 1080 }
       });
 
@@ -71,12 +74,19 @@ class WebRTCManager {
         throw new Error('No screen sources available');
       }
 
+      // For screen type, use primary screen (usually index 0)
+      // For window type, let user select or use first window
+      let selectedSource = sources[0];
+      
+      // If multiple sources and window type, could show selection UI here
+      // For now, using first available source
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
-            chromeMediaSourceId: sources[0].id,
+            chromeMediaSourceId: selectedSource.id,
             minWidth: 1280,
             maxWidth: 1920,
             minHeight: 720,
@@ -96,7 +106,7 @@ class WebRTCManager {
         });
       }
 
-      console.log('[WebRTC] Screen sharing started');
+      console.log(`[WebRTC] Screen sharing started (type: ${shareType})`);
       return stream;
 
     } catch (error) {

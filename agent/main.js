@@ -262,9 +262,10 @@ function createWindow() {
 
 app.whenReady().then(() => {
   // Handle 'get-sources' request from the renderer process
-  ipcMain.handle('get-sources', async () => {
+  // Now supports optional sourceTypes parameter (default: ['screen'])
+  ipcMain.handle('get-sources', async (event, sourceTypes = ['screen']) => {
     const sources = await desktopCapturer.getSources({
-      types: ['screen'],
+      types: Array.isArray(sourceTypes) ? sourceTypes : ['screen'],
       thumbnailSize: { width: 1920, height: 1080 }
     });
     return sources;

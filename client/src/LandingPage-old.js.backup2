@@ -1,0 +1,312 @@
+import React, { useState } from 'react';
+import { Box, Container, TextField, Button, Typography } from '@mui/material';
+import superdeskLogo from './assets/superdesk.png';
+
+function LandingPage({ onGetStarted }) {
+  const [email, setEmail] = useState('');
+
+  const handleEmailSignIn = () => {
+    if (!email) {
+      alert('Please enter your email');
+      return;
+    }
+    console.log('Sign in with email:', email);
+    // TODO: Integrate with Supabase authentication
+    onGetStarted();
+  };
+
+  const handleGitHubSignIn = () => {
+    console.log('Sign in with GitHub');
+    // TODO: Integrate with Supabase GitHub OAuth
+    onGetStarted();
+  };
+
+  return (
+    <Box sx={{
+      display: 'flex',
+      minHeight: '100vh',
+      background: '#09090b',
+      color: 'white'
+    }}>
+      {/* Left Panel - Branding */}
+      <Box sx={{
+        width: '50%',
+        background: '#0a006f',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '60px',
+        position: 'relative',
+        overflow: 'hidden',
+        '@media (max-width: 900px)': {
+          display: 'none'
+        }
+      }}>
+        {/* Decorative gradients */}
+        <Box sx={{
+          position: 'absolute',
+          width: '500px',
+          height: '500px',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)',
+          top: '-250px',
+          right: '-250px',
+          pointerEvents: 'none'
+        }} />
+        <Box sx={{
+          position: 'absolute',
+          width: '400px',
+          height: '400px',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%)',
+          bottom: '-200px',
+          left: '-200px',
+          pointerEvents: 'none'
+        }} />
+
+        <Box sx={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+          <Box
+            component="img"
+            src={superdeskLogo}
+            alt="SuperDesk"
+            sx={{
+              width: '100%',
+              maxWidth: '500px',
+              marginBottom: '40px',
+              filter: 'drop-shadow(0 10px 40px rgba(0, 0, 0, 0.3))',
+              animation: 'fadeInUp 0.8s ease-out',
+              '@keyframes fadeInUp': {
+                from: {
+                  opacity: 0,
+                  transform: 'translateY(20px)'
+                },
+                to: {
+                  opacity: 1,
+                  transform: 'translateY(0)'
+                }
+              }
+            }}
+          />
+          <Typography sx={{
+            fontSize: '24px',
+            fontWeight: 300,
+            opacity: 0.9,
+            lineHeight: 1.6,
+            animation: 'fadeInUp 0.8s ease-out 0.2s both',
+            '@keyframes fadeInUp': {
+              from: {
+                opacity: 0,
+                transform: 'translateY(20px)'
+              },
+              to: {
+                opacity: 1,
+                transform: 'translateY(0)'
+              }
+            }
+          }}>
+            Secure remote desktop sharing<br />
+            for modern teams
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Right Panel - Authentication */}
+      <Box sx={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '60px',
+        '@media (max-width: 900px)': {
+          width: '100%'
+        }
+      }}>
+        <Container maxWidth="sm">
+          <Box sx={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
+            {/* Header */}
+            <Box sx={{ marginBottom: '40px', textAlign: 'center' }}>
+              <Typography variant="h4" sx={{
+                fontWeight: 700,
+                marginBottom: '12px',
+                color: 'white'
+              }}>
+                Create an account
+              </Typography>
+              <Typography sx={{
+                fontSize: '16px',
+                color: 'rgba(255, 255, 255, 0.6)'
+              }}>
+                Enter your email below to create your account
+              </Typography>
+            </Box>
+
+            {/* Email Input */}
+            <TextField
+              fullWidth
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') handleEmailSignIn();
+              }}
+              sx={{
+                marginBottom: '12px',
+                '& .MuiOutlinedInput-root': {
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '8px',
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.2)'
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'white'
+                  }
+                },
+                '& .MuiOutlinedInput-input': {
+                  color: 'white',
+                  padding: '14px 16px',
+                  '&::placeholder': {
+                    color: 'rgba(255, 255, 255, 0.4)',
+                    opacity: 1
+                  }
+                }
+              }}
+            />
+
+            {/* Sign In with Email Button */}
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={handleEmailSignIn}
+              sx={{
+                background: 'white',
+                color: '#09090b',
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: 600,
+                textTransform: 'none',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                '&:hover': {
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(255, 255, 255, 0.2)'
+                }
+              }}
+            >
+              Sign In with Email
+            </Button>
+
+            {/* Divider */}
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              margin: '24px 0',
+              gap: '16px'
+            }}>
+              <Box sx={{
+                flex: 1,
+                height: '1px',
+                background: 'rgba(255, 255, 255, 0.1)'
+              }} />
+              <Typography sx={{
+                fontSize: '13px',
+                color: 'rgba(255, 255, 255, 0.5)',
+                textTransform: 'uppercase'
+              }}>
+                Or continue with
+              </Typography>
+              <Box sx={{
+                flex: 1,
+                height: '1px',
+                background: 'rgba(255, 255, 255, 0.1)'
+              }} />
+            </Box>
+
+            {/* GitHub Button */}
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={handleGitHubSignIn}
+              startIcon={
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                </svg>
+              }
+              sx={{
+                background: 'transparent',
+                color: 'white',
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: 600,
+                textTransform: 'none',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                '&:hover': {
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.3)'
+                }
+              }}
+            >
+              GitHub
+            </Button>
+
+            {/* Terms */}
+            <Typography sx={{
+              fontSize: '12px',
+              color: 'rgba(255, 255, 255, 0.5)',
+              textAlign: 'center',
+              marginTop: '24px',
+              lineHeight: 1.6
+            }}>
+              By clicking continue, you agree to our{' '}
+              <Box component="span" sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                '&:hover': { color: 'white' }
+              }}>
+                Terms of Service
+              </Box>
+              {' '}and{' '}
+              <Box component="span" sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                '&:hover': { color: 'white' }
+              }}>
+                Privacy Policy
+              </Box>
+              .
+            </Typography>
+
+            {/* Login Link */}
+            <Box sx={{
+              marginTop: '32px',
+              textAlign: 'center'
+            }}>
+              <Typography component="span" sx={{
+                fontSize: '14px',
+                color: 'rgba(255, 255, 255, 0.6)'
+              }}>
+                Already have an account?{' '}
+              </Typography>
+              <Typography component="span" sx={{
+                fontSize: '14px',
+                color: 'white',
+                fontWeight: 600,
+                cursor: 'pointer',
+                '&:hover': { textDecoration: 'underline' }
+              }}>
+                Login
+              </Typography>
+            </Box>
+          </Box>
+        </Container>
+      </Box>
+    </Box>
+  );
+}
+
+export default LandingPage;

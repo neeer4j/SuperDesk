@@ -533,8 +533,82 @@ function displaySessionId(id) {
   }
 }
 
+// Start screen share with specified type (screen, window, or area)
+async function startScreenShareWithType(shareType = 'screen') {
+  try {
+    if (isSharing) {
+      console.log('Already sharing screen');
+      return;
+    }
+    
+    updateStatus('Getting sources...');
+    
+    // Determine source types based on share type
+    const sourceTypes = shareType === 'window' ? ['window'] : ['screen'];
+    
+    // Get desktop sources
+    const sources = await ipcRenderer.invoke('get-sources', sourceTypes);
+    
+    if (sources.length === 0) {
+      throw new Error(`No ${shareType} sources available`);
+    }
+    
+    console.log(`📺 Found ${shareType} sources:`, sources.length);
+    updateStatus(`Capturing ${shareType}...`);
+    
+    // Select the source (for now, use first one - can be enhanced with UI selection)
+    const selectedSource = sources[0];
+    
+    // Create media stream from capture
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: selectedSource.id,
+          minWidth: 1280,
+          maxWidth: 1920,
+          minHeight: 720,
+          maxHeight: 1080,
+          minFrameRate: 15,
+          maxFrameRate: 30
+        }
+      }
+    });
+    
+    localStream = stream;
+    isSharing = true;
+    ipcRenderer.send('robot-refresh-screen-size');
+    
+    console.log(`✅ ${shareType} capture started`);
+    updateStatus(`${shareType.charAt(0).toUpperCase() + shareType.slice(1)} sharing active`);
+    
+    // Create peer connection and add stream
+    createPeerConnection();
+    
+    stream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, stream);
+    });
+
+    // Continue with offer creation...
+    await createAndSendOffer();
+    
+    // Update UI
+    document.getElementById('sharingStatus').textContent = 'Active';
+    document.getElementById('stopBtn').disabled = false;
+    document.getElementById('testBtn').disabled = true;
+    
+  } catch (error) {
+    console.error(`[Renderer] ${shareType} sharing error:`, error);
+    updateStatus(`Error: ${error.message}`);
+    document.getElementById('shareOptionsBtn').disabled = false;
+    throw error;
+  }
+}
+
 // Expose functions to window for button clicks
 window.startScreenShare = startScreenShare;
+window.startScreenShareWithType = startScreenShareWithType;
 window.stopScreenShare = stopScreenShare;
 
 // Generate a moving canvas test pattern and stream it (for pipeline debugging)
