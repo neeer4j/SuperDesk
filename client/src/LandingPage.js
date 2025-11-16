@@ -1,3 +1,4 @@
+  // Google sign-in removed. Only OTP authentication is allowed.
 import React, { useState, useEffect } from 'react';
 import { Box, Container, TextField, Button, Typography, Tabs, Tab } from '@mui/material';
 import { supabase } from './supabaseClient';
@@ -277,6 +278,7 @@ function LandingPage({ onGetStarted }) {
                   >
                     {loading ? 'Sending...' : 'Send OTP'}
                   </Button>
+                  {/* Google Sign In Button removed */}
 
                   {/* Continue Button (Bypass for testing) */}
                   <Button
