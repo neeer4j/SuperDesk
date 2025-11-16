@@ -168,22 +168,38 @@ if (!fs.existsSync('uploads')) {
 // Store active sessions
 const sessions = new Map();
 
+// Helper function to generate short session IDs
+function generateSessionId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 // WebRTC signaling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
-  socket.on('create-session', () => {
-    const sessionId = uuidv4();
+  socket.on('create-session', (payload) => {
+    // Generate a short, readable session ID
+    let sessionId;
+    do {
+      sessionId = generateSessionId();
+    } while (sessions.has(sessionId)); // Ensure uniqueness
+    
     sessions.set(sessionId, {
       id: sessionId,
       host: socket.id,
       clients: [],
-      created: new Date()
+      created: new Date(),
+      type: payload?.type || 'unknown'
     });
     
     socket.join(sessionId);
-    socket.emit('session-created', sessionId);
-    console.log(`Session created: ${sessionId}`);
+    socket.emit('session-created', { sessionId });
+    console.log(`Session created: ${sessionId} (Type: ${payload?.type || 'unknown'})`);
   });
 
   socket.on('join-session', (sessionId) => {
