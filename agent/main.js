@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen } = require('electron');
 const path = require('path');
 const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
 
@@ -13,16 +13,19 @@ let remoteControlEnabled = false;
 let screenSize = { width: 1920, height: 1080 };
 const activeKeys = new Set();
 
-async function refreshScreenSize() {
+
+function refreshScreenSize() {
   try {
-    screenSize = await screen.size();
+    // Use Electron's screen API to get the primary display size
+    const primaryDisplay = electronScreen.getPrimaryDisplay();
+    screenSize = primaryDisplay.size;
   } catch (error) {
     console.error('Failed to get screen size:', error);
   }
 }
 
 // Initialize screen size
-refreshScreenSize();
+app.whenReady().then(refreshScreenSize);
 
 
 function clamp(value, min, max) {
