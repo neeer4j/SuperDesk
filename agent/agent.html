@@ -560,17 +560,43 @@
             }, 300);
         };
 
-        // Window controls
-        const { ipcRenderer } = require('electron');
-        const remote = require('@electron/remote');
+        // Window controls (safe): prefer direct remote, fall back to IPC or preload-exposed API
+        (function() {
+            try {
+                const { ipcRenderer } = require('electron');
+                const remote = require('@electron/remote');
 
-        window.minimizeWindow = function() {
-            remote.getCurrentWindow().minimize();
-        };
+                window.minimizeWindow = function() {
+                    try {
+                        remote.getCurrentWindow().minimize();
+                    } catch (err) {
+                        // fallback to IPC
+                        try { ipcRenderer.send('window-minimize'); } catch (e) { /* noop */ }
+                    }
+                };
 
-        window.closeWindow = function() {
-            remote.getCurrentWindow().close();
-        };
+                window.closeWindow = function() {
+                    try {
+                        remote.getCurrentWindow().close();
+                    } catch (err) {
+                        try { ipcRenderer.send('window-close'); } catch (e) { /* noop */ }
+                    }
+                };
+            } catch (e) {
+                // If require isn't available (packaged with contextIsolation), try preload-exposed API
+                console.warn('Window controls unavailable via require; using preload/api fallback if present', e);
+                if (window.appControls && typeof window.appControls.minimize === 'function') {
+                    window.minimizeWindow = window.appControls.minimize;
+                } else {
+                    window.minimizeWindow = function() { /* noop */ };
+                }
+                if (window.appControls && typeof window.appControls.close === 'function') {
+                    window.closeWindow = window.appControls.close;
+                } else {
+                    window.closeWindow = function() { /* noop */ };
+                }
+            }
+        })();
 
         // UI update functions
         function displaySessionId(sessionId) {

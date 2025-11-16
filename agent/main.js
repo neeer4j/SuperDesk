@@ -146,6 +146,19 @@ ipcMain.on('robot-refresh-screen-size', () => {
   console.log('[robot] screenSize now:', screenSize);
 });
 
+// Window control fallbacks (support preload or renderer IPC)
+ipcMain.on('window-minimize', () => {
+  if (mainWindow) {
+    try { mainWindow.minimize(); } catch (e) { console.warn('Minimize failed:', e); }
+  }
+});
+
+ipcMain.on('window-close', () => {
+  if (mainWindow) {
+    try { mainWindow.close(); } catch (e) { console.warn('Close failed:', e); }
+  }
+});
+
 ipcMain.on('robot-set-enabled', (_event, enabled) => {
   remoteControlEnabled = !!enabled;
   console.log('[robot] set-enabled:', remoteControlEnabled);
