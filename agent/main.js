@@ -240,7 +240,10 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      enableRemoteModule: true
+      enableRemoteModule: true,
+      // Preload provides a safe bridge for packaged apps where
+      // require()/remote may not be available. It exposes `window.appControls`.
+      preload: path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
     title: 'SuperDesk Agent'
