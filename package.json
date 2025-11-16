@@ -21,16 +21,23 @@
     "deploy:build": "npm run install:all && npm run build:client",
     "deploy:help": "echo \"📖 See DEPLOYMENT.md for deployment instructions\" && echo \"🔍 Run 'npm run check-deployment' to verify deployment status\""
   },
-  "keywords": ["remote-desktop", "webrtc", "screen-sharing", "windows"],
+  "keywords": [
+    "remote-desktop",
+    "webrtc",
+    "screen-sharing",
+    "windows"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "workspaces": [
     "client",
-    "server", 
+    "server",
     "agent",
     "shared"
   ],
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "node-abi": "^4.24.0",
+    "prebuild-install": "^7.1.3"
   }
 }

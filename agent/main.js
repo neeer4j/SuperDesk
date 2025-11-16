@@ -230,13 +230,10 @@ ipcMain.on('robot-keyboard-event', (_event, data = {}) => {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 1000,
-    minHeight: 700,
+    fullscreen: true,
     frame: false,
-    transparent: true,
-    backgroundColor: '#00000000',
+    transparent: false,
+    backgroundColor: '#0a006f',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
