@@ -1935,15 +1935,15 @@ function App() {
       <Box sx={{ 
         flexGrow: 1, 
         minHeight: '100vh', 
-        background: '#0a0a0a'
+        background: '#613da9'
       }}>
         <AppBar 
           position="static" 
           elevation={0}
           sx={{
-            background: 'rgba(10, 10, 10, 0.8)',
+            background: 'rgba(97, 61, 169, 0.9)',
             backdropFilter: 'blur(10px)',
-            borderBottom: '1px solid rgba(139, 92, 246, 0.2)'
+            borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
           }}
         >
           <Toolbar>
@@ -1989,11 +1989,10 @@ function App() {
           <Paper sx={{ 
             p: 4, 
             mb: 4, 
-            background: darkMode 
-              ? 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)' 
-              : 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', 
+            background: 'rgba(255, 255, 255, 0.1)', 
             color: 'white', 
-            textAlign: 'center' 
+            textAlign: 'center',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
           }}>
             <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
               Next-Generation Remote Desktop
@@ -2043,17 +2042,17 @@ function App() {
               sx={{ 
                 p: 4, 
                 textAlign: 'center',
-                background: 'rgba(20, 20, 20, 0.6)',
+                background: 'rgba(255, 255, 255, 0.1)',
                 backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(139, 92, 246, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 borderRadius: '16px'
               }}
             >
-              <CircularProgress size={60} sx={{ mb: 2, color: '#8b5cf6' }} />
+              <CircularProgress size={60} sx={{ mb: 2, color: '#fff' }} />
               <Typography variant="h5" gutterBottom sx={{ color: '#fff' }}>
                 Connecting to SuperDesk Server...
               </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                 Server: {config.server}
               </Typography>
             </Paper>
@@ -2402,7 +2401,7 @@ function App() {
             <Paper sx={{ 
               mt: 3, 
               p: 2.5,
-              background: 'rgba(20, 20, 20, 0.6)',
+              background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(139, 92, 246, 0.2)',
               borderRadius: '12px'
@@ -2602,7 +2601,7 @@ function App() {
             <Paper sx={{ 
               mt: 3, 
               p: 2.5,
-              background: 'rgba(20, 20, 20, 0.6)',
+              background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(59, 130, 246, 0.2)',
               borderRadius: '12px'
@@ -2693,7 +2692,7 @@ function App() {
             <Paper sx={{ 
               mt: 3, 
               p: 2.5,
-              background: 'rgba(20, 20, 20, 0.6)',
+              background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(139, 92, 246, 0.2)',
               borderRadius: '12px'

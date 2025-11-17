@@ -12,7 +12,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', 'Segoe UI', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #09090b;
+            background: #613da9;
             color: white;
             min-height: 100vh;
             overflow: hidden;
@@ -59,14 +59,14 @@
         .auth-container {
             display: flex;
             height: calc(100vh - 36px);
-            background: #09090b;
+            background: #613da9;
             color: white;
             margin-top: 36px;
         }
         .auth-left {
             width: 44%;
             min-width: 340px;
-            background: #0a006f;
+            background: white;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -80,13 +80,14 @@
             position: absolute;
             width: 420px;
             height: 420px;
-            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(97,61,169,0.08) 0%, transparent 70%);
             top: -210px;
             right: -210px;
             pointer-events: none;
         }
         .auth-right {
             flex: 1;
+            background: #613da9;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -108,24 +109,24 @@
         }
         .auth-subtitle {
             font-size: 15px;
-            color: rgba(255,255,255,0.6);
+            color: rgba(255,255,255,0.8);
         }
         .input-field {
             width: 100%;
             padding: 13px 15px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.11);
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
             border-radius: 7px;
             color: white;
             font-size: 15px;
             margin-bottom: 12px;
             transition: all 0.2s;
         }
-        .input-field::placeholder { color: rgba(255,255,255,0.38); }
+        .input-field::placeholder { color: rgba(255,255,255,0.7); }
         .input-field:focus {
             outline: none;
-            border-color: #fbbf24;
-            background: rgba(255,255,255,0.09);
+            border-color: white;
+            background: rgba(255,255,255,0.2);
         }
         .btn {
             width: 100%;
@@ -140,26 +141,27 @@
         }
         .btn-primary {
             background: white;
-            color: #09090b;
+            color: #613da9;
         }
-        .btn-primary:hover:not(:disabled) { background: #f3f3f3; }
+        .btn-primary:hover:not(:disabled) { background: #f5f5f5; }
         .btn-warning {
             background: transparent;
-            color: #fbbf24;
-            border: 1.5px solid #fbbf24;
+            color: white;
+            border: 2px solid white;
         }
-        .btn-warning:hover { background: rgba(251,191,36,0.13); }
+        .btn-warning:hover { background: rgba(255,255,255,0.15); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .logo-large {
             width: 100%;
             max-width: 220px;
             margin-bottom: 32px;
-            filter: drop-shadow(0 8px 32px rgba(0,0,0,0.22));
+            filter: drop-shadow(0 8px 32px rgba(97,61,169,0.15));
             animation: fadeInUp 0.7s ease-out;
         }
         .brand-text {
             font-size: 20px;
             font-weight: 300;
+            color: #613da9;
             opacity: 0.88;
             line-height: 1.5;
             animation: fadeInUp 0.7s ease-out 0.15s both;
@@ -167,24 +169,6 @@
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(18px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-        .auth-left::before {
-            content: '';
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            top: -250px;
-            right: -250px;
-            pointer-events: none;
-        }
-
-        .auth-right {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 60px;
         }
 
         .auth-form {
@@ -218,9 +202,10 @@
 
         .dashboard-sidebar {
             width: 30%;
-            background: #0a006f;
+            background: #FFFFFF;
+            color: #613da9;
             padding: 24px;
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(97, 61, 169, 0.2);
             display: flex;
             flex-direction: column;
             overflow-y: auto;
@@ -244,7 +229,7 @@
 
         .user-info {
             padding: 16px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(97, 61, 169, 0.1);
             border-radius: 8px;
             margin-bottom: 24px;
         }
@@ -253,11 +238,13 @@
             font-size: 14px;
             opacity: 0.7;
             margin-bottom: 4px;
+            color: #613da9;
         }
 
         .user-info-value {
             font-size: 16px;
             font-weight: 600;
+            color: #613da9;
         }
 
         .nav-menu {
@@ -270,7 +257,7 @@
             padding: 16px;
             margin-bottom: 8px;
             background: transparent;
-            color: white;
+            color: #613da9;
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -283,11 +270,11 @@
         }
 
         .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(97, 61, 169, 0.1);
         }
 
         .nav-item.active {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(97, 61, 169, 0.15);
             font-weight: 600;
         }
 
@@ -351,12 +338,12 @@
         }
 
         .btn-danger {
-            background: rgba(255, 0, 0, 0.2);
-            color: white;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
         }
 
         .btn-danger:hover {
-            background: rgba(255, 0, 0, 0.3);
+            background: rgba(239, 68, 68, 0.2);
         }
 
         .btn:disabled {
