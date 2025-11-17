@@ -15,3 +15,13 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Temporary override for runtime-generated emotion classes inside the left panel.
+   Some MUI/Emotion-generated classes may inject backgrounds at runtime (e.g. .css-xxxxxx).
+   This rule forces any generated class inside the left panel to use a transparent
+   background so the left panel remains pure white. We'll keep this as a short-term
+   safety net while locating the original component that injects the blue background. */
+.superdesk-left-panel [class*="css-"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
