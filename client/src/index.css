@@ -25,3 +25,15 @@ code {
   background: transparent !important;
   background-color: transparent !important;
 }
+
+/* Also handle the case where the generated emotion class is on the same element
+   as the `superdesk-left-panel` (e.g. "css-xxxxx superdesk-left-panel" or
+   "superdesk-left-panel css-xxxxx"). This ensures the runtime-injected class
+   cannot override the white background. */
+.superdesk-left-panel[class*="css-"],
+[class*="css-"] .superdesk-left-panel,
+[class*="css-"] .superdesk-left-panel[class*="css-"],
+.superdesk-left-panel[class*="css-"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
