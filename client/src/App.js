@@ -1174,7 +1174,7 @@ function App() {
           }
           
           .desktop-header {
-            background: #2c3e50;
+            background: #613da9;
             color: white;
             padding: 10px 20px;
             display: flex;

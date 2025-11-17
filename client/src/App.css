@@ -594,24 +594,25 @@ html {
 }
 
 button {
-  background-color: #61dafb;
+  background-color: #613da9;
   border: none;
   padding: 10px 20px;
   border-radius: 4px;
-  color: #282c34;
-  font-weight: bold;
+  color: #fff;
+  font-weight: 700;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s, transform 0.15s;
 }
 
 button:hover:not(:disabled) {
-  background-color: #21a9c7;
+  background-color: #4b2b86;
+  transform: translateY(-1px);
 }
 
 button:disabled {
   background-color: #555;
-  color: #888;
+  color: #aaa;
   cursor: not-allowed;
 }
 
@@ -643,7 +644,7 @@ button:disabled {
 
 .progress-fill {
   height: 100%;
-  background-color: #61dafb;
+  background: linear-gradient(90deg, #8b5cf6, #613da9);
   transition: width 0.3s ease;
 }
 
