@@ -246,7 +246,7 @@ function createWindow() {
     fullscreen: true,
     frame: false,
     transparent: false,
-    backgroundColor: '#0a006f',
+  backgroundColor: '#613da9',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,

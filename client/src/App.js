@@ -2018,15 +2018,15 @@ function App() {
 
           {/* Popup Permission Warning Banner */}
           {!isHost && sessionId && (
-            <Alert 
+              <Alert 
               severity="info" 
               sx={{ 
                 mb: 3,
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
+                background: 'rgba(97, 61, 169, 0.08)',
+                border: '1px solid rgba(97, 61, 169, 0.2)',
                 color: 'rgba(255, 255, 255, 0.9)',
                 '& .MuiAlert-icon': {
-                  color: '#3b82f6'
+                  color: '#613da9'
                 }
               }}
             >
@@ -2211,7 +2211,7 @@ function App() {
                         justifyContent: 'center',
                         mr: 2
                       }}>
-                        <ScreenShare sx={{ color: '#8b5cf6', fontSize: '1.5rem' }} />
+                        <ScreenShare sx={{ color: '#613da9', fontSize: '1.5rem' }} />
                       </Box>
                       <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: '1.25rem' }}>
                         Share Your Desktop
@@ -2235,9 +2235,9 @@ function App() {
                         size="small" 
                         label="Audio Support" 
                         sx={{ 
-                          background: 'rgba(59, 130, 246, 0.1)', 
-                          color: '#3b82f6',
-                          border: '1px solid rgba(59, 130, 246, 0.2)',
+                          background: 'rgba(97, 61, 169, 0.1)', 
+                          color: '#613da9',
+                          border: '1px solid rgba(97, 61, 169, 0.2)',
                           fontSize: '0.75rem'
                         }} 
                       />
@@ -2259,19 +2259,19 @@ function App() {
                       startIcon={<DesktopWindows />}
                       onClick={startSession} 
                       disabled={!connected}
-                      sx={{
+                        sx={{
                         px: 3,
                         py: 1.25,
                         borderRadius: '8px',
-                        background: '#8b5cf6',
+                        background: '#613da9',
                         color: 'white',
                         textTransform: 'none',
                         fontSize: '0.95rem',
                         fontWeight: 600,
                         boxShadow: 'none',
                         '&:hover': {
-                          background: '#7c3aed',
-                          boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
+                          background: '#4b2b86',
+                          boxShadow: '0 4px 12px rgba(97, 61, 169, 0.4)'
                         },
                         '&:disabled': {
                           background: 'rgba(100, 100, 100, 0.2)',
@@ -2295,7 +2295,7 @@ function App() {
               overflow: 'hidden',
               transition: 'all 0.2s ease',
               '&:hover': {
-                borderColor: 'rgba(59, 130, 246, 0.3)',
+                borderColor: 'rgba(97, 61, 169, 0.3)',
                 boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
               }
             }}>
@@ -2307,13 +2307,13 @@ function App() {
                         width: 40,
                         height: 40,
                         borderRadius: '8px',
-                        background: 'rgba(59, 130, 246, 0.15)',
+                        background: 'rgba(97, 61, 169, 0.15)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         mr: 2
                       }}>
-                        <TouchApp sx={{ color: '#3b82f6', fontSize: '1.5rem' }} />
+                        <TouchApp sx={{ color: '#613da9', fontSize: '1.5rem' }} />
                       </Box>
                       <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: '1.25rem' }}>
                         Join Remote Desktop
@@ -2346,10 +2346,10 @@ function App() {
                               borderColor: 'rgba(255, 255, 255, 0.1)'
                             },
                             '&:hover fieldset': {
-                              borderColor: 'rgba(59, 130, 246, 0.4)'
+                              borderColor: 'rgba(97, 61, 169, 0.4)'
                             },
                             '&.Mui-focused fieldset': {
-                              borderColor: '#3b82f6',
+                              borderColor: '#613da9',
                               borderWidth: '2px'
                             }
                           },
@@ -2358,7 +2358,7 @@ function App() {
                             fontSize: '0.9rem'
                           },
                           '& .MuiInputLabel-root.Mui-focused': {
-                            color: '#3b82f6'
+                            color: '#613da9'
                           }
                         }}
                       />
@@ -2371,15 +2371,15 @@ function App() {
                           px: 3,
                           py: 1.5,
                           borderRadius: '8px',
-                          background: '#3b82f6',
+                          background: '#613da9',
                           color: 'white',
                           textTransform: 'none',
                           fontSize: '0.95rem',
                           fontWeight: 600,
                           boxShadow: 'none',
                           '&:hover': {
-                            background: '#2563eb',
-                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)'
+                            background: '#4b2b86',
+                            boxShadow: '0 4px 12px rgba(97, 61, 169, 0.4)'
                           },
                           '&:disabled': {
                             background: 'rgba(100, 100, 100, 0.2)',
@@ -2420,14 +2420,14 @@ function App() {
                       fontWeight: 600
                     }}
                   />
-                  <Chip 
+                    <Chip 
                     icon={<Person />} 
                     label={isHost ? 'Host' : 'Guest'} 
                     size="small"
                     sx={{
-                      background: isHost ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                      color: isHost ? '#22c55e' : '#3b82f6',
-                      border: `1px solid ${isHost ? 'rgba(34, 197, 94, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                      background: isHost ? 'rgba(34, 197, 94, 0.2)' : 'rgba(97, 61, 169, 0.2)',
+                      color: isHost ? '#22c55e' : '#613da9',
+                      border: `1px solid ${isHost ? 'rgba(34, 197, 94, 0.3)' : 'rgba(97, 61, 169, 0.3)'}`
                     }}
                   />
                   {!isHost && remoteControlEnabled && (
@@ -2603,12 +2603,12 @@ function App() {
               p: 2.5,
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
+              border: '1px solid rgba(97, 61, 169, 0.2)',
               borderRadius: '12px'
             }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
                 <Box display="flex" alignItems="center" gap={1}>
-                  <CloudUpload sx={{ color: '#3b82f6' }} />
+                  <CloudUpload sx={{ color: '#613da9' }} />
                   <Typography variant="body1" fontWeight="bold" sx={{ color: 'white' }}>
                     File Transfer
                   </Typography>
@@ -2648,16 +2648,16 @@ function App() {
                       ? 'rgba(255, 255, 255, 0.3)' 
                       : 'white',
                     borderColor: (!dataChannel || dataChannel.readyState !== 'open') 
-                      ? 'rgba(59, 130, 246, 0.2)' 
-                      : 'rgba(59, 130, 246, 0.5)',
-                    background: 'rgba(59, 130, 246, 0.1)',
+                      ? 'rgba(97, 61, 169, 0.2)' 
+                      : 'rgba(97, 61, 169, 0.5)',
+                    background: 'rgba(97, 61, 169, 0.1)',
                     '&:hover': {
-                      borderColor: '#3b82f6',
-                      background: 'rgba(59, 130, 246, 0.2)'
+                      borderColor: '#613da9',
+                      background: 'rgba(97, 61, 169, 0.2)'
                     },
                     '&.Mui-disabled': {
                       color: 'rgba(255, 255, 255, 0.2)',
-                      borderColor: 'rgba(59, 130, 246, 0.1)'
+                      borderColor: 'rgba(97, 61, 169, 0.1)'
                     }
                   }}
                 >
@@ -2677,7 +2677,7 @@ function App() {
                       borderRadius: '4px',
                       backgroundColor: 'rgba(139, 92, 246, 0.2)',
                       '& .MuiLinearProgress-bar': {
-                        background: 'linear-gradient(90deg, #8b5cf6, #3b82f6)',
+                        background: 'linear-gradient(90deg, #8b5cf6, #613da9)',
                         borderRadius: '4px'
                       }
                     }}

@@ -124,7 +124,7 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
   ];
 
   return (
-    <Box sx={{ minHeight: '100vh', background: '#0a0a0a' }}>
+    <Box sx={{ minHeight: '100vh', background: '#613da9' }}>
       {/* Header */}
       <AppBar 
         position="sticky" 
@@ -175,7 +175,7 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
       <Box
         sx={{
           py: 8,
-          background: 'linear-gradient(180deg, #0a0a0a 0%, #0d0d0d 100%)',
+          background: 'linear-gradient(180deg, #613da9 0%, #4b2b86 100%)',
           borderBottom: '1px solid rgba(139, 92, 246, 0.2)'
         }}
       >
@@ -211,7 +211,7 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
       </Box>
 
       {/* Features Grid */}
-      <Box ref={featuresRef} sx={{ py: 8, background: '#0d0d0d' }}>
+  <Box ref={featuresRef} sx={{ py: 8, background: '#613da9' }}>
         <Container maxWidth="lg">
           <Grid container spacing={4}>
             {features.map((feature, index) => (
@@ -280,7 +280,7 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
       <Box
         sx={{
           py: 8,
-          background: '#0a0a0a',
+          background: '#613da9',
           borderTop: '1px solid rgba(139, 92, 246, 0.2)',
           textAlign: 'center'
         }}
