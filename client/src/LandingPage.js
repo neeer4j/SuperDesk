@@ -65,7 +65,7 @@ function LandingPage({ onGetStarted }) {
         <Box
           className="superdesk-left-panel"
           // inline style wins over runtime CSS rules injected by Emotion
-          style={{ width: '50%', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 0 0 0', position: 'relative', overflow: 'hidden' }}
+          style={{ width: '44%', minWidth: '340px', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 32px', position: 'relative', overflow: 'hidden' }}
           sx={{
             '@media (max-width: 900px)': {
               display: 'none',
@@ -370,7 +370,7 @@ function LandingPage({ onGetStarted }) {
       <Box style={{ display: 'flex', height: '100vh', minHeight: '100vh', background: '#613da9', color: 'white', paddingTop: 36, overflow: 'hidden' }}>
         {/* Left Sidebar - Navigation (30%) */}
         <Box sx={{
-          width: '32vw',
+          width: '30%',
           minWidth: 340,
           maxWidth: 480,
           background: '#fff',
@@ -378,10 +378,11 @@ function LandingPage({ onGetStarted }) {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'stretch',
-          padding: 0,
-          borderRight: 'none',
+          padding: '24px',
+          borderRight: '1px solid rgba(97, 61, 169, 0.2)',
           height: '100vh',
           boxSizing: 'border-box',
+          overflowY: 'auto',
         }}>
           {/* Logo */}
           <Box sx={{ mt: 3, mb: 3, textAlign: 'center' }}>
@@ -470,7 +471,7 @@ function LandingPage({ onGetStarted }) {
       {/* Right Content Area (70%) */}
       <Box sx={{
         flex: 1,
-        padding: 0,
+        padding: '40px',
         background: '#613da9',
         display: 'flex',
         flexDirection: 'column',
@@ -478,7 +479,7 @@ function LandingPage({ onGetStarted }) {
         justifyContent: 'center',
         height: '100vh',
         boxSizing: 'border-box',
-        overflow: 'hidden',
+        overflow: 'auto',
       }}>
         {/* Share Screen View */}
         {activeView === 'share' && (
