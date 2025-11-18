@@ -566,17 +566,18 @@
 
         /* Copy/Paste Buttons */
         .copy-button, .paste-button {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            padding: 8px 16px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 8px;
             color: white;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.12s ease-in-out;
+            box-shadow: none;
         }
 
         .copy-button:hover, .paste-button:hover {
@@ -593,6 +594,27 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 8px;
             padding: 16px;
+        }
+
+        .session-id-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .session-id {
+            flex: 1;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 20px;
+            color: white;
+            letter-spacing: 3px;
+            box-sizing: border-box;
+        }
             margin-bottom: 24px;
         }
 
@@ -718,8 +740,10 @@
 
                     <div class="session-id-container">
                         <div class="section-label">Session ID</div>
-                        <div class="session-id" id="session-id">GENERATING...</div>
-                        <button class="copy-button" id="copy-session-btn">Copy</button>
+                        <div class="session-id-row">
+                            <div class="session-id" id="session-id">GENERATING...</div>
+                            <button class="copy-button" id="copy-session-btn">Copy</button>
+                        </div>
                     </div>
 
                     <div class="status-grid">
