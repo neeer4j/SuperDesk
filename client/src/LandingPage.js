@@ -105,10 +105,6 @@ function LandingPage({ onGetStarted }) {
     }
   };
 
-  const handleGoBack = () => {
-    setActiveView('share');
-  };
-
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -370,7 +366,42 @@ function LandingPage({ onGetStarted }) {
         overflowY: 'auto'
       }}>
         {/* Logo */}
-        <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+        <div style={{ marginBottom: '40px', textAlign: 'center', position: 'relative' }}>
+          <button
+            onClick={handleSignOut}
+            title="Back to Login"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '32px',
+              height: '32px',
+              background: 'white',
+              border: '2px solid #613da9',
+              borderRadius: '8px',
+              color: '#613da9',
+              fontSize: '18px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(97, 61, 169, 0.15)'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#613da9';
+              e.target.style.color = 'white';
+              e.target.style.boxShadow = '0 4px 12px rgba(97, 61, 169, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'white';
+              e.target.style.color = '#613da9';
+              e.target.style.boxShadow = '0 2px 8px rgba(97, 61, 169, 0.15)';
+            }}
+          >
+            ←
+          </button>
           <img
             src={superdeskLogo}
             alt="SuperDesk"
@@ -548,46 +579,8 @@ function LandingPage({ onGetStarted }) {
         flex: 1,
         padding: '40px',
         overflowY: 'auto',
-        background: '#613da9',
-        position: 'relative'
+        background: '#613da9'
       }}>
-        {/* Back Button */}
-        <button
-          onClick={handleGoBack}
-          style={{
-            position: 'fixed',
-            top: '50px',
-            left: 'calc(30% + 16px)',
-            width: '40px',
-            height: '40px',
-            background: 'white',
-            border: '2px solid #613da9',
-            borderRadius: '8px',
-            color: '#613da9',
-            fontSize: '20px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: activeView === 'share' ? 'none' : 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            transition: 'all 0.2s',
-            boxShadow: '0 2px 8px rgba(97, 61, 169, 0.15)'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = '#613da9';
-            e.target.style.color = 'white';
-            e.target.style.boxShadow = '0 4px 12px rgba(97, 61, 169, 0.3)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'white';
-            e.target.style.color = '#613da9';
-            e.target.style.boxShadow = '0 2px 8px rgba(97, 61, 169, 0.15)';
-          }}
-        >
-          &lt;
-        </button>
-
         {/* Share Screen View */}
         {activeView === 'share' && (
           <div>

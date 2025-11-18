@@ -226,6 +226,38 @@
             text-align: center;
         }
 
+        .sidebar-header {
+            position: relative;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .logout-button {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 32px;
+            height: 32px;
+            background: white;
+            border: 2px solid #613da9;
+            border-radius: 8px;
+            color: #613da9;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(97, 61, 169, 0.15);
+        }
+
+        .logout-button:hover {
+            background: #613da9;
+            color: white;
+            box-shadow: 0 4px 12px rgba(97, 61, 169, 0.3);
+        }
+
         .sidebar-logo {
             width: 100%;
             max-width: 200px;
@@ -498,31 +530,36 @@
         }
 
         /* Back Button */
-        .back-button {
-            position: fixed;
-            top: 50px;
+        .logout-button {
+            position: absolute;
+            top: 16px;
             left: 16px;
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             background: white;
             border: 2px solid #613da9;
             border-radius: 8px;
             color: #613da9;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 600;
             cursor: pointer;
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
             transition: all 0.2s;
             box-shadow: 0 2px 8px rgba(97, 61, 169, 0.15);
         }
 
-        .back-button:hover {
+        .logout-button:hover {
             background: #613da9;
             color: white;
             box-shadow: 0 4px 12px rgba(97, 61, 169, 0.3);
+        }
+
+        .sidebar-header {
+            position: relative;
+            text-align: center;
+            margin-bottom: 24px;
         }
 
         /* Copy/Paste Buttons */
@@ -634,6 +671,7 @@
         <!-- Left Sidebar (30%) -->
         <div class="dashboard-sidebar">
             <div class="sidebar-header">
+                <button class="logout-button" id="logout-button" title="Back to Login">←</button>
                 <img src="assets/superdesk.png" alt="SuperDesk" class="sidebar-logo">
             </div>
 
@@ -875,10 +913,9 @@
                 window.joinSession(sessionId);
             });
 
-            // Back button
-            document.getElementById('back-button').addEventListener('click', () => {
-                // Navigate to the share view (home)
-                switchView('share');
+            // Logout button (back to login)
+            document.getElementById('logout-button').addEventListener('click', () => {
+                signOut();
             });
 
             // Copy session ID button
@@ -1019,14 +1056,6 @@
                 v.classList.add('hidden');
             });
             document.getElementById(`${view}-view`).classList.remove('hidden');
-
-            // Show/hide back button (hide on share view, show on other views)
-            const backButton = document.getElementById('back-button');
-            if (view === 'share') {
-                backButton.style.display = 'none';
-            } else {
-                backButton.style.display = 'flex';
-            }
         }
 
         function generateSessionId() {
