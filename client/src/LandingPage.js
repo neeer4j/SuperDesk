@@ -377,28 +377,30 @@ function LandingPage({ onGetStarted }) {
               left: 0,
               width: '32px',
               height: '32px',
-              background: '#613da9',
+              background: 'rgba(97, 61, 169, 0.1)',
               border: '2px solid #613da9',
               borderRadius: '8px',
-              color: 'white',
-              fontSize: '18px',
-              fontWeight: 600,
+              color: '#613da9',
+              fontSize: '16px',
+              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'all 0.2s',
-              boxShadow: '0 2px 8px rgba(97, 61, 169, 0.15)'
+              boxShadow: '0 2px 8px rgba(97, 61, 169, 0.1)'
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = '#4a2d7f';
-              e.target.style.borderColor = '#4a2d7f';
+              e.target.style.background = '#613da9';
+              e.target.style.color = 'white';
+              e.target.style.borderColor = '#613da9';
               e.target.style.boxShadow = '0 4px 12px rgba(97, 61, 169, 0.3)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = '#613da9';
+              e.target.style.background = 'rgba(97, 61, 169, 0.1)';
+              e.target.style.color = '#613da9';
               e.target.style.borderColor = '#613da9';
-              e.target.style.boxShadow = '0 2px 8px rgba(97, 61, 169, 0.15)';
+              e.target.style.boxShadow = '0 2px 8px rgba(97, 61, 169, 0.1)';
             }}
           >
             <GoChevronLeft size={20} />
