@@ -566,11 +566,11 @@
 
         /* Copy/Paste Buttons */
         .copy-button, .paste-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute;
+            top: 12px;
+            right: 12px;
             padding: 8px 12px;
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 8px;
             color: white;
@@ -578,6 +578,7 @@
             cursor: pointer;
             transition: all 0.12s ease-in-out;
             box-shadow: none;
+            z-index: 5;
         }
 
         .copy-button:hover, .paste-button:hover {
@@ -596,15 +597,7 @@
             padding: 16px;
         }
 
-        .session-id-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 8px;
-        }
-
         .session-id {
-            flex: 1;
             padding: 14px 16px;
             background: rgba(255,255,255,0.02);
             border: 1px solid rgba(255,255,255,0.04);
@@ -614,6 +607,7 @@
             color: white;
             letter-spacing: 3px;
             box-sizing: border-box;
+            width: 100%;
         }
             margin-bottom: 24px;
         }
@@ -740,10 +734,8 @@
 
                     <div class="session-id-container">
                         <div class="section-label">Session ID</div>
-                        <div class="session-id-row">
-                            <div class="session-id" id="session-id">GENERATING...</div>
-                            <button class="copy-button" id="copy-session-btn">Copy</button>
-                        </div>
+                        <div class="session-id" id="session-id">GENERATING...</div>
+                        <button class="copy-button" id="copy-session-btn">Copy</button>
                     </div>
 
                     <div class="status-grid">
