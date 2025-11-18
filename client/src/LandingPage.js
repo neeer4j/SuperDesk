@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { GoChevronLeft } from 'react-icons/go';
 import { supabase } from './supabaseClient';
 import superdeskLogo from './assets/superdesk.png';
 
@@ -400,7 +401,7 @@ function LandingPage({ onGetStarted }) {
               e.target.style.boxShadow = '0 2px 8px rgba(97, 61, 169, 0.15)';
             }}
           >
-            ←
+            <GoChevronLeft size={20} />
           </button>
           <img
             src={superdeskLogo}
