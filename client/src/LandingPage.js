@@ -1,4 +1,6 @@
   // Google sign-in removed. Only OTP authentication is allowed.
+  // Another test comment to force git change
+  // Test change for git push troubleshooting
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Container, TextField, Button, Typography, Tabs, Tab } from '@mui/material';
 import { supabase } from './supabaseClient';
@@ -7,6 +9,7 @@ import io from 'socket.io-client';
 import config, { fetchIceServers } from './config';
 
 function LandingPage({ onGetStarted }) {
+  console.log('LandingPage rendered');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,253 +18,39 @@ function LandingPage({ onGetStarted }) {
   const [activeView, setActiveView] = useState('share'); // share, friends, messages, files
   const [joinSessionId, setJoinSessionId] = useState('');
   const [connectionStatus, setConnectionStatus] = useState(''); // 'connecting', 'connected', 'error'
-  const socketRef = useRef(null);
-  const peerConnectionRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-
-  // Check for existing session on mount
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Cleanup socket and peer connection on unmount
-  useEffect(() => {
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-        peerConnectionRef.current = null;
-      }
-    };
-  }, []);
-
-  const handleSendOTP = async () => {
-    if (!email) {
-      alert('Please enter your email');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-        }
-      });
-
-      if (error) throw error;
-      
-      setOtpSent(true);
-      alert('Check your email for the OTP code!');
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async () => {
-    if (!otp) {
-      alert('Please enter the OTP code');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email'
-      });
-
-      if (error) throw error;
-      
-      // User will be set via onAuthStateChange listener
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ...existing code...
 
   const handleContinue = () => {
     // Bypass authentication for testing
     setUser({ email: 'test@example.com', id: 'test-user' });
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setOtpSent(false);
-    setOtp('');
-  };
-
-  const handleJoinSession = async () => {
-    if (!joinSessionId || joinSessionId.length < 6) {
-      alert('Please enter a valid session ID');
-      return;
-    }
-
-    try {
-      setConnectionStatus('connecting');
-      
-      // Initialize socket connection
-      const serverUrl = config.server || 'http://localhost:3001';
-      socketRef.current = io(serverUrl);
-
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Connection timeout')), 5000);
-        
-        socketRef.current.on('connect', () => {
-          clearTimeout(timeout);
-          console.log('Connected to signaling server');
-          setConnectionStatus('connected');
-          resolve();
-        });
-
-        socketRef.current.on('connect_error', (error) => {
-          clearTimeout(timeout);
-          setConnectionStatus('error');
-          reject(error);
-        });
-      });
-
-      // Join the session
-      socketRef.current.emit('join-session', joinSessionId);
-
-      // Handle session joined
-      socketRef.current.once('session-joined', () => {
-        console.log('Successfully joined session:', joinSessionId);
-        alert(`Connected to session ${joinSessionId}. Waiting for screen share...`);
-      });
-
-      // Handle session error
-      socketRef.current.once('session-error', (error) => {
-        alert(`Error: ${error}`);
-        setConnectionStatus('error');
-        socketRef.current.disconnect();
-      });
-
-      // Set up WebRTC peer connection with dynamic ICE servers
-      const iceServers = await fetchIceServers();
-      peerConnectionRef.current = new RTCPeerConnection({ iceServers });
-
-      // Handle incoming remote stream
-      peerConnectionRef.current.ontrack = (event) => {
-        console.log('Received remote track:', event.track.kind);
-        
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-        }
-      };
-
-      // Handle ICE candidates
-      peerConnectionRef.current.onicecandidate = (event) => {
-        if (event.candidate) {
-          socketRef.current.emit('ice-candidate', {
-            sessionId: joinSessionId,
-            candidate: event.candidate
-          });
-        }
-      };
-
-      // Listen for offer from host
-      socketRef.current.on('offer', async (data) => {
-        console.log('Received offer from host');
-        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.offer));
-        
-        const answer = await peerConnectionRef.current.createAnswer();
-        await peerConnectionRef.current.setLocalDescription(answer);
-        
-        socketRef.current.emit('answer', {
-          sessionId: joinSessionId,
-          targetId: data.from,
-          answer
-        });
-      });
-
-      // Listen for ICE candidates
-      socketRef.current.on('ice-candidate', async (data) => {
-        if (data.candidate) {
-          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-        }
-      });
-
-    } catch (error) {
-      console.error('Error joining session:', error);
-      setConnectionStatus('error');
-      alert('Failed to join session: ' + error.message);
-      
-      // Cleanup on error
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-        peerConnectionRef.current = null;
-      }
-    }
-  };
-
   // Authentication Screen
   if (!user) {
     return (
-      <Box sx={{
-        display: 'flex',
-        minHeight: '100vh',
-        background: '#09090b',
-        color: 'white'
-      }}>
-        {/* Left Panel - Branding */}
-        <Box sx={{
-          width: '50%',
-          background: '#0a006f',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '60px',
-          position: 'relative',
-          overflow: 'hidden',
-          '@media (max-width: 900px)': {
-            display: 'none'
-          }
-        }}>
-          {/* Decorative gradients */}
-          <Box sx={{
-            position: 'absolute',
-            width: '500px',
-            height: '500px',
-            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)',
-            top: '-250px',
-            right: '-250px',
-            pointerEvents: 'none'
-          }} />
-          <Box sx={{
-            position: 'absolute',
-            width: '400px',
-            height: '400px',
-            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%)',
-            bottom: '-200px',
-            left: '-200px',
-            pointerEvents: 'none'
-          }} />
+      <>
+        {/* Top header bar - match desktop agent title bar */}
+        <Box sx={{ height: 36, background: '#2d2046', color: '#fff', display: 'flex', alignItems: 'center', px: 2, position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>SuperDesk Agent</Typography>
+          <Box sx={{ ml: 'auto', display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box component="span" sx={{ opacity: 0.6, fontSize: 18 }}>—</Box>
+            <Box component="span" sx={{ opacity: 0.6, fontSize: 18, ml: 2 }}>✕</Box>
+          </Box>
+        </Box>
 
+        {/* Use inline style here to defeat runtime-injected stylesheet rules */}
+  <Box style={{ background: '#6C3FC5', minHeight: '100vh', display: 'flex', paddingTop: 36 }}>
+        {/* Left Panel - White with Logo */}
+        <Box
+          className="superdesk-left-panel"
+          // inline style wins over runtime CSS rules injected by Emotion
+          style={{ width: '50%', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 0 0 0', position: 'relative', overflow: 'hidden' }}
+          sx={{
+            '@media (max-width: 900px)': {
+              display: 'none',
+            },
+          }}
+        >
           <Box sx={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
             <Box
               component="img"
@@ -269,77 +58,69 @@ function LandingPage({ onGetStarted }) {
               alt="SuperDesk"
               sx={{
                 width: '100%',
-                maxWidth: '500px',
-                marginBottom: '40px',
-                filter: 'drop-shadow(0 10px 40px rgba(0, 0, 0, 0.3))',
-                animation: 'fadeInUp 0.8s ease-out',
-                '@keyframes fadeInUp': {
-                  from: {
-                    opacity: 0,
-                    transform: 'translateY(20px)'
-                  },
-                  to: {
-                    opacity: 1,
-                    transform: 'translateY(0)'
-                  }
-                }
+                maxWidth: '180px',
+                marginBottom: '18px',
+                mt: 2
               }}
             />
-            <Typography sx={{
-              fontSize: '24px',
-              fontWeight: 300,
-              opacity: 0.9,
-              lineHeight: 1.6,
-              animation: 'fadeInUp 0.8s ease-out 0.2s both',
-              '@keyframes fadeInUp': {
-                from: {
-                  opacity: 0,
-                  transform: 'translateY(20px)'
-                },
-                to: {
-                  opacity: 1,
-                  transform: 'translateY(0)'
-                }
-              }
-            }}>
-              Secure remote desktop sharing<br />
-              for modern teams
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                color: '#111',
+                marginBottom: '12px',
+                fontSize: 32
+              }}
+            >
+              SuperDesk
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '20px',
+                color: '#6C3FC5',
+                fontWeight: 600,
+                lineHeight: 1.4,
+                mt: 2
+              }}
+            >
+              Secure remote desktop sharing<br />for modern teams
             </Typography>
           </Box>
         </Box>
 
         {/* Right Panel - Authentication */}
-        <Box sx={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '60px',
-          '@media (max-width: 900px)': {
-            width: '100%'
-          }
-        }}>
+        <Box className="superdesk-right-panel"
+          style={{ flex: 1, background: '#6C3FC5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'white' }}
+          sx={{}}
+        >
           <Container maxWidth="sm">
-            <Box sx={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
-              {/* Header */}
-              <Box sx={{ marginBottom: '40px', textAlign: 'center' }}>
-                <Typography variant="h4" sx={{
-                  fontWeight: 700,
-                  marginBottom: '12px',
-                  color: 'white'
-                }}>
-                  {otpSent ? 'Verify OTP' : 'Sign In'}
-                </Typography>
-                <Typography sx={{
-                  fontSize: '16px',
-                  color: 'rgba(255, 255, 255, 0.6)'
-                }}>
-                  {otpSent 
-                    ? 'Enter the OTP code sent to your email'
-                    : 'Enter your email to receive an OTP code'
-                  }
-                </Typography>
-              </Box>
+            <Box sx={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              padding: '48px',
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+            }}>
+              <Typography variant="h4" sx={{
+                fontWeight: 700,
+                marginBottom: '8px',
+                color: 'white',
+                textAlign: 'center',
+                fontSize: 36
+              }}>
+                {otpSent ? 'Verify OTP' : 'Sign In'}
+              </Typography>
+              <Typography sx={{
+                fontSize: '16px',
+                color: 'rgba(255, 255, 255, 0.7)',
+                marginBottom: '32px',
+                textAlign: 'center',
+              }}>
+                {otpSent 
+                  ? 'Enter the OTP code sent to your email'
+                  : 'Enter your email to receive an OTP code'
+                }
+              </Typography>
 
               {!otpSent ? (
                 <>
@@ -387,7 +168,7 @@ function LandingPage({ onGetStarted }) {
                     disabled={loading}
                     sx={{
                       background: 'white',
-                      color: '#09090b',
+                      color: '#613da9',
                       padding: '12px',
                       fontSize: '14px',
                       fontWeight: 600,
@@ -401,7 +182,7 @@ function LandingPage({ onGetStarted }) {
                       },
                       '&:disabled': {
                         background: 'rgba(255, 255, 255, 0.5)',
-                        color: '#09090b'
+                        color: '#613da9'
                       }
                     }}
                   >
@@ -416,16 +197,18 @@ function LandingPage({ onGetStarted }) {
                     onClick={handleContinue}
                     sx={{
                       background: 'transparent',
-                      color: '#fbbf24',
+                      color: '#ffb300',
                       padding: '12px',
                       fontSize: '14px',
                       fontWeight: 600,
                       textTransform: 'none',
                       borderRadius: '8px',
-                      border: '1px solid #fbbf24',
+                      border: '2px solid #ffb300',
+                      marginTop: '10px',
                       '&:hover': {
-                        background: 'rgba(251, 191, 36, 0.1)',
-                        borderColor: '#fbbf24'
+                        background: 'rgba(255, 179, 0, 0.08)',
+                        borderColor: '#ffb300',
+                        color: '#fff'
                       }
                     }}
                   >
@@ -447,13 +230,13 @@ function LandingPage({ onGetStarted }) {
                     sx={{
                       marginBottom: '12px',
                       '& .MuiOutlinedInput-root': {
-                        background: 'rgba(255, 255, 255, 0.05)',
+                        background: 'rgba(255, 255, 255, 0.15)',
                         borderRadius: '8px',
                         '& fieldset': {
-                          borderColor: 'rgba(255, 255, 255, 0.1)'
+                          borderColor: 'rgba(255, 255, 255, 0.3)'
                         },
                         '&:hover fieldset': {
-                          borderColor: 'rgba(255, 255, 255, 0.2)'
+                          borderColor: 'rgba(255, 255, 255, 0.5)'
                         },
                         '&.Mui-focused fieldset': {
                           borderColor: 'white'
@@ -463,7 +246,7 @@ function LandingPage({ onGetStarted }) {
                         color: 'white',
                         padding: '14px 16px',
                         '&::placeholder': {
-                          color: 'rgba(255, 255, 255, 0.4)',
+                          color: 'rgba(255, 255, 255, 0.7)',
                           opacity: 1
                         }
                       }
@@ -478,7 +261,7 @@ function LandingPage({ onGetStarted }) {
                     disabled={loading}
                     sx={{
                       background: 'white',
-                      color: '#09090b',
+                      color: '#613da9',
                       padding: '12px',
                       fontSize: '14px',
                       fontWeight: 600,
@@ -486,13 +269,13 @@ function LandingPage({ onGetStarted }) {
                       borderRadius: '8px',
                       marginBottom: '16px',
                       '&:hover': {
-                        background: 'rgba(255, 255, 255, 0.9)',
+                        background: 'rgba(255, 255, 255, 0.95)',
                         transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.2)'
+                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.3)'
                       },
                       '&:disabled': {
                         background: 'rgba(255, 255, 255, 0.5)',
-                        color: '#09090b'
+                        color: '#613da9'
                       }
                     }}
                   >
@@ -527,26 +310,26 @@ function LandingPage({ onGetStarted }) {
               {/* Terms */}
               <Typography sx={{
                 fontSize: '12px',
-                color: 'rgba(255, 255, 255, 0.5)',
+                color: 'rgba(255, 255, 255, 0.7)',
                 textAlign: 'center',
                 marginTop: '24px',
                 lineHeight: 1.6
               }}>
                 By continuing, you agree to our{' '}
                 <Box component="span" sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  color: '#fff',
                   textDecoration: 'underline',
                   cursor: 'pointer',
-                  '&:hover': { color: 'white' }
+                  '&:hover': { color: '#ffb300' }
                 }}>
                   Terms of Service
                 </Box>
                 {' '}and{' '}
                 <Box component="span" sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  color: '#fff',
                   textDecoration: 'underline',
                   cursor: 'pointer',
-                  '&:hover': { color: 'white' }
+                  '&:hover': { color: '#ffb300' }
                 }}>
                   Privacy Policy
                 </Box>
@@ -556,207 +339,235 @@ function LandingPage({ onGetStarted }) {
           </Container>
         </Box>
       </Box>
+    </>
     );
   }
 
   // Dashboard Screen (After Authentication)
   return (
-    <Box sx={{
-      display: 'flex',
-      minHeight: '100vh',
-      background: '#09090b',
-      color: 'white'
-    }}>
-      {/* Left Sidebar - Navigation (30%) */}
-      <Box sx={{
-        width: '30%',
-        background: '#0a006f',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '24px',
-        borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-        '@media (max-width: 900px)': {
-          width: '80px'
-        }
-      }}>
-        {/* Logo */}
-        <Box sx={{ marginBottom: '40px', textAlign: 'center' }}>
-          <Box
-            component="img"
-            src={superdeskLogo}
-            alt="SuperDesk"
-            sx={{
-              width: '100%',
-              maxWidth: '200px',
-              '@media (max-width: 900px)': {
-                maxWidth: '40px'
-              }
-            }}
-          />
+    <>
+      {/* Top header bar - match desktop agent title bar */}
+      <Box sx={{ height: 36, background: '#2d2046', color: '#fff', display: 'flex', alignItems: 'center', px: 2, position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>SuperDesk Agent</Typography>
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box component="span" sx={{ opacity: 0.6, fontSize: 18 }}>—</Box>
+          <Box component="span" sx={{ opacity: 0.6, fontSize: 18, ml: 2 }}>✕</Box>
         </Box>
+      </Box>
 
-        {/* User Info */}
+      {/* inline style to avoid runtime-injected dark backgrounds */}
+  <Box style={{ display: 'flex', minHeight: '100vh', background: '#7B4EDB', color: 'white', paddingTop: 36 }}>
+        {/* Left Sidebar - Navigation (30%) */}
         <Box sx={{
-          padding: '16px',
-          background: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '8px',
-          marginBottom: '24px'
+          width: '320px',
+          background: '#fff',
+          color: '#6C3FC5',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          padding: '0 0 0 0',
+          borderRight: '1px solid #e5e5e5',
+          minHeight: '100vh',
         }}>
-          <Typography sx={{ fontSize: '14px', opacity: 0.7, marginBottom: '4px' }}>
-            Signed in as
-          </Typography>
-          <Typography sx={{ fontSize: '16px', fontWeight: 600 }}>
-            {user.email}
-          </Typography>
-        </Box>
-
-        {/* Navigation Menu */}
-        <Box sx={{ flex: 1 }}>
-          {[
-            { id: 'share', icon: '🖥️', label: 'Share Screen' },
-            { id: 'join', icon: '🔗', label: 'Join Session' },
-            { id: 'friends', icon: '👥', label: 'Friends' },
-            { id: 'messages', icon: '💬', label: 'Messages' },
-            { id: 'files', icon: '📁', label: 'File Transfer' }
-          ].map((item) => (
+          {/* Logo */}
+          <Box sx={{ mt: 3, mb: 3, textAlign: 'center' }}>
+            <Box
+              component="img"
+              src={superdeskLogo}
+              alt="SuperDesk"
+              sx={{ width: '120px', mb: 1 }}
+            />
+          </Box>
+          {/* User Info */}
+          <Box sx={{
+            background: '#f3eaff',
+            borderRadius: '10px',
+            margin: '0 24px 18px 24px',
+            padding: '18px 16px',
+            color: '#6C3FC5',
+            fontWeight: 500,
+            fontSize: 15,
+            boxShadow: '0 1px 4px 0 rgba(108,63,197,0.04)'
+          }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 500, opacity: 0.7, mb: 0.5 }}>Signed in as</Typography>
+            <Typography sx={{ fontSize: 16, fontWeight: 700 }}>{user.email}</Typography>
+          </Box>
+          {/* Navigation Menu */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0px', alignItems: 'stretch', justifyContent: 'flex-start', px: 2 }}>
+            {[
+              { id: 'share', icon: <span style={{color:'#6C3FC5',fontSize:22,verticalAlign:'middle'}}>🖥️</span>, label: 'Share Screen' },
+              { id: 'join', icon: <span style={{color:'#bca6e7',fontSize:22,verticalAlign:'middle'}}>🔗</span>, label: 'Join Session' },
+              { id: 'friends', icon: <span style={{color:'#bca6e7',fontSize:22,verticalAlign:'middle'}}>👥</span>, label: 'Friends' },
+              { id: 'messages', icon: <span style={{color:'#bca6e7',fontSize:22,verticalAlign:'middle'}}>💬</span>, label: 'Messages' },
+              { id: 'files', icon: <span style={{color:'#bca6e7',fontSize:22,verticalAlign:'middle'}}>📁</span>, label: 'File Transfer' }
+            ].map((item) => (
+              <Button
+                key={item.id}
+                fullWidth
+                onClick={() => setActiveView(item.id)}
+                sx={{
+                  justifyContent: 'flex-start',
+                  padding: '18px 18px',
+                  marginBottom: '6px',
+                  color: activeView === item.id ? '#6C3FC5' : '#bca6e7',
+                  background: activeView === item.id ? '#f3eaff' : 'transparent',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontSize: '16px',
+                  fontWeight: activeView === item.id ? 700 : 500,
+                  boxShadow: activeView === item.id ? '0 1px 4px 0 rgba(108,63,197,0.04)' : 'none',
+                  transition: 'background 0.2s, color 0.2s',
+                  '&:hover': {
+                    background: '#f3eaff',
+                    color: '#6C3FC5',
+                  }
+                }}
+              >
+                <Box component="span" sx={{ marginRight: '14px', fontSize: '22px', display: 'inline-flex', alignItems: 'center' }}>
+                  {item.icon}
+                </Box>
+                <Box component="span">{item.label}</Box>
+              </Button>
+            ))}
+          </Box>
+          {/* Sign Out Button */}
+          <Box sx={{ mt: 'auto', mb: 3, px: 2 }}>
             <Button
-              key={item.id}
               fullWidth
-              onClick={() => setActiveView(item.id)}
+              onClick={handleSignOut}
               sx={{
-                justifyContent: 'flex-start',
-                padding: '16px',
-                marginBottom: '8px',
-                color: 'white',
-                background: activeView === item.id ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-                borderRadius: '8px',
+                padding: '14px',
+                color: '#ef4444',
+                background: '#fff0f0',
+                borderRadius: '10px',
                 textTransform: 'none',
-                fontSize: '16px',
-                fontWeight: activeView === item.id ? 600 : 400,
+                fontWeight: 700,
+                fontSize: 16,
                 '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.1)'
+                  background: '#ffeaea',
                 }
               }}
             >
-              <Box component="span" sx={{ marginRight: '12px', fontSize: '20px' }}>
-                {item.icon}
-              </Box>
-              <Box component="span" sx={{
-                '@media (max-width: 900px)': {
-                  display: 'none'
-                }
-              }}>
-                {item.label}
-              </Box>
+              Sign Out
             </Button>
-          ))}
+          </Box>
         </Box>
-
-        {/* Sign Out Button */}
-        <Button
-          fullWidth
-          onClick={handleSignOut}
-          sx={{
-            padding: '12px',
-            marginTop: '16px',
-            color: 'white',
-            background: 'rgba(255, 0, 0, 0.2)',
-            borderRadius: '8px',
-            textTransform: 'none',
-            '&:hover': {
-              background: 'rgba(255, 0, 0, 0.3)'
-            }
-          }}
-        >
-          Sign Out
-        </Button>
-      </Box>
 
       {/* Right Content Area (70%) */}
       <Box sx={{
         flex: 1,
-        padding: '40px',
-        overflowY: 'auto'
+        padding: '48px 64px',
+        overflowY: 'auto',
+        background: '#7B4EDB',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}>
         {/* Share Screen View */}
         {activeView === 'share' && (
-          <Box>
-            <Typography variant="h4" sx={{ marginBottom: '24px', fontWeight: 700 }}>
+          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
               Share Your Screen
             </Typography>
-            
             <Box sx={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              padding: '32px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              background: '#7B4EDB',
+              padding: '36px 32px 36px 32px',
+              borderRadius: '18px',
+              border: '1.5px solid #bca6e7',
+              maxWidth: 900,
+              margin: '0 auto',
+              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}>
-              <Typography sx={{ fontSize: '16px', marginBottom: '24px', opacity: 0.8 }}>
+              <Typography sx={{ fontSize: 18, marginBottom: '24px', color: '#fff', fontWeight: 600, textAlign: 'left', width: '100%' }}>
                 Start a remote desktop session
               </Typography>
-
-              <Box sx={{ marginBottom: '32px' }}>
-                <Typography sx={{ fontSize: '14px', marginBottom: '8px', opacity: 0.7 }}>
+              <Box sx={{ marginBottom: '24px', width: '100%' }}>
+                <Typography sx={{ fontSize: 15, marginBottom: '8px', color: '#e0d7fa', fontWeight: 500, textAlign: 'left' }}>
                   Session ID
                 </Typography>
                 <Box sx={{
-                  padding: '16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '14px',
+                  background: '#7B4EDB',
                   borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  border: '1.5px solid #bca6e7',
                   fontFamily: 'monospace',
-                  fontSize: '18px',
-                  fontWeight: 600
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: '#fff',
+                  letterSpacing: 2,
+                  width: 340,
+                  textAlign: 'left',
+                  mb: 2
                 }}>
-                  {Math.random().toString(36).substring(2, 10).toUpperCase()}
+                  21Z7568T
                 </Box>
               </Box>
-
-              <Box sx={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <Button
-                  variant="contained"
-                  onClick={onGetStarted}
-                  sx={{
-                    background: 'white',
-                    color: '#09090b',
-                    padding: '14px 32px',
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    borderRadius: '8px',
-                    '&:hover': {
-                      background: 'rgba(255, 255, 255, 0.9)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 20px rgba(255, 255, 255, 0.2)'
-                    }
-                  }}
-                >
-                  Start Sharing
-                </Button>
+              <Box sx={{ display: 'flex', gap: '24px', mb: 4, width: '100%' }}>
+                <Box sx={{ flex: 1, background: '#7B4EDB', borderRadius: '10px', padding: '24px 0', textAlign: 'center', color: '#fff', fontWeight: 600, fontSize: 18, border: '1.5px solid #bca6e7', boxShadow: 'none' }}>
+                  <Typography sx={{ fontSize: 15, color: '#e0d7fa', fontWeight: 500, mb: 1 }}>Connection</Typography>
+                  <Typography sx={{ fontSize: 18, color: '#fff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                    <Box component="span" sx={{ width: 10, height: 10, borderRadius: '50%', background: '#6fff8f', display: 'inline-block', mr: 1 }} />
+                    Ready
+                  </Typography>
+                </Box>
+                <Box sx={{ flex: 1, background: '#7B4EDB', borderRadius: '10px', padding: '24px 0', textAlign: 'center', color: '#fff', fontWeight: 600, fontSize: 18, border: '1.5px solid #bca6e7', boxShadow: 'none' }}>
+                  <Typography sx={{ fontSize: 15, color: '#e0d7fa', fontWeight: 500, mb: 1 }}>Session</Typography>
+                  <Typography sx={{ fontSize: 18, color: '#fff', fontWeight: 700 }}>Not Started</Typography>
+                </Box>
               </Box>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={onGetStarted}
+                sx={{
+                  background: '#fff',
+                  color: '#7B4EDB',
+                  padding: '16px',
+                  fontSize: 18,
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  borderRadius: '10px',
+                  boxShadow: 'none',
+                  border: 'none',
+                  '&:hover': {
+                    background: '#f3eaff',
+                    color: '#7B4EDB',
+                  }
+                }}
+              >
+                Start Sharing
+              </Button>
             </Box>
           </Box>
         )}
 
         {/* Join Session View */}
         {activeView === 'join' && (
-          <Box>
-            <Typography variant="h4" sx={{ marginBottom: '24px', fontWeight: 700 }}>
+          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
               Join Session
             </Typography>
-            
             <Box sx={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              padding: '32px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              background: '#7B4EDB',
+              padding: '36px 32px 36px 32px',
+              borderRadius: '18px',
+              border: '1.5px solid #bca6e7',
+              maxWidth: 900,
+              margin: '0 auto',
+              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}>
-              <Typography sx={{ fontSize: '16px', marginBottom: '24px', opacity: 0.8 }}>
+              <Typography sx={{ fontSize: 18, marginBottom: '24px', color: '#fff', fontWeight: 600, textAlign: 'left', width: '100%' }}>
                 Enter a session ID to connect to a remote desktop
               </Typography>
-
-              <Box sx={{ marginBottom: '32px' }}>
-                <Typography sx={{ fontSize: '14px', marginBottom: '8px', opacity: 0.7 }}>
+              <Box sx={{ marginBottom: '24px', width: '100%' }}>
+                <Typography sx={{ fontSize: 15, marginBottom: '8px', color: '#e0d7fa', fontWeight: 500, textAlign: 'left' }}>
                   Session ID
                 </Typography>
                 <input
@@ -765,125 +576,96 @@ function LandingPage({ onGetStarted }) {
                   value={joinSessionId}
                   onChange={(e) => setJoinSessionId(e.target.value.toUpperCase())}
                   style={{
-                    width: '100%',
-                    padding: '16px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    width: 340,
+                    padding: '14px',
+                    background: '#7B4EDB',
+                    border: '1.5px solid #bca6e7',
                     borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '18px',
-                    fontWeight: 600,
+                    color: '#fff',
+                    fontSize: 22,
+                    fontWeight: 700,
                     fontFamily: 'monospace',
                     textTransform: 'uppercase',
-                    outline: 'none'
+                    outline: 'none',
+                    marginBottom: 0,
+                    letterSpacing: 2
                   }}
                   maxLength={8}
                 />
               </Box>
-
               <Button
+                fullWidth
                 variant="contained"
                 onClick={handleJoinSession}
                 disabled={connectionStatus === 'connecting'}
                 sx={{
-                  background: connectionStatus === 'connecting' ? 'rgba(255, 255, 255, 0.5)' : 'white',
-                  color: '#09090b',
-                  padding: '14px 32px',
-                  fontSize: '16px',
-                  fontWeight: 600,
+                  background: '#fff',
+                  color: '#7B4EDB',
+                  padding: '16px',
+                  fontSize: 18,
+                  fontWeight: 700,
                   textTransform: 'none',
-                  borderRadius: '8px',
-                  marginBottom: '24px',
+                  borderRadius: '10px',
+                  boxShadow: 'none',
+                  border: 'none',
+                  margin: '24px 0 0 0',
                   '&:hover': {
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 20px rgba(255, 255, 255, 0.2)'
+                    background: '#f3eaff',
+                    color: '#7B4EDB',
                   },
                   '&:disabled': {
-                    background: 'rgba(255, 255, 255, 0.3)',
-                    color: 'rgba(0, 0, 0, 0.5)'
+                    background: '#e0d7fa',
+                    color: '#bca6e7',
                   }
                 }}
               >
-                {connectionStatus === 'connecting' ? 'Connecting...' : 'Connect to Session'}
+                {connectionStatus === 'connecting' ? 'Connecting...' : 'Join Session'}
               </Button>
-
               {/* Connection Status */}
               {connectionStatus && (
-                <Box sx={{ marginBottom: '24px', textAlign: 'center' }}>
+                <Box sx={{ margin: '24px 0 0 0', textAlign: 'center', width: '100%' }}>
                   {connectionStatus === 'connecting' && (
-                    <Typography sx={{ color: '#fbbf24', fontSize: '14px' }}>
+                    <Typography sx={{ color: '#fbbf24', fontSize: '15px', fontWeight: 600 }}>
                       🔄 Connecting to session...
                     </Typography>
                   )}
                   {connectionStatus === 'connected' && (
-                    <Typography sx={{ color: '#10b981', fontSize: '14px' }}>
+                    <Typography sx={{ color: '#6fff8f', fontSize: '15px', fontWeight: 600 }}>
                       ✅ Connected! Waiting for remote stream...
                     </Typography>
                   )}
                   {connectionStatus === 'error' && (
-                    <Typography sx={{ color: '#ef4444', fontSize: '14px' }}>
+                    <Typography sx={{ color: '#ef4444', fontSize: '15px', fontWeight: 600 }}>
                       ❌ Connection failed. Please check the session ID and try again.
                     </Typography>
                   )}
                 </Box>
               )}
-
-              {/* Remote Video Display */}
-              <Box sx={{
-                background: '#000',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                position: 'relative',
-                paddingTop: '56.25%' // 16:9 aspect ratio
-              }}>
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain'
-                  }}
-                />
-                <Box sx={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  textAlign: 'center',
-                  pointerEvents: 'none'
-                }}>
-                  <Typography sx={{ fontSize: '48px', opacity: 0.3 }}>📺</Typography>
-                  <Typography sx={{ fontSize: '14px', opacity: 0.5 }}>
-                    Remote screen will appear here
-                  </Typography>
-                </Box>
-              </Box>
             </Box>
           </Box>
         )}
 
         {/* Friends View */}
         {activeView === 'friends' && (
-          <Box>
-            <Typography variant="h4" sx={{ marginBottom: '24px', fontWeight: 700 }}>
+          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
               Friends
             </Typography>
-            
             <Box sx={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              padding: '32px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              textAlign: 'center'
+              background: '#7B4EDB',
+              padding: '36px 32px',
+              borderRadius: '18px',
+              border: '1.5px solid #bca6e7',
+              maxWidth: 900,
+              margin: '0 auto',
+              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
             }}>
               <Typography sx={{ fontSize: '48px', marginBottom: '16px' }}>👥</Typography>
-              <Typography sx={{ fontSize: '18px', opacity: 0.6 }}>
+              <Typography sx={{ fontSize: 20, color: '#fff', fontWeight: 600, opacity: 0.8 }}>
                 Friend system coming soon!
               </Typography>
             </Box>
@@ -892,20 +674,25 @@ function LandingPage({ onGetStarted }) {
 
         {/* Messages View */}
         {activeView === 'messages' && (
-          <Box>
-            <Typography variant="h4" sx={{ marginBottom: '24px', fontWeight: 700 }}>
+          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
               Messages
             </Typography>
-            
             <Box sx={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              padding: '32px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              textAlign: 'center'
+              background: '#7B4EDB',
+              padding: '36px 32px',
+              borderRadius: '18px',
+              border: '1.5px solid #bca6e7',
+              maxWidth: 900,
+              margin: '0 auto',
+              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
             }}>
               <Typography sx={{ fontSize: '48px', marginBottom: '16px' }}>💬</Typography>
-              <Typography sx={{ fontSize: '18px', opacity: 0.6 }}>
+              <Typography sx={{ fontSize: 20, color: '#fff', fontWeight: 600, opacity: 0.8 }}>
                 Messaging system coming soon!
               </Typography>
             </Box>
@@ -914,20 +701,25 @@ function LandingPage({ onGetStarted }) {
 
         {/* File Transfer View */}
         {activeView === 'files' && (
-          <Box>
-            <Typography variant="h4" sx={{ marginBottom: '24px', fontWeight: 700 }}>
+          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
               File Transfer
             </Typography>
-            
             <Box sx={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              padding: '32px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              textAlign: 'center'
+              background: '#7B4EDB',
+              padding: '36px 32px',
+              borderRadius: '18px',
+              border: '1.5px solid #bca6e7',
+              maxWidth: 900,
+              margin: '0 auto',
+              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
             }}>
               <Typography sx={{ fontSize: '48px', marginBottom: '16px' }}>📁</Typography>
-              <Typography sx={{ fontSize: '18px', opacity: 0.6 }}>
+              <Typography sx={{ fontSize: 20, color: '#fff', fontWeight: 600, opacity: 0.8 }}>
                 File transfer (max 10MB) coming soon!
               </Typography>
             </Box>
@@ -935,6 +727,7 @@ function LandingPage({ onGetStarted }) {
         )}
       </Box>
     </Box>
+    </>
   );
 }
 
