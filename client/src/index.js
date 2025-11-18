@@ -3,22 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 
-// Runtime injection: add an extra high-specificity stylesheet at startup so
-// these debug styles take effect even if the browser served a cached build
-// or an earlier service-workered CSS file is active. We'll remove this after
-// we confirm the panels render correctly.
-try {
-  const debugStyle = document.createElement('style');
-  debugStyle.setAttribute('data-debug-styles', 'superdesk-panels');
-  debugStyle.innerHTML = `
-    .superdesk-left-panel{background-color:#ffffff!important;border:6px solid red!important}
-    .superdesk-right-panel{background-color:#613da9!important;border:6px solid lime!important}
-    #root > * { position: relative; }
-  `;
-  document.head.appendChild(debugStyle);
-} catch (e) {
-  // ignore in non-browser contexts
-}
+// Runtime injection removed - no more debug borders
 
 // MutationObserver to neutralize Emotion/runtime-injected backgrounds that
 // are overriding our panel colors. This sets inline styles with !important
@@ -66,7 +51,6 @@ try {
           // Force inline white background for any element that looks like the left panel
           el.style.setProperty('background-color', '#ffffff', 'important');
           el.style.setProperty('background', '#ffffff', 'important');
-          el.style.setProperty('border', '6px solid red', 'important');
         });
       });
 
@@ -74,7 +58,6 @@ try {
         document.querySelectorAll(sel).forEach(el => {
           el.style.setProperty('background-color', '#613da9', 'important');
           el.style.setProperty('background', '#613da9', 'important');
-          el.style.setProperty('border', '6px solid lime', 'important');
         });
       });
 
@@ -82,12 +65,10 @@ try {
       document.querySelectorAll('.css-wqbxsj').forEach(el => {
         el.style.setProperty('background-color', '#ffffff', 'important');
         el.style.setProperty('background', '#ffffff', 'important');
-        el.style.setProperty('border', '6px solid red', 'important');
       });
       document.querySelectorAll('.css-19vhk6s').forEach(el => {
         el.style.setProperty('background-color', '#613da9', 'important');
         el.style.setProperty('background', '#613da9', 'important');
-        el.style.setProperty('border', '6px solid lime', 'important');
       });
     } catch (e) {
       // ignore
