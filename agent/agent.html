@@ -1241,6 +1241,299 @@
                 alert('Failed to join session: ' + error.message);
             }
         };
+
+        // Remote Desktop Viewer Functions
+        function showRemoteDesktopViewer(stream) {
+            const viewer = document.getElementById('remote-desktop-viewer');
+            const video = document.getElementById('remote-video');
+            
+            video.srcObject = stream;
+            viewer.classList.remove('hidden');
+            
+            console.log('Remote desktop viewer shown');
+        }
+
+        function toggleRemoteControl() {
+            const controlBtn = document.getElementById('toggle-control-btn');
+            const controlIndicator = document.getElementById('control-indicator');
+            
+            if (window.superdeskState && window.superdeskState.remoteControlEnabled) {
+                // Disable remote control
+                if (typeof disableRemoteControl === 'function') {
+                    disableRemoteControl();
+                }
+                controlBtn.textContent = '🖱️ Enable Control';
+                controlBtn.style.background = 'rgba(255,255,255,0.1)';
+                controlIndicator.classList.add('hidden');
+            } else {
+                // Enable remote control
+                if (typeof enableRemoteControl === 'function') {
+                    enableRemoteControl();
+                }
+                controlBtn.textContent = '🖱️ Control Active';
+                controlBtn.style.background = '#10b981';
+                controlIndicator.classList.remove('hidden');
+            }
+        }
+
+        function toggleFullscreen() {
+            const viewer = document.getElementById('remote-desktop-viewer');
+            const btn = document.getElementById('toggle-fullscreen-btn');
+            
+            if (!document.fullscreenElement) {
+                viewer.requestFullscreen();
+                btn.textContent = '↙️ Exit Fullscreen';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '↗️ Fullscreen';
+            }
+        }
+
+        function endRemoteSession() {
+            if (confirm('Are you sure you want to end this session?')) {
+                const viewer = document.getElementById('remote-desktop-viewer');
+                const video = document.getElementById('remote-video');
+                
+                // Stop video stream
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                }
+                
+                // Hide viewer
+                viewer.classList.add('hidden');
+                
+                // Call end session from WebRTC
+                if (typeof endSession === 'function') {
+                    endSession();
+                }
+                
+                // Exit fullscreen if active
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+                
+                console.log('Remote session ended');
+            }
+        }
+
+        // Listen for fullscreen change
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.getElementById('toggle-fullscreen-btn');
+            if (btn) {
+                btn.textContent = document.fullscreenElement ? '↙️ Exit Fullscreen' : '↗️ Fullscreen';
+            }
+        });
     </script>
+
+    <!-- Remote Desktop Viewer (for guests) -->
+    <div id="remote-desktop-viewer" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999;">
+        <div style="position: absolute; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; z-index: 10;">
+            <div style="color: white; font-size: 14px; display: flex; align-items: center; gap: 16px;">
+                <span style="font-weight: 600;">Remote Session</span>
+                <span id="connection-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+                    Connected
+                </span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button id="toggle-control-btn" onclick="toggleRemoteControl()" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; cursor: pointer; font-size: 14px;">
+                    🖱️ Enable Control
+                </button>
+                <button id="toggle-fullscreen-btn" onclick="toggleFullscreen()" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; cursor: pointer; font-size: 14px;">
+                    ↗️ Fullscreen
+                </button>
+                <button onclick="endRemoteSession()" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 14px;">
+                    End Session
+                </button>
+            </div>
+        </div>
+        <video id="remote-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: contain;"></video>
+        <div id="control-indicator" class="hidden" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 12px 24px; border-radius: 8px; color: white; font-size: 14px; border: 1px solid rgba(16,185,129,0.5);">
+            🖱️ Remote control is active
+        </div>
+    </div>
+
+    <!-- Source Selection Modal -->
+    <div id="source-selection-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select Screen or Window to Share</h2>
+                <button class="modal-close" onclick="closeSourceModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="source-tabs">
+                    <button class="source-tab active" data-tab="screens" onclick="switchSourceTab('screens')">
+                        Entire Screen
+                    </button>
+                    <button class="source-tab" data-tab="windows" onclick="switchSourceTab('windows')">
+                        Application Window
+                    </button>
+                </div>
+                <div class="source-list" id="source-list">
+                    <!-- Sources will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSourceModal()">Cancel</button>
+                <button class="btn btn-primary" id="confirm-share-btn" onclick="confirmSourceSelection()" disabled>
+                    Share Selected
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background: #2a1a4a;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-body {
+            padding: 24px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .source-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .source-tab {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .source-tab:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .source-tab.active {
+            background: rgba(97, 61, 169, 0.3);
+            border-color: #613da9;
+            color: white;
+        }
+
+        .source-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .source-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .source-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(97, 61, 169, 0.5);
+        }
+
+        .source-item.selected {
+            background: rgba(97, 61, 169, 0.2);
+            border-color: #613da9;
+        }
+
+        .source-thumbnail {
+            width: 100%;
+            height: 120px;
+            object-fit: contain;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .source-name {
+            color: white;
+            font-size: 13px;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+    </style>
 </body>
 </html>

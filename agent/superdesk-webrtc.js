@@ -198,7 +198,12 @@ async function setupWebRTCReceiver(socket, sessionId) {
     // Handle incoming stream
     peerConnection.ontrack = (event) => {
         console.log('📺 Received remote stream');
-        displayRemoteStream(event.streams[0]);
+        // Use the new remote desktop viewer
+        if (typeof showRemoteDesktopViewer === 'function') {
+            showRemoteDesktopViewer(event.streams[0]);
+        } else {
+            displayRemoteStream(event.streams[0]);
+        }
     };
 
     // Handle ICE candidates
@@ -334,6 +339,14 @@ function createButton(text, onClick, bgColor = '#613da9') {
 }
 
 // Start screen share (Host)
+// Global variable to store available sources and selected source
+window.availableSources = {
+    screens: [],
+    windows: [],
+    selected: null,
+    currentTab: 'screens'
+};
+
 async function startScreenShare() {
     if (!window.superdeskState.guestConnected) {
         alert('No guest connected yet. Please wait for someone to join your session.');
@@ -347,21 +360,94 @@ async function startScreenShare() {
         }
 
         const sources = await window.appControls.getDesktopSources({
-            types: ['screen', 'window']
+            types: ['screen', 'window'],
+            thumbnailSize: { width: 300, height: 200 }
         });
 
         if (sources.length === 0) {
             throw new Error('No screen sources available');
         }
 
-        // For now, use the first screen source (primary display)
-        // TODO: Add UI for source selection
-        const primaryScreen = sources.find(s => s.name.includes('Entire screen') || s.name.includes('Screen 1')) || sources[0];
+        // Separate screens and windows
+        window.availableSources.screens = sources.filter(s => s.id.startsWith('screen:'));
+        window.availableSources.windows = sources.filter(s => s.id.startsWith('window:'));
 
+        // Show source selection modal
+        showSourceSelectionModal();
+
+    } catch (error) {
+        console.error('Failed to start screen share:', error);
+        alert('Failed to start screen sharing: ' + error.message);
+    }
+}
+
+function showSourceSelectionModal() {
+    const modal = document.getElementById('source-selection-modal');
+    modal.classList.remove('hidden');
+    
+    // Show screens tab by default
+    switchSourceTab('screens');
+}
+
+function closeSourceModal() {
+    const modal = document.getElementById('source-selection-modal');
+    modal.classList.add('hidden');
+    window.availableSources.selected = null;
+}
+
+function switchSourceTab(tab) {
+    window.availableSources.currentTab = tab;
+    
+    // Update tab buttons
+    document.querySelectorAll('.source-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    
+    // Render sources for the selected tab
+    renderSources(tab);
+}
+
+function renderSources(tab) {
+    const sourceList = document.getElementById('source-list');
+    const sources = tab === 'screens' ? window.availableSources.screens : window.availableSources.windows;
+    
+    if (sources.length === 0) {
+        sourceList.innerHTML = '<div style="color: rgba(255,255,255,0.5); text-align: center; padding: 40px;">No ' + tab + ' available</div>';
+        return;
+    }
+    
+    sourceList.innerHTML = sources.map((source, index) => `
+        <div class="source-item" data-source-id="${source.id}" onclick="selectSource('${source.id}')">
+            <img src="${source.thumbnail.toDataURL()}" class="source-thumbnail" alt="${source.name}">
+            <div class="source-name">${source.name}</div>
+        </div>
+    `).join('');
+}
+
+function selectSource(sourceId) {
+    window.availableSources.selected = sourceId;
+    
+    // Update visual selection
+    document.querySelectorAll('.source-item').forEach(item => {
+        item.classList.toggle('selected', item.dataset.sourceId === sourceId);
+    });
+    
+    // Enable confirm button
+    document.getElementById('confirm-share-btn').disabled = false;
+}
+
+async function confirmSourceSelection() {
+    if (!window.availableSources.selected) {
+        return;
+    }
+    
+    try {
+        closeSourceModal();
+        
         await setupWebRTCSender(
             window.superdeskState.socket,
             window.superdeskState.sessionId,
-            primaryScreen.id
+            window.availableSources.selected
         );
 
         showNotification('Sharing Started', 'Your screen is now being shared');
@@ -369,7 +455,7 @@ async function startScreenShare() {
         document.getElementById('start-share-btn').style.background = '#dc2626';
 
     } catch (error) {
-        console.error('Failed to start screen share:', error);
+        console.error('Failed to start screen sharing:', error);
         alert('Failed to start screen sharing: ' + error.message);
     }
 }
