@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Container, TextField, Button, Typography } from '@mui/material';
 import { supabase } from './supabaseClient';
 import superdeskLogo from './assets/superdesk.png';

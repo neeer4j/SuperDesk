@@ -15,11 +15,9 @@ import {
   Container,
   Card,
   CardContent,
-  CardActions,
   Button,
   TextField,
   Box,
-  Grid,
   Paper,
   Alert,
   Chip,
@@ -37,9 +35,7 @@ import {
   PowerSettingsNew,
   Computer,
   TouchApp,
-  ScreenShare,
-  Brightness4,
-  Brightness7
+  ScreenShare
 } from '@mui/icons-material';
 
 // Create professional Material UI theme
@@ -136,10 +132,7 @@ function App() {
     remoteSocketIdRef.current = value;
   };
   
-  // Toggle dark/light mode
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
-  };
+
   
   const videoRef = useRef(null);
   const remoteDesktopWindowRef = useRef(null);
