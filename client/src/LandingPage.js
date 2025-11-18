@@ -377,10 +377,10 @@ function LandingPage({ onGetStarted }) {
               left: 0,
               width: '32px',
               height: '32px',
-              background: 'white',
+              background: '#613da9',
               border: '2px solid #613da9',
               borderRadius: '8px',
-              color: '#613da9',
+              color: 'white',
               fontSize: '18px',
               fontWeight: 600,
               cursor: 'pointer',
@@ -391,13 +391,13 @@ function LandingPage({ onGetStarted }) {
               boxShadow: '0 2px 8px rgba(97, 61, 169, 0.15)'
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = '#613da9';
-              e.target.style.color = 'white';
+              e.target.style.background = '#4a2d7f';
+              e.target.style.borderColor = '#4a2d7f';
               e.target.style.boxShadow = '0 4px 12px rgba(97, 61, 169, 0.3)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = 'white';
-              e.target.style.color = '#613da9';
+              e.target.style.background = '#613da9';
+              e.target.style.borderColor = '#613da9';
               e.target.style.boxShadow = '0 2px 8px rgba(97, 61, 169, 0.15)';
             }}
           >
