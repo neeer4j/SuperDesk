@@ -560,21 +560,30 @@ function LandingPage({ onGetStarted }) {
             left: 'calc(30% + 16px)',
             width: '40px',
             height: '40px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'white',
+            border: '2px solid #613da9',
             borderRadius: '8px',
-            color: 'white',
-            fontSize: '24px',
-            fontWeight: 300,
+            color: '#613da9',
+            fontSize: '20px',
+            fontWeight: 600,
             cursor: 'pointer',
             display: activeView === 'share' ? 'none' : 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            boxShadow: '0 2px 8px rgba(97, 61, 169, 0.15)'
           }}
-          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.15)'}
-          onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+          onMouseEnter={(e) => {
+            e.target.style.background = '#613da9';
+            e.target.style.color = 'white';
+            e.target.style.boxShadow = '0 4px 12px rgba(97, 61, 169, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'white';
+            e.target.style.color = '#613da9';
+            e.target.style.boxShadow = '0 2px 8px rgba(97, 61, 169, 0.15)';
+          }}
         >
           &lt;
         </button>
