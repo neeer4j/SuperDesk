@@ -28,6 +28,7 @@
       "main.js",
       "agent.html",
       "preload.js",
+      "superdesk-webrtc.js",
       "assets/**/*",
       "package.json",
       "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",

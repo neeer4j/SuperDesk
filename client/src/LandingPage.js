@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GoChevronLeft } from 'react-icons/go';
 import { supabase } from './supabaseClient';
 import superdeskLogo from './assets/superdesk.png';
+import SuperDeskClient from './SuperDeskClient';
+import RemoteDesktopView from './RemoteDesktopView';
 
 function LandingPage({ onGetStarted }) {
   const [email, setEmail] = useState('');
@@ -11,7 +13,10 @@ function LandingPage({ onGetStarted }) {
   const [user, setUser] = useState(null);
   const [activeView, setActiveView] = useState('share');
   const [joinSessionId, setJoinSessionId] = useState('');
-  const [sessionId] = useState(Math.random().toString(36).substring(2, 10).toUpperCase());
+  const [sessionId, setSessionId] = useState('');
+  const [inSession, setInSession] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const clientRef = useRef(null);
   
   const handleSendOTP = async () => {
     if (!email.trim()) {
@@ -61,13 +66,52 @@ function LandingPage({ onGetStarted }) {
     setEmail('');
   };
 
-  const handleJoinSession = () => {
+  const handleJoinSession = async () => {
     const sid = joinSessionId.trim().toUpperCase();
     if (!sid) {
       alert('Please enter a session ID');
       return;
     }
-    alert(`Joining session ${sid}...\n\nThis will connect to the remote desktop.`);
+
+    if (sid.length !== 8) {
+      alert('Session ID must be 8 characters');
+      return;
+    }
+
+    setConnecting(true);
+    
+    try {
+      // Create client if not exists
+      if (!clientRef.current) {
+        clientRef.current = new SuperDeskClient();
+        
+        clientRef.current.on('sessionJoined', () => {
+          console.log('Successfully joined session');
+          setSessionId(sid);
+          setInSession(true);
+          setConnecting(false);
+        });
+
+        clientRef.current.on('sessionEnded', () => {
+          console.log('Session ended');
+          setInSession(false);
+          setSessionId('');
+          clientRef.current = null;
+        });
+
+        clientRef.current.on('error', (error) => {
+          console.error('Session error:', error);
+          alert(`Error: ${error.message || 'Failed to join session'}`);
+          setConnecting(false);
+        });
+      }
+
+      await clientRef.current.joinSession(sid);
+    } catch (error) {
+      console.error('Failed to join session:', error);
+      alert('Failed to join session: ' + error.message);
+      setConnecting(false);
+    }
   };
 
   const handleContinue = () => {
@@ -340,6 +384,21 @@ function LandingPage({ onGetStarted }) {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Show remote desktop view when in session
+  if (inSession && clientRef.current && sessionId) {
+    return (
+      <RemoteDesktopView
+        client={clientRef.current}
+        sessionId={sessionId}
+        onClose={() => {
+          setInSession(false);
+          setSessionId('');
+          clientRef.current = null;
+        }}
+      />
     );
   }
 
@@ -804,6 +863,7 @@ function LandingPage({ onGetStarted }) {
 
               <button
                 onClick={handleJoinSession}
+                disabled={connecting}
                 style={{
                   width: '100%',
                   padding: '16px 24px',
@@ -811,12 +871,13 @@ function LandingPage({ onGetStarted }) {
                   fontWeight: 600,
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: connecting ? 'not-allowed' : 'pointer',
                   background: 'white',
-                  color: '#09090b'
+                  color: '#09090b',
+                  opacity: connecting ? 0.7 : 1
                 }}
               >
-                Connect to Session
+                {connecting ? 'Connecting...' : 'Connect to Session'}
               </button>
             </div>
           </div>
