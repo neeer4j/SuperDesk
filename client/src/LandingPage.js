@@ -57,10 +57,6 @@ function LandingPage({ onGetStarted }) {
         {/* Top header bar - match desktop agent title bar */}
         <Box sx={{ height: 36, background: '#2d2046', color: '#fff', display: 'flex', alignItems: 'center', px: 2, position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>SuperDesk Agent</Typography>
-          <Box sx={{ ml: 'auto', display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Box component="span" sx={{ opacity: 0.6, fontSize: 18 }}>—</Box>
-            <Box component="span" sx={{ opacity: 0.6, fontSize: 18, ml: 2 }}>✕</Box>
-          </Box>
         </Box>
 
         {/* Use inline style here to defeat runtime-injected stylesheet rules */}
@@ -88,17 +84,7 @@ function LandingPage({ onGetStarted }) {
                 mt: 2
               }}
             />
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 700,
-                color: '#111',
-                marginBottom: '12px',
-                fontSize: 32
-              }}
-            >
-              SuperDesk
-            </Typography>
+            {/* Removed duplicate SuperDesk branding text */}
             <Typography
               sx={{
                 fontSize: '20px',
@@ -381,18 +367,21 @@ function LandingPage({ onGetStarted }) {
       </Box>
 
       {/* inline style to avoid runtime-injected dark backgrounds */}
-  <Box style={{ display: 'flex', minHeight: '100vh', background: '#7B4EDB', color: 'white', paddingTop: 36 }}>
+  <Box style={{ display: 'flex', height: '100vh', minHeight: '100vh', background: '#7B4EDB', color: 'white', paddingTop: 36, overflow: 'hidden' }}>
         {/* Left Sidebar - Navigation (30%) */}
         <Box sx={{
-          width: '320px',
+          width: '32vw',
+          minWidth: 340,
+          maxWidth: 480,
           background: '#fff',
           color: '#6C3FC5',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'stretch',
-          padding: '0 0 0 0',
-          borderRight: '1px solid #e5e5e5',
-          minHeight: '100vh',
+          padding: 0,
+          borderRight: 'none',
+          height: '100vh',
+          boxSizing: 'border-box',
         }}>
           {/* Logo */}
           <Box sx={{ mt: 3, mb: 3, textAlign: 'center' }}>
@@ -481,31 +470,35 @@ function LandingPage({ onGetStarted }) {
       {/* Right Content Area (70%) */}
       <Box sx={{
         flex: 1,
-        padding: '48px 64px',
-        overflowY: 'auto',
+        padding: 0,
         background: '#7B4EDB',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        height: '100vh',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
       }}>
         {/* Share Screen View */}
         {activeView === 'share' && (
-          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
+          <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
               Share Your Screen
             </Typography>
             <Box sx={{
               background: '#7B4EDB',
-              padding: '36px 32px 36px 32px',
+              padding: '36px 32px',
               borderRadius: '18px',
-              border: '1.5px solid #bca6e7',
+              border: 'none',
+              width: '100%',
               maxWidth: 900,
-              margin: '0 auto',
-              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              margin: 0,
+              boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
+              justifyContent: 'center',
             }}>
               <Typography sx={{ fontSize: 18, marginBottom: '24px', color: '#fff', fontWeight: 600, textAlign: 'left', width: '100%' }}>
                 Start a remote desktop session
@@ -518,7 +511,7 @@ function LandingPage({ onGetStarted }) {
                   padding: '14px',
                   background: '#7B4EDB',
                   borderRadius: '8px',
-                  border: '1.5px solid #bca6e7',
+                  border: 'none',
                   fontFamily: 'monospace',
                   fontSize: 22,
                   fontWeight: 700,
@@ -532,14 +525,14 @@ function LandingPage({ onGetStarted }) {
                 </Box>
               </Box>
               <Box sx={{ display: 'flex', gap: '24px', mb: 4, width: '100%' }}>
-                <Box sx={{ flex: 1, background: '#7B4EDB', borderRadius: '10px', padding: '24px 0', textAlign: 'center', color: '#fff', fontWeight: 600, fontSize: 18, border: '1.5px solid #bca6e7', boxShadow: 'none' }}>
+                <Box sx={{ flex: 1, background: '#7B4EDB', borderRadius: '10px', padding: '24px 0', textAlign: 'center', color: '#fff', fontWeight: 600, fontSize: 18, border: 'none', boxShadow: 'none' }}>
                   <Typography sx={{ fontSize: 15, color: '#e0d7fa', fontWeight: 500, mb: 1 }}>Connection</Typography>
                   <Typography sx={{ fontSize: 18, color: '#fff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 1 }}>
                     <Box component="span" sx={{ width: 10, height: 10, borderRadius: '50%', background: '#6fff8f', display: 'inline-block', mr: 1 }} />
                     Ready
                   </Typography>
                 </Box>
-                <Box sx={{ flex: 1, background: '#7B4EDB', borderRadius: '10px', padding: '24px 0', textAlign: 'center', color: '#fff', fontWeight: 600, fontSize: 18, border: '1.5px solid #bca6e7', boxShadow: 'none' }}>
+                <Box sx={{ flex: 1, background: '#7B4EDB', borderRadius: '10px', padding: '24px 0', textAlign: 'center', color: '#fff', fontWeight: 600, fontSize: 18, border: 'none', boxShadow: 'none' }}>
                   <Typography sx={{ fontSize: 15, color: '#e0d7fa', fontWeight: 500, mb: 1 }}>Session</Typography>
                   <Typography sx={{ fontSize: 18, color: '#fff', fontWeight: 700 }}>Not Started</Typography>
                 </Box>
