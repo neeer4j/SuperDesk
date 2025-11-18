@@ -12,10 +12,14 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', 'Segoe UI', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #613da9;
+            background: #613da9 !important;
             color: white;
             min-height: 100vh;
             overflow: hidden;
+        }
+        /* Prevent wallpaper flicker on startup */
+        html, body {
+            background-color: #613da9 !important;
         }
         .titlebar {
             -webkit-app-region: drag;
