@@ -28,393 +28,337 @@ function LandingPage({ onGetStarted }) {
 
   const handleVerifyOTP = () => {
     // TODO: Implement OTP verification logic
-    setUser({ email, id: 'verified-user' });
-    setLoading(false);
   };
 
-  const handleSignOut = () => {
-    // TODO: Implement sign out logic
-    setUser(null);
-    setOtpSent(false);
-    setOtp('');
-    setEmail('');
-  };
+  // ...existing code for other handlers...
 
-  const handleJoinSession = () => {
-    // TODO: Implement join session logic
-    setConnectionStatus('connected');
-  };
+  // Assume isAuthenticated is set correctly elsewhere
+  const isAuthenticated = !!user;
 
-  const handleContinue = () => {
-    // Bypass authentication for testing
-    setUser({ email: 'test@example.com', id: 'test-user' });
-  };
-
-  // Authentication Screen
-  if (!user) {
-    return (
-      <>
-        {/* Top header bar - match desktop agent title bar */}
-        <Box sx={{ height: 36, background: '#2d2046', color: '#fff', display: 'flex', alignItems: 'center', px: 2, position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>SuperDesk Agent</Typography>
-        </Box>
-
-        {/* Use inline style here to defeat runtime-injected stylesheet rules */}
-  <Box style={{ background: '#6C3FC5', minHeight: '100vh', display: 'flex', paddingTop: 36 }}>
-        {/* Left Panel - White with Logo */}
-        <Box
-          className="superdesk-left-panel"
-          // inline style wins over runtime CSS rules injected by Emotion
-          style={{ width: '44%', minWidth: '340px', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 32px', position: 'relative', overflow: 'hidden' }}
-          sx={{
-            '@media (max-width: 900px)': {
-              display: 'none',
-            },
-          }}
-        >
-          <Box sx={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-            <Box
-              component="img"
-              src={superdeskLogo}
-              alt="SuperDesk"
-              sx={{
-                width: '100%',
-                maxWidth: '180px',
-                marginBottom: '18px',
-                mt: 2
-              }}
-            />
-            {/* Removed duplicate SuperDesk branding text */}
-            <Typography
-              sx={{
-                fontSize: '20px',
-                color: '#6C3FC5',
-                fontWeight: 600,
-                lineHeight: 1.4,
-                mt: 2
-              }}
-            >
-              Secure remote desktop sharing<br />for modern teams
-            </Typography>
-          </Box>
-        </Box>
-
-        {/* Right Panel - Authentication */}
-        <Box className="superdesk-right-panel"
-          style={{ flex: 1, background: '#6C3FC5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'white' }}
-          sx={{}}
-        >
-          <Container maxWidth="sm">
-            <Box sx={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              padding: '48px',
-              borderRadius: '16px',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-            }}>
-              <Typography variant="h4" sx={{
-                fontWeight: 700,
-                marginBottom: '8px',
-                color: 'white',
-                textAlign: 'center',
-                fontSize: 36
-              }}>
-                {otpSent ? 'Verify OTP' : 'Sign In'}
-              </Typography>
-              <Typography sx={{
-                fontSize: '16px',
-                color: 'rgba(255, 255, 255, 0.7)',
-                marginBottom: '32px',
-                textAlign: 'center',
-              }}>
-                {otpSent 
-                  ? 'Enter the OTP code sent to your email'
-                  : 'Enter your email to receive an OTP code'
-                }
-              </Typography>
-
-              {!otpSent ? (
-                <>
-                  {/* Email Input */}
-                  <TextField
-                    fullWidth
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') handleSendOTP();
-                    }}
-                    disabled={loading}
-                    sx={{
-                      marginBottom: '12px',
-                      '& .MuiOutlinedInput-root': {
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        '& fieldset': {
-                          borderColor: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        '&:hover fieldset': {
-                          borderColor: 'rgba(255, 255, 255, 0.2)'
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: 'white'
-                        }
-                      },
-                      '& .MuiOutlinedInput-input': {
-                        color: 'white',
-                        padding: '14px 16px',
-                        '&::placeholder': {
-                          color: 'rgba(255, 255, 255, 0.4)',
-                          opacity: 1
-                        }
-                      }
-                    }}
-                  />
-
-                  {/* Send OTP Button */}
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={handleSendOTP}
-                    disabled={loading}
-                    sx={{
-                      background: 'white',
-                      color: '#613da9',
-                      padding: '12px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      borderRadius: '8px',
-                      marginBottom: '16px',
-                      '&:hover': {
-                        background: 'rgba(255, 255, 255, 0.9)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.2)'
-                      },
-                      '&:disabled': {
-                        background: 'rgba(255, 255, 255, 0.5)',
-                        color: '#613da9'
-                      }
-                    }}
-                  >
-                    {loading ? 'Sending...' : 'Send OTP'}
-                  </Button>
-                  {/* Google Sign In Button removed */}
-
-                  {/* Continue Button (Bypass for testing) */}
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    onClick={handleContinue}
-                    sx={{
-                      background: 'transparent',
-                      color: '#ffb300',
-                      padding: '12px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      borderRadius: '8px',
-                      border: '2px solid #ffb300',
-                      marginTop: '10px',
-                      '&:hover': {
-                        background: 'rgba(255, 179, 0, 0.08)',
-                        borderColor: '#ffb300',
-                        color: '#fff'
-                      }
-                    }}
-                  >
-                    Continue Without Auth (Testing Only)
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {/* OTP Input */}
-                  <TextField
-                    fullWidth
-                    placeholder="Enter 6-digit OTP"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') handleVerifyOTP();
-                    }}
-                    disabled={loading}
-                    sx={{
-                      marginBottom: '12px',
-                      '& .MuiOutlinedInput-root': {
-                        background: 'rgba(255, 255, 255, 0.15)',
-                        borderRadius: '8px',
-                        '& fieldset': {
-                          borderColor: 'rgba(255, 255, 255, 0.3)'
-                        },
-                        '&:hover fieldset': {
-                          borderColor: 'rgba(255, 255, 255, 0.5)'
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: 'white'
-                        }
-                      },
-                      '& .MuiOutlinedInput-input': {
-                        color: 'white',
-                        padding: '14px 16px',
-                        '&::placeholder': {
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          opacity: 1
-                        }
-                      }
-                    }}
-                  />
-
-                  {/* Verify Button */}
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={handleVerifyOTP}
-                    disabled={loading}
-                    sx={{
-                      background: 'white',
-                      color: '#613da9',
-                      padding: '12px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      borderRadius: '8px',
-                      marginBottom: '16px',
-                      '&:hover': {
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.3)'
-                      },
-                      '&:disabled': {
-                        background: 'rgba(255, 255, 255, 0.5)',
-                        color: '#613da9'
-                      }
-                    }}
-                  >
-                    {loading ? 'Verifying...' : 'Verify OTP'}
-                  </Button>
-
-                  {/* Back Button */}
-                  <Button
-                    fullWidth
-                    variant="text"
-                    onClick={() => {
-                      setOtpSent(false);
-                      setOtp('');
-                    }}
-                    sx={{
-                      color: 'rgba(255, 255, 255, 0.6)',
-                      padding: '12px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      '&:hover': {
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        color: 'white'
-                      }
-                    }}
-                  >
-                    Back to Email
-                  </Button>
-                </>
-              )}
-
-              {/* Terms */}
-              <Typography sx={{
-                fontSize: '12px',
-                color: 'rgba(255, 255, 255, 0.7)',
-                textAlign: 'center',
-                marginTop: '24px',
-                lineHeight: 1.6
-              }}>
-                By continuing, you agree to our{' '}
-                <Box component="span" sx={{
-                  color: '#fff',
-                  textDecoration: 'underline',
-                  cursor: 'pointer',
-                  '&:hover': { color: '#ffb300' }
-                }}>
-                  Terms of Service
-                </Box>
-                {' '}and{' '}
-                <Box component="span" sx={{
-                  color: '#fff',
-                  textDecoration: 'underline',
-                  cursor: 'pointer',
-                  '&:hover': { color: '#ffb300' }
-                }}>
-                  Privacy Policy
-                </Box>
-                .
-              </Typography>
-            </Box>
-          </Container>
-        </Box>
-      </Box>
-    </>
-    );
-  }
-
-  // Dashboard Screen (After Authentication)
   return (
     <>
-      {/* Top header bar - match desktop agent title bar */}
-      <Box sx={{ height: 36, background: '#2d2046', color: '#fff', display: 'flex', alignItems: 'center', px: 2, position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>SuperDesk Agent</Typography>
-        <Box sx={{ ml: 'auto', display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Box component="span" sx={{ opacity: 0.6, fontSize: 18 }}>—</Box>
-          <Box component="span" sx={{ opacity: 0.6, fontSize: 18, ml: 2 }}>✕</Box>
-        </Box>
-      </Box>
-
-      {/* inline style to avoid runtime-injected dark backgrounds */}
-      <Box style={{ display: 'flex', height: '100vh', minHeight: '100vh', background: '#613da9', color: 'white', paddingTop: 36, overflow: 'hidden' }}>
-        {/* Left Sidebar - Navigation (30%) */}
+      {/* Dashboard View - Electron-style layout */}
+      {isAuthenticated && (
+        <div style={{ display: 'flex', height: '100vh', paddingTop: 40 }}>
+          {/* Sidebar (30%) */}
+          <div style={{ width: '30%', background: '#fff', padding: 24, borderRight: '1px solid rgba(97,61,169,0.2)', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', minWidth: 280 }}>
+            {/* User Info */}
+            <div style={{ background: 'rgba(97,61,169,0.08)', borderRadius: 8, padding: 16, marginBottom: 32, display: 'flex', alignItems: 'center' }}>
+              <Avatar sx={{ bgcolor: '#613da9', width: 48, height: 48, fontWeight: 700, fontSize: 22 }}>
+                {user?.email?.[0]?.toUpperCase() || 'U'}
+              </Avatar>
+              <div style={{ marginLeft: 16 }}>
+                <Typography sx={{ fontWeight: 700, fontSize: 16, color: '#613da9' }}>Signed in as</Typography>
+                <Typography sx={{ fontWeight: 500, fontSize: 15, color: '#2d2046' }}>{user?.email}</Typography>
+              </div>
+            </div>
+            {/* Navigation */}
+            <div style={{ marginBottom: 32 }}>
+              {navItems.map((item) => (
+                <Button
+                  key={item.id}
+                  fullWidth
+                  onClick={() => setActiveView(item.id)}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    padding: '16px',
+                    marginBottom: '8px',
+                    color: '#613da9',
+                    background: activeView === item.id ? 'rgba(97, 61, 169, 0.15)' : 'transparent',
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    fontSize: '16px',
+                    fontWeight: activeView === item.id ? 600 : 400,
+                    '&:hover': {
+                      background: 'rgba(97, 61, 169, 0.1)'
+                    }
+                  }}
+                >
+                  <Box component="span" sx={{ marginRight: '12px', fontSize: '20px' }}>
+                    {item.icon}
+                  </Box>
+                  <Box component="span">{item.label}</Box>
+                </Button>
+              ))}
+            </div>
+            {/* Sign Out Button */}
+            <Button
+              fullWidth
+              onClick={handleSignOut}
+              sx={{
+                padding: '12px',
+                color: '#ef4444',
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: '8px',
+                textTransform: 'none',
+                '&:hover': {
+                  background: 'rgba(239, 68, 68, 0.2)'
+                }
+              }}
+            >
+              Sign Out
+            </Button>
+          </div>
+          {/* Content Area (70%) */}
+          <div style={{ flex: 1, padding: 40, background: '#613da9', overflowY: 'auto' }}>
+            {/* Share Screen View */}
+            {activeView === 'share' && (
+              <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 32, color: '#fff', textAlign: 'left', width: '100%' }}>
+                  Share Your Screen
+                </Typography>
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '32px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  width: '100%',
+                  maxWidth: 900,
+                  margin: 0,
+                  boxShadow: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  justifyContent: 'center',
+                }}>
+                  <Typography sx={{ fontSize: 16, marginBottom: '24px', color: '#fff', fontWeight: 400, textAlign: 'left', width: '100%', opacity: 0.8 }}>
+                    Start a remote desktop session
+                  </Typography>
+                  <Box sx={{ marginBottom: '24px', width: '100%' }}>
+                    <Typography sx={{ fontSize: 14, marginBottom: '8px', color: 'rgba(255, 255, 255, 0.7)', fontWeight: 400, textAlign: 'left' }}>
+                      Session ID
+                    </Typography>
+                    <Box sx={{
+                      padding: '16px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      fontFamily: 'monospace',
+                      fontSize: 18,
+                      fontWeight: 600,
+                      color: '#fff',
+                      letterSpacing: 0,
+                      width: 'auto',
+                      display: 'inline-block',
+                      textAlign: 'left',
+                      mb: 2
+                    }}>
+                      21Z7568T
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', mb: 3, width: '100%' }}>
+                    <Box sx={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', padding: '16px', textAlign: 'center', color: '#fff', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                      <Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', fontWeight: 400, mb: 1 }}>Connection</Typography>
+                      <Typography sx={{ fontSize: 14, color: '#fff', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                        <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', mr: 0.75 }} />
+                        Ready
+                      </Typography>
+                    </Box>
+                    <Box sx={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', padding: '16px', textAlign: 'center', color: '#fff', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                      <Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', fontWeight: 400, mb: 1 }}>Session</Typography>
+                      <Typography sx={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>Not Started</Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={onGetStarted}
+                    sx={{
+                      background: '#fff',
+                      color: '#09090b',
+                      padding: '12px 24px',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      borderRadius: '8px',
+                      boxShadow: 'none',
+                      border: 'none',
+                      '&:hover': {
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        color: '#09090b',
+                      }
+                    }}
+                  >
+                    Start Sharing
+                  </Button>
+                </Box>
+              </Box>
+            )}
+            {/* Join Session View */}
+            {activeView === 'join' && (
+              <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 32, color: '#fff', textAlign: 'left', width: '100%' }}>
+                  Join Session
+                </Typography>
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '32px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  width: '100%',
+                  maxWidth: 900,
+                  margin: 0,
+                  boxShadow: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  justifyContent: 'center',
+                }}>
+                  <Typography sx={{ fontSize: 16, marginBottom: '24px', color: '#fff', fontWeight: 400, textAlign: 'left', width: '100%', opacity: 0.8 }}>
+                    Enter a session ID to connect to a remote desktop
+                  </Typography>
+                  <Box sx={{ marginBottom: '24px', width: '100%' }}>
+                    <Typography sx={{ fontSize: 14, marginBottom: '8px', color: 'rgba(255, 255, 255, 0.7)', fontWeight: 400, textAlign: 'left' }}>
+                      Session ID
+                    </Typography>
+                    <input
+                      type="text"
+                      placeholder="Enter session ID (e.g. ABC123XY)"
+                      value={joinSessionId}
+                      onChange={(e) => setJoinSessionId(e.target.value.toUpperCase())}
+                      style={{
+                        width: '100%',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: 18,
+                        fontWeight: 600,
+                        fontFamily: 'monospace',
+                        textTransform: 'uppercase',
+                        outline: 'none',
+                        marginBottom: 0,
+                        letterSpacing: 0
+                      }}
+                      maxLength={8}
+                    />
+                  </Box>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={handleJoinSession}
+                    disabled={connectionStatus === 'connecting'}
+                    sx={{
+                      background: '#fff',
+                      color: '#09090b',
+                      padding: '12px 24px',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      borderRadius: '8px',
+                      boxShadow: 'none',
+                      border: 'none',
+                      margin: 0,
+                      '&:hover': {
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        color: '#09090b',
+                      },
+                      '&:disabled': {
+                        background: 'rgba(255, 255, 255, 0.5)',
+                        color: '#09090b',
+                        opacity: 0.5
+                      }
+                    }}
+                  >
+                    {connectionStatus === 'connecting' ? 'Connecting...' : 'Connect to Session'}
+                  </Button>
+                  {/* Connection Status */}
+                  {connectionStatus && (
+                    <Box sx={{ margin: '24px 0 0 0', textAlign: 'center', width: '100%' }}>
+                      {connectionStatus === 'connecting' && (
+                        <Typography sx={{ color: '#fbbf24', fontSize: '15px', fontWeight: 600 }}>
+                          🔄 Connecting to session...
+                        </Typography>
+                      )}
+                      {connectionStatus === 'connected' && (
+                        <Typography sx={{ color: '#6fff8f', fontSize: '15px', fontWeight: 600 }}>
+                          ✅ Connected! Waiting for remote stream...
+                        </Typography>
+                      )}
+                      {connectionStatus === 'error' && (
+                        <Typography sx={{ color: '#ef4444', fontSize: '15px', fontWeight: 600 }}>
+                          ❌ Connection failed. Please check the session ID and try again.
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            )}
+            {/* Friends View */}
+            {activeView === 'friends' && (
+              <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 32, color: '#fff', textAlign: 'left', width: '100%' }}>
+                  Friends
+                </Typography>
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '32px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  width: '100%',
+                  maxWidth: 900,
+                  margin: 0,
+                  boxShadow: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  justifyContent: 'center',
+                }}>
+                  <Typography sx={{ fontSize: 16, marginBottom: '24px', color: '#fff', fontWeight: 400, textAlign: 'left', width: '100%', opacity: 0.8 }}>
+                    Your friends will appear here.
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </div>
+        </div>
+      )}
+// ...existing code...
+      <Box sx={{ display: 'flex', height: '100vh', paddingTop: '36px', background: '#613da9' }}>
+        {/* Left Sidebar - 30% */}
         <Box sx={{
           width: '30%',
-          minWidth: 340,
-          maxWidth: 480,
-          background: '#fff',
-          color: '#6C3FC5',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
+          background: '#FFFFFF',
+          color: '#613da9',
           padding: '24px',
           borderRight: '1px solid rgba(97, 61, 169, 0.2)',
-          height: '100vh',
-          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
           overflowY: 'auto',
         }}>
           {/* Logo */}
-          <Box sx={{ mt: 3, mb: 3, textAlign: 'center' }}>
+          <Box sx={{ marginBottom: '40px', textAlign: 'center' }}>
             <Box
               component="img"
               src={superdeskLogo}
               alt="SuperDesk"
-              sx={{ width: '120px', mb: 1 }}
+              sx={{ width: '100%', maxWidth: '200px' }}
             />
           </Box>
           {/* User Info */}
           <Box sx={{
-            background: '#f3eaff',
-            borderRadius: '10px',
-            margin: '0 24px 18px 24px',
-            padding: '18px 16px',
-            color: '#6C3FC5',
-            fontWeight: 500,
-            fontSize: 15,
-            boxShadow: '0 1px 4px 0 rgba(108,63,197,0.04)'
+            padding: '16px',
+            background: 'rgba(97, 61, 169, 0.1)',
+            borderRadius: '8px',
+            marginBottom: '24px'
           }}>
-            <Typography sx={{ fontSize: 14, fontWeight: 500, opacity: 0.7, mb: 0.5 }}>Signed in as</Typography>
-            <Typography sx={{ fontSize: 16, fontWeight: 700 }}>{user.email}</Typography>
+            <Typography sx={{ fontSize: 14, opacity: 0.7, marginBottom: '4px', color: '#613da9' }}>
+              Signed in as
+            </Typography>
+            <Typography sx={{ fontSize: 16, fontWeight: 600, color: '#613da9' }}>
+              {user.email}
+            </Typography>
           </Box>
           {/* Navigation Menu */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0px', alignItems: 'stretch', justifyContent: 'flex-start', px: 2 }}>
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0px', marginBottom: '16px' }}>
             {[
-              { id: 'share', icon: <span style={{color:'#6C3FC5',fontSize:22,verticalAlign:'middle'}}>🖥️</span>, label: 'Share Screen' },
-              { id: 'join', icon: <span style={{color:'#bca6e7',fontSize:22,verticalAlign:'middle'}}>🔗</span>, label: 'Join Session' },
-              { id: 'friends', icon: <span style={{color:'#bca6e7',fontSize:22,verticalAlign:'middle'}}>👥</span>, label: 'Friends' },
-              { id: 'messages', icon: <span style={{color:'#bca6e7',fontSize:22,verticalAlign:'middle'}}>💬</span>, label: 'Messages' },
-              { id: 'files', icon: <span style={{color:'#bca6e7',fontSize:22,verticalAlign:'middle'}}>📁</span>, label: 'File Transfer' }
+              { id: 'share', icon: '🖥️', label: 'Share Screen' },
+              { id: 'join', icon: '🔗', label: 'Join Session' },
+              { id: 'friends', icon: '👥', label: 'Friends' },
+              { id: 'messages', icon: '💬', label: 'Messages' },
+              { id: 'files', icon: '📁', label: 'File Transfer' }
             ].map((item) => (
               <Button
                 key={item.id}
@@ -426,19 +370,16 @@ function LandingPage({ onGetStarted }) {
                   marginBottom: '6px',
                   color: activeView === item.id ? '#6C3FC5' : '#bca6e7',
                   background: activeView === item.id ? '#f3eaff' : 'transparent',
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   textTransform: 'none',
                   fontSize: '16px',
-                  fontWeight: activeView === item.id ? 700 : 500,
-                  boxShadow: activeView === item.id ? '0 1px 4px 0 rgba(108,63,197,0.04)' : 'none',
-                  transition: 'background 0.2s, color 0.2s',
+                  fontWeight: activeView === item.id ? 600 : 400,
                   '&:hover': {
-                    background: '#f3eaff',
-                    color: '#6C3FC5',
+                    background: 'rgba(97, 61, 169, 0.1)'
                   }
                 }}
               >
-                <Box component="span" sx={{ marginRight: '14px', fontSize: '22px', display: 'inline-flex', alignItems: 'center' }}>
+                <Box component="span" sx={{ marginRight: '12px', fontSize: '20px' }}>
                   {item.icon}
                 </Box>
                 <Box component="span">{item.label}</Box>
@@ -446,41 +387,30 @@ function LandingPage({ onGetStarted }) {
             ))}
           </Box>
           {/* Sign Out Button */}
-          <Box sx={{ mt: 'auto', mb: 3, px: 2 }}>
-            <Button
-              fullWidth
-              onClick={handleSignOut}
-              sx={{
-                padding: '14px',
-                color: '#ef4444',
-                background: '#fff0f0',
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: 16,
-                '&:hover': {
-                  background: '#ffeaea',
-                }
-              }}
-            >
-              Sign Out
-            </Button>
-          </Box>
+          <Button
+            fullWidth
+            onClick={handleSignOut}
+            sx={{
+              padding: '12px',
+              color: '#ef4444',
+              background: 'rgba(239, 68, 68, 0.1)',
+              borderRadius: '8px',
+              textTransform: 'none',
+              '&:hover': {
+                background: 'rgba(239, 68, 68, 0.2)'
+              }
+            }}
+          >
+            Sign Out
+          </Button>
         </Box>
 
-      {/* Right Content Area (70%) */}
-      <Box sx={{
-        flex: 1,
-        padding: '40px',
-        background: '#613da9',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        boxSizing: 'border-box',
-        overflow: 'auto',
-      }}>
+        {/* Right Content Area - 70% */}
+        <Box sx={{
+          flex: 1,
+          padding: '40px',
+          overflowY: 'auto'
+        }}>
         {/* Share Screen View */}
         {activeView === 'share' && (
           <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
