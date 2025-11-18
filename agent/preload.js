@@ -1,7 +1,6 @@
 // Preload script: expose a safe appControls API to the renderer
 // This avoids relying on require() or @electron/remote in packaged contexts.
-const { ipcRenderer, desktopCapturer } = require('electron');
-const { screen } = require('electron');
+const { ipcRenderer, desktopCapturer, screen } = require('electron');
 
 try {
   // Expose a minimal global API that renderer can call as window.appControls
