@@ -77,6 +77,38 @@ function LandingPage({ onGetStarted }) {
     alert(`Starting screen share with Session ID: ${sessionId}\n\nIn the full app, this would start capturing your screen.`);
   };
 
+  const handleCopySessionId = async () => {
+    try {
+      await navigator.clipboard.writeText(sessionId);
+      // Show temporary feedback
+      const btn = document.getElementById('copy-session-btn');
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy session ID');
+    }
+  };
+
+  const handlePasteSessionId = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setJoinSessionId(text.trim().toUpperCase());
+    } catch (err) {
+      console.error('Failed to paste:', err);
+      alert('Failed to paste from clipboard');
+    }
+  };
+
+  const handleGoBack = () => {
+    setActiveView('share');
+  };
+
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -516,8 +548,37 @@ function LandingPage({ onGetStarted }) {
         flex: 1,
         padding: '40px',
         overflowY: 'auto',
-        background: '#613da9'
+        background: '#613da9',
+        position: 'relative'
       }}>
+        {/* Back Button */}
+        <button
+          onClick={handleGoBack}
+          style={{
+            position: 'fixed',
+            top: '50px',
+            left: 'calc(30% + 16px)',
+            width: '40px',
+            height: '40px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '24px',
+            fontWeight: 300,
+            cursor: 'pointer',
+            display: activeView === 'share' ? 'none' : 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.15)'}
+          onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+        >
+          &lt;
+        </button>
+
         {/* Share Screen View */}
         {activeView === 'share' && (
           <div>
@@ -536,7 +597,8 @@ function LandingPage({ onGetStarted }) {
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '12px',
               padding: '32px',
-              marginBottom: '24px'
+              marginBottom: '24px',
+              position: 'relative'
             }}>
               <div style={{
                 fontSize: '14px',
@@ -555,6 +617,29 @@ function LandingPage({ onGetStarted }) {
               }}>
                 {sessionId}
               </div>
+
+              {/* Copy Button */}
+              <button
+                id="copy-session-btn"
+                onClick={handleCopySessionId}
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  padding: '8px 16px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.15)'}
+                onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+              >
+                Copy
+              </button>
 
               <div style={{
                 display: 'grid',
@@ -665,29 +750,52 @@ function LandingPage({ onGetStarted }) {
               }}>
                 Session ID
               </div>
-              <input
-                type="text"
-                placeholder="Enter session ID (e.g. ABC123XY)"
-                value={joinSessionId}
-                onChange={(e) => setJoinSessionId(e.target.value.toUpperCase())}
-                maxLength={8}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '18px',
-                  fontWeight: 600,
-                  fontFamily: 'monospace',
-                  textTransform: 'uppercase',
-                  outline: 'none',
-                  marginBottom: '24px',
-                  boxSizing: 'border-box',
-                  letterSpacing: '2px'
-                }}
-              />
+              <div style={{ position: 'relative', marginBottom: '24px' }}>
+                <input
+                  type="text"
+                  placeholder="Enter session ID (e.g. ABC123XY)"
+                  value={joinSessionId}
+                  onChange={(e) => setJoinSessionId(e.target.value.toUpperCase())}
+                  maxLength={8}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    paddingRight: '80px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    fontFamily: 'monospace',
+                    textTransform: 'uppercase',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    letterSpacing: '2px'
+                  }}
+                />
+                {/* Paste Button */}
+                <button
+                  onClick={handlePasteSessionId}
+                  style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    padding: '8px 16px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.15)'}
+                  onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+                >
+                  Paste
+                </button>
+              </div>
 
               <button
                 onClick={handleJoinSession}

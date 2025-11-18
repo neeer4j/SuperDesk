@@ -496,6 +496,68 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+
+        /* Back Button */
+        .back-button {
+            position: fixed;
+            top: 50px;
+            left: 16px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 24px;
+            font-weight: 300;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Copy/Paste Buttons */
+        .copy-button, .paste-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-button:hover, .paste-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .copy-button:active, .paste-button:active {
+            transform: scale(0.95);
+        }
+
+        .session-id-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .join-input-container {
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -506,6 +568,9 @@
             <button class="titlebar-button close" id="close-btn" onclick="window.appControls && window.appControls.close()">×</button>
         </div>
     </div>
+
+    <!-- Back Button -->
+    <button class="back-button" id="back-button">&lt;</button>
     <div class="auth-container" id="auth-screen">
         <!-- Left Panel -->
         <div class="auth-left">
@@ -611,9 +676,10 @@
                         Start a remote desktop session
                     </p>
 
-                    <div class="content-section">
+                    <div class="session-id-container">
                         <div class="section-label">Session ID</div>
                         <div class="session-id" id="session-id">GENERATING...</div>
+                        <button class="copy-button" id="copy-session-btn">Copy</button>
                     </div>
 
                     <div class="status-grid">
@@ -647,7 +713,7 @@
                         Enter a session ID to connect to a remote desktop
                     </p>
 
-                    <div class="content-section">
+                    <div class="join-input-container">
                         <div class="section-label">Session ID</div>
                         <input 
                             type="text" 
@@ -657,6 +723,7 @@
                             style="
                                 width: 100%;
                                 padding: 16px;
+                                padding-right: 80px;
                                 background: rgba(255, 255, 255, 0.05);
                                 border: 1px solid rgba(255, 255, 255, 0.1);
                                 border-radius: 8px;
@@ -668,6 +735,7 @@
                                 outline: none;
                             "
                         />
+                        <button class="paste-button" id="paste-session-btn">Paste</button>
                     </div>
 
                     <div class="button-group">
@@ -803,6 +871,39 @@
                 // Join the session
                 window.joinSession(sessionId);
             });
+
+            // Back button
+            document.getElementById('back-button').addEventListener('click', () => {
+                // Navigate to the share view (home)
+                switchView('share');
+            });
+
+            // Copy session ID button
+            document.getElementById('copy-session-btn').addEventListener('click', async () => {
+                const sessionId = document.getElementById('session-id').textContent;
+                try {
+                    await navigator.clipboard.writeText(sessionId);
+                    const btn = document.getElementById('copy-session-btn');
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        btn.textContent = 'Copy';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy:', err);
+                    alert('Failed to copy session ID');
+                }
+            });
+
+            // Paste session ID button
+            document.getElementById('paste-session-btn').addEventListener('click', async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    document.getElementById('join-session-input').value = text.trim().toUpperCase();
+                } catch (err) {
+                    console.error('Failed to paste:', err);
+                    alert('Failed to paste from clipboard');
+                }
+            });
         }
 
         async function sendOTP() {
@@ -915,6 +1016,14 @@
                 v.classList.add('hidden');
             });
             document.getElementById(`${view}-view`).classList.remove('hidden');
+
+            // Show/hide back button (hide on share view, show on other views)
+            const backButton = document.getElementById('back-button');
+            if (view === 'share') {
+                backButton.style.display = 'none';
+            } else {
+                backButton.style.display = 'flex';
+            }
         }
 
         function generateSessionId() {
