@@ -123,16 +123,17 @@ function LandingPage({ onGetStarted }) {
               alt="SuperDesk"
               sx={{
                 width: '100%',
-                maxWidth: '180px',
-                marginBottom: '18px',
-                mt: 2
+                maxWidth: '220px',
+                marginBottom: '32px',
+                filter: 'drop-shadow(0 8px 32px rgba(97,61,169,0.15))',
+                animation: 'fadeInUp 0.7s ease-out'
               }}
             />
             {/* Removed duplicate SuperDesk branding text */}
             <Typography
               sx={{
                 fontSize: '20px',
-                color: '#6C3FC5',
+                color: '#613da9',
                 fontWeight: 600,
                 lineHeight: 1.4,
                 mt: 2
@@ -145,7 +146,7 @@ function LandingPage({ onGetStarted }) {
 
         {/* Right Panel - Authentication */}
         <Box className="superdesk-right-panel"
-          style={{ flex: 1, background: '#6C3FC5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'white' }}
+          style={{ flex: 1, background: '#613da9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'white' }}
           sx={{}}
         >
           <Container maxWidth="sm">
@@ -418,6 +419,7 @@ function LandingPage({ onGetStarted }) {
         {/* Left Sidebar - 30% */}
         <Box sx={{
           width: '30%',
+          minWidth: '340px',
           background: '#FFFFFF',
           color: '#613da9',
           padding: '24px',
@@ -432,7 +434,7 @@ function LandingPage({ onGetStarted }) {
               component="img"
               src={superdeskLogo}
               alt="SuperDesk"
-              sx={{ width: '100%', maxWidth: '200px' }}
+              sx={{ width: '100%', maxWidth: '200px', margin: '0 auto', display: 'block' }}
             />
           </Box>
           {/* User Info */}
