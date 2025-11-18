@@ -18,7 +18,32 @@ function LandingPage({ onGetStarted }) {
   const [activeView, setActiveView] = useState('share'); // share, friends, messages, files
   const [joinSessionId, setJoinSessionId] = useState('');
   const [connectionStatus, setConnectionStatus] = useState(''); // 'connecting', 'connected', 'error'
-  // ...existing code...
+
+  // Placeholder implementations for missing handlers
+  const handleSendOTP = () => {
+    // TODO: Implement OTP sending logic
+    setOtpSent(true);
+    setLoading(false);
+  };
+
+  const handleVerifyOTP = () => {
+    // TODO: Implement OTP verification logic
+    setUser({ email, id: 'verified-user' });
+    setLoading(false);
+  };
+
+  const handleSignOut = () => {
+    // TODO: Implement sign out logic
+    setUser(null);
+    setOtpSent(false);
+    setOtp('');
+    setEmail('');
+  };
+
+  const handleJoinSession = () => {
+    // TODO: Implement join session logic
+    setConnectionStatus('connected');
+  };
 
   const handleContinue = () => {
     // Bypass authentication for testing
