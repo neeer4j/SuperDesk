@@ -367,7 +367,7 @@ function LandingPage({ onGetStarted }) {
       </Box>
 
       {/* inline style to avoid runtime-injected dark backgrounds */}
-  <Box style={{ display: 'flex', height: '100vh', minHeight: '100vh', background: '#7B4EDB', color: 'white', paddingTop: 36, overflow: 'hidden' }}>
+      <Box style={{ display: 'flex', height: '100vh', minHeight: '100vh', background: '#613da9', color: 'white', paddingTop: 36, overflow: 'hidden' }}>
         {/* Left Sidebar - Navigation (30%) */}
         <Box sx={{
           width: '32vw',
@@ -471,7 +471,7 @@ function LandingPage({ onGetStarted }) {
       <Box sx={{
         flex: 1,
         padding: 0,
-        background: '#7B4EDB',
+        background: '#613da9',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -483,58 +483,59 @@ function LandingPage({ onGetStarted }) {
         {/* Share Screen View */}
         {activeView === 'share' && (
           <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 32, color: '#fff', textAlign: 'left', width: '100%' }}>
               Share Your Screen
             </Typography>
             <Box sx={{
-              background: '#7B4EDB',
-              padding: '36px 32px',
-              borderRadius: '18px',
-              border: 'none',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '32px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               width: '100%',
               maxWidth: 900,
               margin: 0,
               boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               justifyContent: 'center',
             }}>
-              <Typography sx={{ fontSize: 18, marginBottom: '24px', color: '#fff', fontWeight: 600, textAlign: 'left', width: '100%' }}>
+              <Typography sx={{ fontSize: 16, marginBottom: '24px', color: '#fff', fontWeight: 400, textAlign: 'left', width: '100%', opacity: 0.8 }}>
                 Start a remote desktop session
               </Typography>
               <Box sx={{ marginBottom: '24px', width: '100%' }}>
-                <Typography sx={{ fontSize: 15, marginBottom: '8px', color: '#e0d7fa', fontWeight: 500, textAlign: 'left' }}>
+                <Typography sx={{ fontSize: 14, marginBottom: '8px', color: 'rgba(255, 255, 255, 0.7)', fontWeight: 400, textAlign: 'left' }}>
                   Session ID
                 </Typography>
                 <Box sx={{
-                  padding: '14px',
-                  background: '#7B4EDB',
+                  padding: '16px',
+                  background: 'rgba(255, 255, 255, 0.05)',
                   borderRadius: '8px',
-                  border: 'none',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   fontFamily: 'monospace',
-                  fontSize: 22,
-                  fontWeight: 700,
+                  fontSize: 18,
+                  fontWeight: 600,
                   color: '#fff',
-                  letterSpacing: 2,
-                  width: 340,
+                  letterSpacing: 0,
+                  width: 'auto',
+                  display: 'inline-block',
                   textAlign: 'left',
                   mb: 2
                 }}>
                   21Z7568T
                 </Box>
               </Box>
-              <Box sx={{ display: 'flex', gap: '24px', mb: 4, width: '100%' }}>
-                <Box sx={{ flex: 1, background: '#7B4EDB', borderRadius: '10px', padding: '24px 0', textAlign: 'center', color: '#fff', fontWeight: 600, fontSize: 18, border: 'none', boxShadow: 'none' }}>
-                  <Typography sx={{ fontSize: 15, color: '#e0d7fa', fontWeight: 500, mb: 1 }}>Connection</Typography>
-                  <Typography sx={{ fontSize: 18, color: '#fff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-                    <Box component="span" sx={{ width: 10, height: 10, borderRadius: '50%', background: '#6fff8f', display: 'inline-block', mr: 1 }} />
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', mb: 3, width: '100%' }}>
+                <Box sx={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', padding: '16px', textAlign: 'center', color: '#fff', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', fontWeight: 400, mb: 1 }}>Connection</Typography>
+                  <Typography sx={{ fontSize: 14, color: '#fff', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                    <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', mr: 0.75 }} />
                     Ready
                   </Typography>
                 </Box>
-                <Box sx={{ flex: 1, background: '#7B4EDB', borderRadius: '10px', padding: '24px 0', textAlign: 'center', color: '#fff', fontWeight: 600, fontSize: 18, border: 'none', boxShadow: 'none' }}>
-                  <Typography sx={{ fontSize: 15, color: '#e0d7fa', fontWeight: 500, mb: 1 }}>Session</Typography>
-                  <Typography sx={{ fontSize: 18, color: '#fff', fontWeight: 700 }}>Not Started</Typography>
+                <Box sx={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', padding: '16px', textAlign: 'center', color: '#fff', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', fontWeight: 400, mb: 1 }}>Session</Typography>
+                  <Typography sx={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>Not Started</Typography>
                 </Box>
               </Box>
               <Button
@@ -543,17 +544,17 @@ function LandingPage({ onGetStarted }) {
                 onClick={onGetStarted}
                 sx={{
                   background: '#fff',
-                  color: '#7B4EDB',
-                  padding: '16px',
-                  fontSize: 18,
-                  fontWeight: 700,
+                  color: '#09090b',
+                  padding: '12px 24px',
+                  fontSize: 14,
+                  fontWeight: 600,
                   textTransform: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   boxShadow: 'none',
                   border: 'none',
                   '&:hover': {
-                    background: '#f3eaff',
-                    color: '#7B4EDB',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    color: '#09090b',
                   }
                 }}
               >
@@ -566,28 +567,28 @@ function LandingPage({ onGetStarted }) {
         {/* Join Session View */}
         {activeView === 'join' && (
           <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 32, color: '#fff', textAlign: 'left', width: '100%' }}>
               Join Session
             </Typography>
             <Box sx={{
-              background: '#7B4EDB',
-              padding: '36px 32px',
-              borderRadius: '18px',
-              border: 'none',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '32px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               width: '100%',
               maxWidth: 900,
               margin: 0,
               boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               justifyContent: 'center',
             }}>
-              <Typography sx={{ fontSize: 18, marginBottom: '24px', color: '#fff', fontWeight: 600, textAlign: 'left', width: '100%' }}>
+              <Typography sx={{ fontSize: 16, marginBottom: '24px', color: '#fff', fontWeight: 400, textAlign: 'left', width: '100%', opacity: 0.8 }}>
                 Enter a session ID to connect to a remote desktop
               </Typography>
               <Box sx={{ marginBottom: '24px', width: '100%' }}>
-                <Typography sx={{ fontSize: 15, marginBottom: '8px', color: '#e0d7fa', fontWeight: 500, textAlign: 'left' }}>
+                <Typography sx={{ fontSize: 14, marginBottom: '8px', color: 'rgba(255, 255, 255, 0.7)', fontWeight: 400, textAlign: 'left' }}>
                   Session ID
                 </Typography>
                 <input
@@ -596,19 +597,19 @@ function LandingPage({ onGetStarted }) {
                   value={joinSessionId}
                   onChange={(e) => setJoinSessionId(e.target.value.toUpperCase())}
                   style={{
-                    width: 340,
-                    padding: '14px',
-                    background: '#7B4EDB',
-                    border: 'none',
+                    width: '100%',
+                    padding: '16px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
                     borderRadius: '8px',
                     color: '#fff',
-                    fontSize: 22,
-                    fontWeight: 700,
+                    fontSize: 18,
+                    fontWeight: 600,
                     fontFamily: 'monospace',
                     textTransform: 'uppercase',
                     outline: 'none',
                     marginBottom: 0,
-                    letterSpacing: 2
+                    letterSpacing: 0
                   }}
                   maxLength={8}
                 />
@@ -620,22 +621,23 @@ function LandingPage({ onGetStarted }) {
                 disabled={connectionStatus === 'connecting'}
                 sx={{
                   background: '#fff',
-                  color: '#7B4EDB',
-                  padding: '16px',
-                  fontSize: 18,
-                  fontWeight: 700,
+                  color: '#09090b',
+                  padding: '12px 24px',
+                  fontSize: 14,
+                  fontWeight: 600,
                   textTransform: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   boxShadow: 'none',
                   border: 'none',
-                  margin: '24px 0 0 0',
+                  margin: 0,
                   '&:hover': {
-                    background: '#f3eaff',
-                    color: '#7B4EDB',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    color: '#09090b',
                   },
                   '&:disabled': {
-                    background: '#e0d7fa',
-                    color: '#bca6e7',
+                    background: 'rgba(255, 255, 255, 0.5)',
+                    color: '#09090b',
+                    opacity: 0.5
                   }
                 }}
               >
@@ -668,14 +670,14 @@ function LandingPage({ onGetStarted }) {
         {/* Friends View */}
         {activeView === 'friends' && (
           <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 32, color: '#fff', textAlign: 'left', width: '100%' }}>
               Friends
             </Typography>
             <Box sx={{
-              background: '#7B4EDB',
-              padding: '36px 32px',
-              borderRadius: '18px',
-              border: 'none',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '60px 20px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               width: '100%',
               maxWidth: 900,
               margin: 0,
@@ -686,7 +688,7 @@ function LandingPage({ onGetStarted }) {
               textAlign: 'center',
             }}>
               <Typography sx={{ fontSize: '48px', marginBottom: '16px' }}>👥</Typography>
-              <Typography sx={{ fontSize: 20, color: '#fff', fontWeight: 600, opacity: 0.8 }}>
+              <Typography sx={{ fontSize: 18, color: '#fff', fontWeight: 400, opacity: 0.6 }}>
                 Friend system coming soon!
               </Typography>
             </Box>
@@ -696,14 +698,14 @@ function LandingPage({ onGetStarted }) {
         {/* Messages View */}
         {activeView === 'messages' && (
           <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 32, color: '#fff', textAlign: 'left', width: '100%' }}>
               Messages
             </Typography>
             <Box sx={{
-              background: '#7B4EDB',
-              padding: '36px 32px',
-              borderRadius: '18px',
-              border: 'none',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '60px 20px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               width: '100%',
               maxWidth: 900,
               margin: 0,
@@ -714,7 +716,7 @@ function LandingPage({ onGetStarted }) {
               textAlign: 'center',
             }}>
               <Typography sx={{ fontSize: '48px', marginBottom: '16px' }}>💬</Typography>
-              <Typography sx={{ fontSize: 20, color: '#fff', fontWeight: 600, opacity: 0.8 }}>
+              <Typography sx={{ fontSize: 18, color: '#fff', fontWeight: 400, opacity: 0.6 }}>
                 Messaging system coming soon!
               </Typography>
             </Box>
@@ -724,14 +726,14 @@ function LandingPage({ onGetStarted }) {
         {/* File Transfer View */}
         {activeView === 'files' && (
           <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 32, color: '#fff', textAlign: 'left', width: '100%' }}>
               File Transfer
             </Typography>
             <Box sx={{
-              background: '#7B4EDB',
-              padding: '36px 32px',
-              borderRadius: '18px',
-              border: 'none',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '60px 20px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               width: '100%',
               maxWidth: 900,
               margin: 0,
@@ -742,7 +744,7 @@ function LandingPage({ onGetStarted }) {
               textAlign: 'center',
             }}>
               <Typography sx={{ fontSize: '48px', marginBottom: '16px' }}>📁</Typography>
-              <Typography sx={{ fontSize: 20, color: '#fff', fontWeight: 600, opacity: 0.8 }}>
+              <Typography sx={{ fontSize: 18, color: '#fff', fontWeight: 400, opacity: 0.6 }}>
                 File transfer (max 10MB) coming soon!
               </Typography>
             </Box>
