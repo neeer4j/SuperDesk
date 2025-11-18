@@ -1,6 +1,7 @@
 // Preload script: expose a safe appControls API to the renderer
 // This avoids relying on require() or @electron/remote in packaged contexts.
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, desktopCapturer } = require('electron');
+const { screen } = require('electron');
 
 try {
   // Expose a minimal global API that renderer can call as window.appControls
@@ -11,6 +12,14 @@ try {
     },
     close: () => {
       try { ipcRenderer.send('window-close'); } catch (e) { console.warn('ipc send failed (close)', e); }
+    },
+    // Expose desktopCapturer for screen sharing
+    getDesktopSources: async (options) => {
+      return await desktopCapturer.getSources(options);
+    },
+    // Expose screen for getting display info
+    getScreen: () => {
+      return screen;
     }
   };
 } catch (e) {

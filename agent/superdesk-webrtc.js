@@ -65,96 +65,21 @@ async function initializeSocket() {
         });
 
         // Handle incoming mouse events (when guest controls our mouse)
+        // TODO: Implement via IPC to main process since nut-js can't be used in renderer
         socket.on('mouse-event', async (data) => {
             if (!window.superdeskState.isHost) return;
-            
-            console.log('Received mouse event:', data.type);
-            
-            try {
-                // Get screen dimensions
-                const { screen } = require('electron');
-                const primaryDisplay = screen.getPrimaryDisplay();
-                const { width, height } = primaryDisplay.size;
-                
-                // Convert percentage coordinates to screen pixels
-                const x = Math.round(data.x * width);
-                const y = Math.round(data.y * height);
-                
-                // Use @nut-tree-fork/nut-js to control the mouse
-                const { mouse, Point, Button } = require('@nut-tree-fork/nut-js');
-                
-                switch (data.type) {
-                    case 'move':
-                        await mouse.setPosition(new Point(x, y));
-                        break;
-                    case 'click':
-                        await mouse.setPosition(new Point(x, y));
-                        await mouse.click(data.button === 2 ? Button.RIGHT : Button.LEFT);
-                        break;
-                    case 'down':
-                        await mouse.setPosition(new Point(x, y));
-                        await mouse.pressButton(data.button === 2 ? Button.RIGHT : Button.LEFT);
-                        break;
-                    case 'up':
-                        await mouse.releaseButton(data.button === 2 ? Button.RIGHT : Button.LEFT);
-                        break;
-                }
-            } catch (error) {
-                console.error('Error handling mouse event:', error);
-            }
+            console.log('Received mouse event (handler not yet implemented):', data.type);
+            // Remote control functionality requires IPC setup
+            // Will be implemented in next update
         });
 
         // Handle incoming keyboard events (when guest types on our keyboard)
+        // TODO: Implement via IPC to main process since nut-js can't be used in renderer
         socket.on('keyboard-event', async (data) => {
             if (!window.superdeskState.isHost) return;
-            
-            console.log('Received keyboard event:', data.type, data.key);
-            
-            try {
-                const { keyboard, Key } = require('@nut-tree-fork/nut-js');
-                
-                // Map keys to nut-js Key enum
-                const keyMap = {
-                    'a': Key.A, 'b': Key.B, 'c': Key.C, 'd': Key.D, 'e': Key.E,
-                    'f': Key.F, 'g': Key.G, 'h': Key.H, 'i': Key.I, 'j': Key.J,
-                    'k': Key.K, 'l': Key.L, 'm': Key.M, 'n': Key.N, 'o': Key.O,
-                    'p': Key.P, 'q': Key.Q, 'r': Key.R, 's': Key.S, 't': Key.T,
-                    'u': Key.U, 'v': Key.V, 'w': Key.W, 'x': Key.X, 'y': Key.Y,
-                    'z': Key.Z,
-                    '0': Key.Num0, '1': Key.Num1, '2': Key.Num2, '3': Key.Num3,
-                    '4': Key.Num4, '5': Key.Num5, '6': Key.Num6, '7': Key.Num7,
-                    '8': Key.Num8, '9': Key.Num9,
-                    'enter': Key.Enter, 'escape': Key.Escape, 'backspace': Key.Backspace,
-                    'tab': Key.Tab, 'delete': Key.Delete, ' ': Key.Space,
-                    'arrowleft': Key.Left, 'arrowright': Key.Right,
-                    'arrowup': Key.Up, 'arrowdown': Key.Down,
-                    'home': Key.Home, 'end': Key.End,
-                    'pageup': Key.PageUp, 'pagedown': Key.PageDown,
-                    'control': Key.LeftControl, 'alt': Key.LeftAlt,
-                    'shift': Key.LeftShift
-                };
-                
-                const key = keyMap[data.key.toLowerCase()];
-                if (!key) {
-                    console.warn('Unknown key:', data.key);
-                    return;
-                }
-                
-                if (data.type === 'down') {
-                    // Build key combination with modifiers
-                    const keys = [];
-                    if (data.modifiers.ctrl) keys.push(Key.LeftControl);
-                    if (data.modifiers.alt) keys.push(Key.LeftAlt);
-                    if (data.modifiers.shift) keys.push(Key.LeftShift);
-                    if (data.modifiers.meta) keys.push(Key.LeftSuper);
-                    keys.push(key);
-                    
-                    // Press all keys
-                    await keyboard.type(...keys);
-                }
-            } catch (error) {
-                console.error('Error handling keyboard event:', error);
-            }
+            console.log('Received keyboard event (handler not yet implemented):', data.type, data.key);
+            // Remote control functionality requires IPC setup
+            // Will be implemented in next update
         });
     });
 }
@@ -416,9 +341,12 @@ async function startScreenShare() {
     }
 
     try {
-        // Get available sources
-        const { desktopCapturer } = require('electron');
-        const sources = await desktopCapturer.getSources({
+        // Get available sources using exposed API from preload
+        if (!window.appControls || !window.appControls.getDesktopSources) {
+            throw new Error('Desktop capture API not available. Please restart the app.');
+        }
+
+        const sources = await window.appControls.getDesktopSources({
             types: ['screen', 'window']
         });
 

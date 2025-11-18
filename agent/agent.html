@@ -775,27 +775,30 @@
 
                     <div class="join-input-container">
                         <div class="section-label">Session ID</div>
-                        <input 
-                            type="text" 
-                            id="join-session-input"
-                            placeholder="Enter session ID (e.g. ABC123XY)"
-                            maxlength="8"
-                            style="
-                                width: 100%;
-                                padding: 16px;
-                                padding-right: 80px;
-                                background: rgba(255, 255, 255, 0.05);
-                                border: 1px solid rgba(255, 255, 255, 0.1);
-                                border-radius: 8px;
-                                color: white;
-                                font-size: 18px;
-                                font-weight: 600;
-                                font-family: monospace;
-                                text-transform: uppercase;
-                                outline: none;
-                            "
-                        />
-                        <button class="paste-button" id="paste-session-btn">Paste</button>
+                        <div class="session-id-wrapper">
+                            <input 
+                                type="text" 
+                                id="join-session-input"
+                                placeholder="Enter session ID (e.g. ABC123XY)"
+                                maxlength="8"
+                                style="
+                                    width: 100%;
+                                    padding: 16px;
+                                    padding-right: 80px;
+                                    background: rgba(255, 255, 255, 0.05);
+                                    border: 1px solid rgba(255, 255, 255, 0.1);
+                                    border-radius: 8px;
+                                    color: white;
+                                    font-size: 18px;
+                                    font-weight: 600;
+                                    font-family: monospace;
+                                    text-transform: uppercase;
+                                    outline: none;
+                                    box-sizing: border-box;
+                                "
+                            />
+                            <button class="paste-button" id="paste-session-btn">Paste</button>
+                        </div>
                     </div>
 
                     <div class="button-group">
