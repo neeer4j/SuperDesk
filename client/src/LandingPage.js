@@ -565,21 +565,23 @@ function LandingPage({ onGetStarted }) {
 
         {/* Join Session View */}
         {activeView === 'join' && (
-          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
+          <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
               Join Session
             </Typography>
             <Box sx={{
               background: '#7B4EDB',
-              padding: '36px 32px 36px 32px',
+              padding: '36px 32px',
               borderRadius: '18px',
-              border: '1.5px solid #bca6e7',
+              border: 'none',
+              width: '100%',
               maxWidth: 900,
-              margin: '0 auto',
-              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              margin: 0,
+              boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
+              justifyContent: 'center',
             }}>
               <Typography sx={{ fontSize: 18, marginBottom: '24px', color: '#fff', fontWeight: 600, textAlign: 'left', width: '100%' }}>
                 Enter a session ID to connect to a remote desktop
@@ -597,7 +599,7 @@ function LandingPage({ onGetStarted }) {
                     width: 340,
                     padding: '14px',
                     background: '#7B4EDB',
-                    border: '1.5px solid #bca6e7',
+                    border: 'none',
                     borderRadius: '8px',
                     color: '#fff',
                     fontSize: 22,
@@ -637,7 +639,7 @@ function LandingPage({ onGetStarted }) {
                   }
                 }}
               >
-                {connectionStatus === 'connecting' ? 'Connecting...' : 'Join Session'}
+                {connectionStatus === 'connecting' ? 'Connecting...' : 'Connect to Session'}
               </Button>
               {/* Connection Status */}
               {connectionStatus && (
@@ -665,18 +667,19 @@ function LandingPage({ onGetStarted }) {
 
         {/* Friends View */}
         {activeView === 'friends' && (
-          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
+          <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
               Friends
             </Typography>
             <Box sx={{
               background: '#7B4EDB',
               padding: '36px 32px',
               borderRadius: '18px',
-              border: '1.5px solid #bca6e7',
+              border: 'none',
+              width: '100%',
               maxWidth: 900,
-              margin: '0 auto',
-              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              margin: 0,
+              boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -692,18 +695,19 @@ function LandingPage({ onGetStarted }) {
 
         {/* Messages View */}
         {activeView === 'messages' && (
-          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
+          <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
               Messages
             </Typography>
             <Box sx={{
               background: '#7B4EDB',
               padding: '36px 32px',
               borderRadius: '18px',
-              border: '1.5px solid #bca6e7',
+              border: 'none',
+              width: '100%',
               maxWidth: 900,
-              margin: '0 auto',
-              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              margin: 0,
+              boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -719,18 +723,19 @@ function LandingPage({ onGetStarted }) {
 
         {/* File Transfer View */}
         {activeView === 'files' && (
-          <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto' }}>
-            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', ml: 2 }}>
+          <Box sx={{ width: '100%', maxWidth: 900, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="h4" sx={{ marginBottom: '32px', fontWeight: 700, fontSize: 40, color: '#fff', textAlign: 'left', width: '100%' }}>
               File Transfer
             </Typography>
             <Box sx={{
               background: '#7B4EDB',
               padding: '36px 32px',
               borderRadius: '18px',
-              border: '1.5px solid #bca6e7',
+              border: 'none',
+              width: '100%',
               maxWidth: 900,
-              margin: '0 auto',
-              boxShadow: '0 2px 16px 0 rgba(108,63,197,0.08)',
+              margin: 0,
+              boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
