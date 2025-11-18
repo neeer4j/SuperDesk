@@ -2,7 +2,11 @@
   // Another test comment to force git change
   // Test change for git push troubleshooting
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Container, TextField, Button, Typography, Tabs, Tab } from '@mui/material';
+import { Box, Container, TextField, Button, Typography, Tabs, Tab, Avatar } from '@mui/material';
+import ScreenShareIcon from '@mui/icons-material/ScreenShare';
+import GroupIcon from '@mui/icons-material/Group';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import FolderIcon from '@mui/icons-material/Folder';
 import { supabase } from './supabaseClient';
 import superdeskLogo from './assets/superdesk.png';
 import io from 'socket.io-client';
@@ -19,6 +23,14 @@ function LandingPage({ onGetStarted }) {
   const [joinSessionId, setJoinSessionId] = useState('');
   const [connectionStatus, setConnectionStatus] = useState(''); // 'connecting', 'connected', 'error'
 
+  // Navigation items for sidebar
+  const navItems = [
+    { id: 'share', label: 'Share', icon: <ScreenShareIcon /> },
+    { id: 'friends', label: 'Friends', icon: <GroupIcon /> },
+    { id: 'messages', label: 'Messages', icon: <ChatBubbleIcon /> },
+    { id: 'files', label: 'Files', icon: <FolderIcon /> },
+  ];
+
   // Placeholder implementations for missing handlers
   const handleSendOTP = () => {
     // TODO: Implement OTP sending logic
@@ -28,6 +40,23 @@ function LandingPage({ onGetStarted }) {
 
   const handleVerifyOTP = () => {
     // TODO: Implement OTP verification logic
+  };
+
+  // Placeholder sign-out handler
+  const handleSignOut = () => {
+    // clear user session locally
+    setUser(null);
+    setActiveView('share');
+  };
+
+  // Placeholder join session handler
+  const handleJoinSession = async () => {
+    if (!joinSessionId) return;
+    setConnectionStatus('connecting');
+    // simulate connection
+    setTimeout(() => {
+      setConnectionStatus('connected');
+    }, 1000);
   };
 
   // ...existing code for other handlers...
