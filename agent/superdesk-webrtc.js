@@ -65,21 +65,60 @@ async function initializeSocket() {
         });
 
         // Handle incoming mouse events (when guest controls our mouse)
-        // TODO: Implement via IPC to main process since nut-js can't be used in renderer
         socket.on('mouse-event', async (data) => {
             if (!window.superdeskState.isHost) return;
-            console.log('Received mouse event (handler not yet implemented):', data.type);
-            // Remote control functionality requires IPC setup
-            // Will be implemented in next update
+            
+            try {
+                // Use IPC to send mouse events to main process for nut-js execution
+                if (window.appControls && window.appControls.ipcSend) {
+                    window.appControls.ipcSend('robot-mouse-event', {
+                        type: data.type === 'move' ? 'mousemove' : data.type === 'down' ? 'mousedown' : 'mouseup',
+                        x: data.x * 1920, // Scale to reference width
+                        y: data.y * 1080, // Scale to reference height
+                        button: data.button || 0
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to send mouse event to main process:', err);
+            }
         });
 
         // Handle incoming keyboard events (when guest types on our keyboard)
-        // TODO: Implement via IPC to main process since nut-js can't be used in renderer
         socket.on('keyboard-event', async (data) => {
             if (!window.superdeskState.isHost) return;
-            console.log('Received keyboard event (handler not yet implemented):', data.type, data.key);
-            // Remote control functionality requires IPC setup
-            // Will be implemented in next update
+            
+            try {
+                // Use IPC to send keyboard events to main process for nut-js execution
+                if (window.appControls && window.appControls.ipcSend) {
+                    window.appControls.ipcSend('robot-keyboard-event', {
+                        type: data.type, // 'keydown' or 'keyup'
+                        key: data.key,
+                        code: data.code
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to send keyboard event to main process:', err);
+            }
+        });
+
+        // Handle enable/disable remote control from guest
+        socket.on('enable-remote-control', (data) => {
+            if (!window.superdeskState.isHost) return;
+            
+            console.log('Guest enabled remote control');
+            if (window.appControls && window.appControls.ipcSend) {
+                window.appControls.ipcSend('robot-set-enabled', true);
+            }
+        });
+
+        socket.on('disable-remote-control', (data) => {
+            if (!window.superdeskState.isHost) return;
+            
+            console.log('Guest disabled remote control');
+            if (window.appControls && window.appControls.ipcSend) {
+                window.appControls.ipcSend('robot-set-enabled', false);
+                window.appControls.ipcSend('robot-release-keys');
+            }
         });
     });
 }
