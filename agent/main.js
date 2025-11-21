@@ -2,9 +2,6 @@ const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen } =
 const path = require('path');
 const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
 
-// Enable @electron/remote
-require('@electron/remote/main').initialize();
-
 let mainWindow;
 
 const REMOTE_REFERENCE_WIDTH = 1920;
@@ -258,9 +255,6 @@ function createWindow() {
     icon: path.join(__dirname, 'assets', 'icon.png'),
     title: 'SuperDesk Agent'
   });
-
-  // Enable @electron/remote for this window
-  require('@electron/remote/main').enable(mainWindow.webContents);
 
   // Load the agent interface
   mainWindow.loadFile('agent.html');

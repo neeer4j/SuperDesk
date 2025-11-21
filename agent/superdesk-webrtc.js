@@ -470,7 +470,7 @@ function renderSources(tab) {
     }
     
     sourceList.innerHTML = sources.map((source, index) => `
-        <div class="source-item" data-source-id="${source.id}" onclick="selectSource('${source.id}')">
+        <div class="source-item" data-source-id="${source.id}" onclick="selectSourceAndConfirm('${source.id}')">
             <img src="${source.thumbnail.toDataURL()}" class="source-thumbnail" alt="${source.name}">
             <div class="source-name">${source.name}</div>
         </div>
@@ -486,23 +486,38 @@ function selectSource(sourceId) {
     });
     
     // Enable confirm button
-    document.getElementById('confirm-share-btn').disabled = false;
+    const confirmBtn = document.getElementById('confirm-share-btn');
+    if (confirmBtn) confirmBtn.disabled = false;
+}
+
+// Select source and immediately confirm (used when clicking a source item)
+function selectSourceAndConfirm(sourceId) {
+    if (!sourceId) {
+        console.error('selectSourceAndConfirm called with invalid sourceId:', sourceId);
+        return;
+    }
+    window.availableSources.selected = sourceId;
+    console.log('Source selected:', sourceId);
+    confirmSourceSelection();
 }
 
 async function confirmSourceSelection() {
     if (!window.availableSources.selected) {
+        console.error('No source selected');
+        alert('Please select a screen or window to share');
         return;
     }
     
     try {
-        closeSourceModal();
+        const selectedSourceId = window.availableSources.selected;
+        console.log('Starting screen share with sourceId:', selectedSourceId);
         
-        console.log('Starting screen share with sourceId:', window.availableSources.selected);
+        closeSourceModal();
         
         await setupWebRTCSender(
             window.superdeskState.socket,
             window.superdeskState.sessionId,
-            window.availableSources.selected
+            selectedSourceId
         );
 
         showNotification('Sharing Started', 'Your screen is now being shared');
@@ -699,6 +714,8 @@ function showNotification(title, message) {
 window.createSession = createSession;
 window.joinSession = joinSession;
 window.startScreenShare = startScreenShare;
+window.selectSourceAndConfirm = selectSourceAndConfirm;
+window.confirmSourceSelection = confirmSourceSelection;
 window.endSession = endSession;
 
 // Initialize on load

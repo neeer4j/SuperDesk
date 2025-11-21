@@ -66,36 +66,32 @@ if (-not $exe) {
     exit 2
 }
 
-$dest = Join-Path -Path $env:USERPROFILE -ChildPath "Downloads\$OutName"
+# Ensure dist folder exists
+$distDir = Join-Path -Path $PSScriptRoot -ChildPath "dist"
+if (-not (Test-Path $distDir)) {
+    New-Item -ItemType Directory -Path $distDir -Force | Out-Null
+}
 
-# Create a timestamped installer filename so we can keep unique copies
+# Create a timestamped installer filename
 $timestamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
 $baseName = [System.IO.Path]::GetFileNameWithoutExtension($OutName)
 $ext = [System.IO.Path]::GetExtension($OutName)
 $timestampedName = "${baseName}-$timestamp$ext"
-$timestampedDest = Join-Path -Path $env:USERPROFILE -ChildPath "Downloads\$timestampedName"
 
-if (Test-Path $dest) {
-    if ($KeepBackup) {
-        $backup = "$dest.$timestamp.bak"
-        Write-Host "Backing up existing installer to $backup"
-        Copy-Item -Path $dest -Destination $backup -Force
-    } else {
-        Write-Host "Removing existing installer $dest"
-        Remove-Item -Path $dest -Force
-    }
-}
+$dest = Join-Path -Path $distDir -ChildPath $OutName
+$timestampedDest = Join-Path -Path $distDir -ChildPath $timestampedName
 
+# Copy the newly built installer to both standard and timestamped names
 Write-Host "Copying $($exe.FullName) -> $dest"
 Copy-Item -Path $exe.FullName -Destination $dest -Force
 Write-Host "Also copying a timestamped copy: $($exe.FullName) -> $timestampedDest"
 Copy-Item -Path $exe.FullName -Destination $timestampedDest -Force
 
-# Prune older timestamped installers (keep only $KeepCount latest)
+# Prune older timestamped installers in dist (keep only $KeepCount latest)
 try {
-    Write-Host "Pruning old installers in Downloads (keeping $KeepCount latest)..."
+    Write-Host "Pruning old installers in dist folder (keeping $KeepCount latest)..."
     $pattern = "${baseName}-*${ext}"
-    $all = Get-ChildItem -Path "$env:USERPROFILE\Downloads" -Filter $pattern -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+    $all = Get-ChildItem -Path $distDir -Filter $pattern -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
     if ($null -ne $all -and $all.Count -gt $KeepCount) {
         $toRemove = $all | Select-Object -Skip $KeepCount
         foreach ($f in $toRemove) {
@@ -113,7 +109,7 @@ try {
     Write-Warning "Prune step failed: $_"
 }
 
-Write-Host "Installer copied to Downloads: $dest"
+Write-Host "Installer saved to dist folder: $dest"
 if ($usedTempOutDir) {
     try {
         Remove-Item -Path $usedTempOutDir -Recurse -Force -ErrorAction SilentlyContinue
