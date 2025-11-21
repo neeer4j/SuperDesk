@@ -4,7 +4,9 @@
 
 param(
     [string]$OutName = "SuperDesk Agent Setup 1.0.0.exe",
-    [switch]$KeepBackup
+    [switch]$KeepBackup,
+    [int]$KeepCount = 5,
+    [switch]$SkipBuild
 )
 
 Write-Host "Starting build_and_replace.ps1..."
@@ -13,13 +15,16 @@ Write-Host "Starting build_and_replace.ps1..."
 Push-Location -Path "$PSScriptRoot"
 
 # Run electron-builder via npm script 'dist'
-Write-Host "Running 'npm run dist'... (this can take a few minutes)"
-$distResult = npm run dist
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Build failed (npm run dist returned exit code $LASTEXITCODE). Aborting."
-    Pop-Location
-    exit $LASTEXITCODE
+if (-not $SkipBuild) {
+    Write-Host "Running 'npm run dist'... (this can take a few minutes)"
+    $distResult = npm run dist
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Build failed (npm run dist returned exit code $LASTEXITCODE). Aborting."
+        Pop-Location
+        exit $LASTEXITCODE
+    }
+} else {
+    Write-Host "Skipping build step (SkipBuild flag provided)."
 }
 
 # Find the most recent exe in the dist folder
@@ -54,6 +59,28 @@ Write-Host "Copying $($exe.FullName) -> $dest"
 Copy-Item -Path $exe.FullName -Destination $dest -Force
 Write-Host "Also copying a timestamped copy: $($exe.FullName) -> $timestampedDest"
 Copy-Item -Path $exe.FullName -Destination $timestampedDest -Force
+
+# Prune older timestamped installers (keep only $KeepCount latest)
+try {
+    Write-Host "Pruning old installers in Downloads (keeping $KeepCount latest)..."
+    $pattern = "${baseName}-*${ext}"
+    $all = Get-ChildItem -Path "$env:USERPROFILE\Downloads" -Filter $pattern -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+    if ($null -ne $all -and $all.Count -gt $KeepCount) {
+        $toRemove = $all | Select-Object -Skip $KeepCount
+        foreach ($f in $toRemove) {
+            try {
+                Remove-Item -Path $f.FullName -Force -ErrorAction Stop
+                Write-Host "Removed old installer: $($f.Name)"
+            } catch {
+                Write-Warning "Failed to remove $($f.Name): $_"
+            }
+        }
+    } else {
+        Write-Host "No old installers to prune (found $($all.Count))."
+    }
+} catch {
+    Write-Warning "Prune step failed: $_"
+}
 
 Write-Host "Installer copied to Downloads: $dest"
 
