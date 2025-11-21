@@ -51,6 +51,8 @@ async function initializeSocket() {
 
         socket.on('session-joined', () => {
             console.log('✅ Successfully joined session');
+            window.superdeskState.guestConnected = true;
+            updateJoinButtonState('connected');
             showNotification('Connected', 'Waiting for host to share screen...');
         });
 
@@ -146,6 +148,8 @@ async function joinSession(sessionId) {
     }
 
     try {
+        updateJoinButtonState('connecting');
+        
         const socket = await initializeSocket();
         window.superdeskState.isHost = false;
         window.superdeskState.sessionId = sessionId;
@@ -159,6 +163,7 @@ async function joinSession(sessionId) {
     } catch (error) {
         console.error('Failed to join session:', error);
         alert('Failed to join session: ' + error.message);
+        updateJoinButtonState('disconnected');
     }
 }
 
@@ -212,8 +217,13 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     };
 
     // Listen for answer from guest
-    socket.on('answer', async (data) => {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+    socket.once('answer', async (data) => {
+        if (peerConnection.signalingState === 'have-local-offer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            console.log('✅ Remote description set');
+        } else {
+            console.warn('Ignoring answer in wrong state:', peerConnection.signalingState);
+        }
     });
 
     // Listen for ICE candidates from guest
@@ -270,18 +280,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
     };
 
     // Listen for offer from host
-    socket.on('offer', async (data) => {
+    socket.once('offer', async (data) => {
         console.log('Received offer from host');
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-        
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        
-        socket.emit('answer', {
-            sessionId,
-            targetId: data.from,
-            answer
-        });
+        if (peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+            
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            
+            socket.emit('answer', {
+                sessionId,
+                targetId: data.from,
+                answer
+            });
+            console.log('✅ Answer sent to host');
+        } else {
+            console.warn('Ignoring offer in wrong state:', peerConnection.signalingState);
+        }
     });
 
     // Listen for ICE candidates from host
@@ -697,6 +712,28 @@ function enableShareButton() {
         shareBtn.disabled = false;
         shareBtn.style.opacity = '1';
         shareBtn.style.cursor = 'pointer';
+    }
+}
+
+// Update join button state
+function updateJoinButtonState(state) {
+    const joinBtn = document.getElementById('join-session-btn');
+    if (!joinBtn) return;
+    
+    if (state === 'connected') {
+        joinBtn.textContent = '✓ Connected';
+        joinBtn.style.background = '#10b981';
+        joinBtn.disabled = true;
+        joinBtn.style.opacity = '0.8';
+    } else if (state === 'connecting') {
+        joinBtn.textContent = 'Connecting...';
+        joinBtn.disabled = true;
+        joinBtn.style.opacity = '0.7';
+    } else {
+        joinBtn.textContent = 'Connect to Session';
+        joinBtn.style.background = '#613da9';
+        joinBtn.disabled = false;
+        joinBtn.style.opacity = '1';
     }
 }
 

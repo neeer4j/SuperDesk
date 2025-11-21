@@ -29,7 +29,7 @@
       "agent.html",
       "preload.js",
       "superdesk-webrtc.js",
-      "assets/icon.ico",
+      "assets/**/*",
       "package.json"
     ],
     "asarUnpack": [],
