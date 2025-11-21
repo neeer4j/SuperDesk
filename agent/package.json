@@ -23,7 +23,7 @@
     "appId": "com.superdesk.agent",
     "productName": "SuperDesk Agent",
     "directories": {
-      "output": "dist2"
+      "output": "dist"
     },
     "files": [
       "main.js",
