@@ -261,11 +261,17 @@ async function setupWebRTCReceiver(socket, sessionId) {
     // Handle incoming stream
     peerConnection.ontrack = (event) => {
         console.log('📺 Received remote stream');
-        // Use the new remote desktop viewer
-        if (typeof showRemoteDesktopViewer === 'function') {
-            showRemoteDesktopViewer(event.streams[0]);
+        const stream = event.streams[0];
+        // Show the remote desktop viewer
+        const viewer = document.getElementById('remote-desktop-viewer');
+        const video = document.getElementById('remote-video');
+        
+        if (viewer && video) {
+            video.srcObject = stream;
+            viewer.classList.remove('hidden');
+            console.log('✅ Remote desktop viewer shown with stream');
         } else {
-            displayRemoteStream(event.streams[0]);
+            console.error('Remote desktop viewer elements not found');
         }
     };
 
@@ -310,101 +316,8 @@ async function setupWebRTCReceiver(socket, sessionId) {
     return peerConnection;
 }
 
-// Display remote stream
-function displayRemoteStream(stream) {
-    let videoContainer = document.getElementById('remote-video-container');
-    
-    if (!videoContainer) {
-        videoContainer = document.createElement('div');
-        videoContainer.id = 'remote-video-container';
-        videoContainer.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-        
-        const video = document.createElement('video');
-        video.id = 'remote-video';
-        video.autoplay = true;
-        video.style.cssText = `
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        `;
-        video.srcObject = stream;
-        
-        // Control panel
-        const controls = document.createElement('div');
-        controls.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10001;
-            display: flex;
-            gap: 10px;
-        `;
-        
-        // Fullscreen button
-        const fullscreenBtn = createButton('⛶ Fullscreen', () => {
-            if (!document.fullscreenElement) {
-                videoContainer.requestFullscreen();
-                fullscreenBtn.textContent = '⛶ Exit Fullscreen';
-            } else {
-                document.exitFullscreen();
-                fullscreenBtn.textContent = '⛶ Fullscreen';
-            }
-        });
-        
-        // Remote control toggle
-        const controlBtn = createButton('🖱️ Enable Control', () => {
-            if (window.superdeskState.remoteControlEnabled) {
-                disableRemoteControl();
-                controlBtn.textContent = '🖱️ Enable Control';
-            } else {
-                enableRemoteControl();
-                controlBtn.textContent = '🖱️ Disable Control';
-            }
-        });
-        
-        // End session button
-        const endBtn = createButton('✕ End Session', () => {
-            endSession();
-        }, '#dc2626');
-        
-        controls.appendChild(fullscreenBtn);
-        controls.appendChild(controlBtn);
-        controls.appendChild(endBtn);
-        
-        videoContainer.appendChild(video);
-        videoContainer.appendChild(controls);
-        document.body.appendChild(videoContainer);
-    }
-}
-
-// Helper to create button
-function createButton(text, onClick, bgColor = '#613da9') {
-    const btn = document.createElement('button');
-    btn.textContent = text;
-    btn.style.cssText = `
-        padding: 12px 24px;
-        background: ${bgColor};
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-    `;
-    btn.onclick = onClick;
-    return btn;
-}
+// Display remote stream - now handled by HTML viewer
+// Video display is managed by the remote-desktop-viewer div in agent.html
 
 // Start screen share (Host)
 // Global variable to store available sources and selected source
@@ -717,7 +630,7 @@ function enableShareButton() {
 
 // Update join button state
 function updateJoinButtonState(state) {
-    const joinBtn = document.getElementById('join-session-btn');
+    const joinBtn = document.getElementById('connect-session-btn');
     if (!joinBtn) return;
     
     if (state === 'connected') {
@@ -753,6 +666,8 @@ window.joinSession = joinSession;
 window.startScreenShare = startScreenShare;
 window.selectSourceAndConfirm = selectSourceAndConfirm;
 window.confirmSourceSelection = confirmSourceSelection;
+window.enableRemoteControl = enableRemoteControl;
+window.disableRemoteControl = disableRemoteControl;
 window.endSession = endSession;
 
 // Initialize on load
