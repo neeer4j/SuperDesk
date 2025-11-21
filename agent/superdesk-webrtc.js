@@ -294,6 +294,10 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     window.superdeskState.webrtc = { peerConnection, stream };
     window.superdeskState.sharingActive = true;
 
+    // Start connection health monitoring
+    const healthMonitor = monitorConnectionHealth(peerConnection);
+    window.superdeskState.healthMonitor = healthMonitor;
+
     console.log('✅ ========== HOST SETUP COMPLETE ==========');
     return peerConnection;
 }
@@ -313,11 +317,25 @@ async function setupWebRTCReceiver(socket, sessionId) {
     peerConnection.onconnectionstatechange = () => {
         console.log('🔌 Connection state:', peerConnection.connectionState);
         updateDebugStatus('connection', peerConnection.connectionState);
+        
+        // Update health indicator
+        if (typeof updateHealthIndicator === 'function') {
+            updateHealthIndicator(peerConnection.connectionState);
+        }
     };
 
     peerConnection.oniceconnectionstatechange = () => {
         console.log('🧊 ICE connection state:', peerConnection.iceConnectionState);
         updateDebugStatus('ice', peerConnection.iceConnectionState);
+        
+        // Update health indicator for ICE states
+        if (typeof updateHealthIndicator === 'function') {
+            const iceState = peerConnection.iceConnectionState;
+            if (iceState === 'checking') updateHealthIndicator('connecting');
+            else if (iceState === 'connected' || iceState === 'completed') updateHealthIndicator('connected');
+            else if (iceState === 'failed') updateHealthIndicator('failed');
+            else if (iceState === 'disconnected') updateHealthIndicator('disconnected');
+        }
     };
 
     peerConnection.onsignalingstatechange = () => {
@@ -428,6 +446,10 @@ async function setupWebRTCReceiver(socket, sessionId) {
     console.log('✅ WebRTC receiver setup complete');
     updateDebugStatus('setup', 'complete');
     
+    // Start connection health monitoring
+    const healthMonitor = monitorConnectionHealth(peerConnection);
+    window.superdeskState.healthMonitor = healthMonitor;
+    
     window.superdeskState.webrtc = { peerConnection };
     return peerConnection;
 }
@@ -437,7 +459,8 @@ function updateDebugStatus(key, value) {
     const debugDiv = document.getElementById('debug-status');
     if (debugDiv) {
         const timestamp = new Date().toLocaleTimeString();
-        const statusLine = `[${timestamp}] ${key}: ${value}\n`;
+        const emoji = getStatusEmoji(key, value);
+        const statusLine = `[${timestamp}] ${emoji} ${key}: ${value}\n`;
         debugDiv.textContent = statusLine + debugDiv.textContent;
         // Keep only last 20 lines
         const lines = debugDiv.textContent.split('\n');
@@ -445,6 +468,55 @@ function updateDebugStatus(key, value) {
             debugDiv.textContent = lines.slice(0, 20).join('\n');
         }
     }
+}
+
+// Get emoji for status updates
+function getStatusEmoji(key, value) {
+    if (value === 'connected' || value === 'complete' || value === 'displayed' || value === 'sent' || value === 'received') {
+        return '✅';
+    } else if (value === 'connecting' || value === 'checking') {
+        return '🔄';
+    } else if (value.includes('failed') || value.includes('error') || value.includes('missing')) {
+        return '❌';
+    } else if (value === 'disconnected' || value === 'closed') {
+        return '⚠️';
+    }
+    return '📌';
+}
+
+// Connection health monitor
+function monitorConnectionHealth(peerConnection) {
+    let lastState = peerConnection.iceConnectionState;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 3;
+    
+    const checkInterval = setInterval(() => {
+        const currentState = peerConnection.iceConnectionState;
+        
+        // If connection failed or disconnected, try to recover
+        if (currentState === 'failed' && reconnectAttempts < maxReconnectAttempts) {
+            console.log(`🔄 Connection failed, attempting reconnect (${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+            updateDebugStatus('reconnect', `attempt ${reconnectAttempts + 1}`);
+            peerConnection.restartIce();
+            reconnectAttempts++;
+        } else if (currentState === 'connected') {
+            reconnectAttempts = 0; // Reset on successful connection
+        } else if (currentState === 'closed') {
+            clearInterval(checkInterval);
+            updateDebugStatus('monitor', 'stopped - connection closed');
+        }
+        
+        lastState = currentState;
+    }, 5000); // Check every 5 seconds
+    
+    // Stop monitoring when connection closes
+    peerConnection.oniceconnectionstatechange = () => {
+        if (peerConnection.iceConnectionState === 'closed') {
+            clearInterval(checkInterval);
+        }
+    };
+    
+    return checkInterval;
 }
 
 // Display remote stream - now handled by HTML viewer

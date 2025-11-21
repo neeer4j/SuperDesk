@@ -5,7 +5,7 @@
 param(
     [string]$OutName = "SuperDesk Agent Setup 1.0.0.exe",
     [switch]$KeepBackup,
-    [int]$KeepCount = 5,
+    [int]$KeepCount = 2,
     [switch]$SkipBuild
 )
 
@@ -103,7 +103,7 @@ try {
             }
         }
     } else {
-        Write-Host "No old installers to prune (found $($all.Count))."
+        Write-Host "No old installers to prune (total: $($all.Count), keeping: $KeepCount)."
     }
 } catch {
     Write-Warning "Prune step failed: $_"
