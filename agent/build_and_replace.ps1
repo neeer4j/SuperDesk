@@ -23,8 +23,12 @@ if (-not $SkipBuild) {
 
         # Fallback: attempt build to a temporary directory to avoid locked dist
         $tempOutDir = "dist-temp-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-        Write-Host "Attempting fallback build to $tempOutDir"
-        $distResult = npm run dist -- --config.directories.output=$tempOutDir
+        $tempConfig = "electron-builder-temp-$((Get-Date).ToString('yyyyMMdd-HHmmss')).json"
+        Write-Host "Attempting fallback build to $tempOutDir with temp config $tempConfig"
+        $json = @{ directories = @{ output = $tempOutDir } } | ConvertTo-Json -Depth 10
+        Set-Content -Path $tempConfig -Value $json -Encoding UTF8
+        $distResult = npx electron-builder --config $tempConfig --publish=never
+        Remove-Item -Path $tempConfig -Force -ErrorAction SilentlyContinue
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Fallback build failed (npm run dist returned exit code $LASTEXITCODE). Aborting."
             Pop-Location
