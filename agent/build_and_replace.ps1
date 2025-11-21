@@ -55,9 +55,10 @@ if (-not $SkipBuild) {
 
 # Find the most recent exe in the dist folder
 $exe = Get-ChildItem -Path "dist" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-if (-not $exe -and $usedTempOutDir) {
-    # If no exe found in dist but we have a temp output folder, use that exe
-    $exe = Get-ChildItem -Path "$usedTempOutDir" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if ($usedTempOutDir) {
+    # Prefer the exe created in the temporary output directory if we used it
+    $tempExe = Get-ChildItem -Path "$usedTempOutDir" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($tempExe) { $exe = $tempExe }
 }
 if (-not $exe) {
     Write-Error "No installer (.exe) found in 'dist' after build. Aborting."
