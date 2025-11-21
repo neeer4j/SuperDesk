@@ -1,0 +1,59 @@
+name: Build Agent Installer (Windows)
+
+on:
+  push:
+    branches:
+      - test
+  create:
+    tags:
+      - 'v*'
+  # Also build on push tags (for release creation)
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows-installer:
+    name: Build Windows Installer
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cache node modules (agent)
+        uses: actions/cache@v4
+        with:
+          path: agent/node_modules
+          key: ${{ runner.os }}-agent-${{ hashFiles('agent/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-agent-
+
+      - name: Install dependencies in agent
+        run: |
+          cd agent
+          npm ci
+
+      - name: Build Windows installer
+        run: |
+          cd agent
+          npm run dist
+
+      - name: Find and upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SuperDesk-Agent-Windows-Installer
+          path: agent/dist/*.exe
+
+      - name: Create GitHub Release and upload installer when tag created
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            agent/dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
