@@ -110,7 +110,12 @@ try {
 
 Write-Host "Installer copied to Downloads: $dest"
 if ($usedTempOutDir) {
-    try { Remove-Item -Path $usedTempOutDir -Recurse -Force -ErrorAction SilentlyContinue; Write-Host "Removed temporary build output folder: $usedTempOutDir" } catch { Write-Warning "Failed to remove temporary folder $usedTempOutDir: $_" }
+    try {
+        Remove-Item -Path $usedTempOutDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "Removed temporary build output folder: $usedTempOutDir"
+    } catch {
+        Write-Warning ("Failed to remove temporary folder: {0} - {1}" -f $usedTempOutDir, $_)
+    }
 }
 
 Pop-Location
