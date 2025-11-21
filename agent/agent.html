@@ -806,6 +806,32 @@
                             Connect to Session
                         </button>
                     </div>
+
+                    <!-- Remote Desktop Video Display -->
+                    <div id="join-video-container" class="hidden" style="margin-top: 24px; background: #000; border-radius: 12px; overflow: hidden; position: relative; aspect-ratio: 16/9;">
+                        <video id="join-remote-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: contain;"></video>
+                        
+                        <!-- Video Controls Overlay -->
+                        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span style="color: #10b981; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+                                    Connected
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="toggle-control-btn-inline" onclick="toggleRemoteControlInline()" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">
+                                    🖱️ Enable Control
+                                </button>
+                                <button id="toggle-fullscreen-btn-inline" onclick="toggleFullscreenInline()" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">
+                                    ⛶ Fullscreen
+                                </button>
+                                <button onclick="endRemoteSession()" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">
+                                    End
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1314,15 +1340,22 @@
             if (confirm('Are you sure you want to end this session?')) {
                 const viewer = document.getElementById('remote-desktop-viewer');
                 const video = document.getElementById('remote-video');
+                const joinContainer = document.getElementById('join-video-container');
+                const joinVideo = document.getElementById('join-remote-video');
                 
-                // Stop video stream
-                if (video.srcObject) {
+                // Stop video streams
+                if (video && video.srcObject) {
                     video.srcObject.getTracks().forEach(track => track.stop());
                     video.srcObject = null;
                 }
+                if (joinVideo && joinVideo.srcObject) {
+                    joinVideo.srcObject.getTracks().forEach(track => track.stop());
+                    joinVideo.srcObject = null;
+                }
                 
-                // Hide viewer
-                viewer.classList.add('hidden');
+                // Hide viewers
+                if (viewer) viewer.classList.add('hidden');
+                if (joinContainer) joinContainer.classList.add('hidden');
                 
                 // Call end session from WebRTC
                 if (typeof endSession === 'function') {
@@ -1338,11 +1371,50 @@
             }
         }
 
+        // Inline control functions for join-view video
+        function toggleRemoteControlInline() {
+            const controlBtn = document.getElementById('toggle-control-btn-inline');
+            const video = document.getElementById('join-remote-video');
+            
+            if (window.superdeskState && window.superdeskState.remoteControlEnabled) {
+                // Disable remote control
+                if (typeof disableRemoteControl === 'function') {
+                    disableRemoteControl();
+                }
+                controlBtn.textContent = '🖱️ Enable Control';
+                controlBtn.style.background = 'rgba(255,255,255,0.1)';
+            } else {
+                // Enable remote control
+                if (typeof enableRemoteControl === 'function') {
+                    enableRemoteControl();
+                }
+                controlBtn.textContent = '🖱️ Control Active';
+                controlBtn.style.background = '#10b981';
+            }
+        }
+
+        function toggleFullscreenInline() {
+            const videoContainer = document.getElementById('join-video-container');
+            const btn = document.getElementById('toggle-fullscreen-btn-inline');
+            
+            if (!document.fullscreenElement) {
+                videoContainer.requestFullscreen();
+                btn.textContent = '⛶ Exit';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '⛶ Fullscreen';
+            }
+        }
+
         // Listen for fullscreen change
         document.addEventListener('fullscreenchange', () => {
             const btn = document.getElementById('toggle-fullscreen-btn');
+            const btnInline = document.getElementById('toggle-fullscreen-btn-inline');
             if (btn) {
                 btn.textContent = document.fullscreenElement ? '↙️ Exit Fullscreen' : '↗️ Fullscreen';
+            }
+            if (btnInline) {
+                btnInline.textContent = document.fullscreenElement ? '⛶ Exit' : '⛶ Fullscreen';
             }
         });
     </script>

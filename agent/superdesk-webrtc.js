@@ -291,18 +291,18 @@ async function setupWebRTCReceiver(socket, sessionId) {
         console.log('📺 Received remote stream, tracks:', event.streams[0].getTracks().length);
         const stream = event.streams[0];
         
-        // Show the remote desktop viewer
-        const viewer = document.getElementById('remote-desktop-viewer');
-        const video = document.getElementById('remote-video');
+        // Show video in the join-view container
+        const videoContainer = document.getElementById('join-video-container');
+        const video = document.getElementById('join-remote-video');
         
-        if (viewer && video) {
-            console.log('🎬 Setting video srcObject and showing viewer');
+        if (videoContainer && video) {
+            console.log('🎬 Setting video srcObject in join-view');
             video.srcObject = stream;
             video.play().catch(e => console.error('Video play error:', e));
-            viewer.classList.remove('hidden');
-            console.log('✅ Remote desktop viewer shown with stream');
+            videoContainer.classList.remove('hidden');
+            console.log('✅ Video displayed in join session area');
         } else {
-            console.error('❌ Remote desktop viewer elements not found!', { viewer: !!viewer, video: !!video });
+            console.error('❌ Join video elements not found!', { container: !!videoContainer, video: !!video });
         }
     };
 
@@ -529,13 +529,22 @@ function enableRemoteControl() {
         sessionId: window.superdeskState.sessionId
     });
     
-    // Setup mouse/keyboard event capture
+    // Setup mouse/keyboard event capture on both video elements
     const video = document.getElementById('remote-video');
+    const joinVideo = document.getElementById('join-remote-video');
+    
     if (video) {
         video.addEventListener('mousemove', handleMouseMove);
         video.addEventListener('mousedown', handleMouseDown);
         video.addEventListener('mouseup', handleMouseUp);
         video.addEventListener('click', handleMouseClick);
+    }
+    
+    if (joinVideo) {
+        joinVideo.addEventListener('mousemove', handleMouseMove);
+        joinVideo.addEventListener('mousedown', handleMouseDown);
+        joinVideo.addEventListener('mouseup', handleMouseUp);
+        joinVideo.addEventListener('click', handleMouseClick);
     }
     
     document.addEventListener('keydown', handleKeyDown);
@@ -552,11 +561,20 @@ function disableRemoteControl() {
     });
     
     const video = document.getElementById('remote-video');
+    const joinVideo = document.getElementById('join-remote-video');
+    
     if (video) {
         video.removeEventListener('mousemove', handleMouseMove);
         video.removeEventListener('mousedown', handleMouseDown);
         video.removeEventListener('mouseup', handleMouseUp);
         video.removeEventListener('click', handleMouseClick);
+    }
+    
+    if (joinVideo) {
+        joinVideo.removeEventListener('mousemove', handleMouseMove);
+        joinVideo.removeEventListener('mousedown', handleMouseDown);
+        joinVideo.removeEventListener('mouseup', handleMouseUp);
+        joinVideo.removeEventListener('click', handleMouseClick);
     }
     
     document.removeEventListener('keydown', handleKeyDown);
