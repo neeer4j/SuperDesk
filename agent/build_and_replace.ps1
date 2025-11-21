@@ -19,9 +19,31 @@ if (-not $SkipBuild) {
     Write-Host "Running 'npm run dist'... (this can take a few minutes)"
     $distResult = npm run dist
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Build failed (npm run dist returned exit code $LASTEXITCODE). Aborting."
-        Pop-Location
-        exit $LASTEXITCODE
+        Write-Warning "Initial build failed (npm run dist returned exit code $LASTEXITCODE). Attempting fallback build to a temporary output directory."
+
+        # Fallback: attempt build to a temporary directory to avoid locked dist
+        $tempOutDir = "dist-temp-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        Write-Host "Attempting fallback build to $tempOutDir"
+        $distResult = npm run dist -- --config.directories.output=$tempOutDir
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Fallback build failed (npm run dist returned exit code $LASTEXITCODE). Aborting."
+            Pop-Location
+            exit $LASTEXITCODE
+        }
+
+        # If fallback succeeded, locate the exe inside tempOutDir and set exePath
+        $exe = Get-ChildItem -Path $tempOutDir -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if (-not $exe) {
+            Write-Error "No installer (.exe) found in '$tempOutDir' after fallback build. Aborting."
+            Pop-Location
+            exit 3
+        }
+        Write-Host "Found installer in fallback output: $($exe.FullName)"
+
+        # Use the fallback-built exe for copy; mark that we used tempOutDir
+        $usedTempOutDir = $tempOutDir
+    } else {
+        Write-Host "Build succeeded into dist (default output)."
     }
 } else {
     Write-Host "Skipping build step (SkipBuild flag provided)."
@@ -29,6 +51,10 @@ if (-not $SkipBuild) {
 
 # Find the most recent exe in the dist folder
 $exe = Get-ChildItem -Path "dist" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $exe -and $usedTempOutDir) {
+    # If no exe found in dist but we have a temp output folder, use that exe
+    $exe = Get-ChildItem -Path "$usedTempOutDir" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+}
 if (-not $exe) {
     Write-Error "No installer (.exe) found in 'dist' after build. Aborting."
     Pop-Location
@@ -83,6 +109,9 @@ try {
 }
 
 Write-Host "Installer copied to Downloads: $dest"
+if ($usedTempOutDir) {
+    try { Remove-Item -Path $usedTempOutDir -Recurse -Force -ErrorAction SilentlyContinue; Write-Host "Removed temporary build output folder: $usedTempOutDir" } catch { Write-Warning "Failed to remove temporary folder $usedTempOutDir: $_" }
+}
 
 Pop-Location
 Write-Host "Done."
