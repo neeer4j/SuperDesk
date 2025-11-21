@@ -169,12 +169,24 @@ async function joinSession(sessionId) {
 
 // Setup WebRTC for host (sender)
 async function setupWebRTCSender(socket, sessionId, sourceId) {
+    console.log('🔄 Setting up WebRTC sender for session:', sessionId, 'sourceId:', sourceId);
+    
     const peerConnection = new RTCPeerConnection({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' }
         ]
     });
+
+    // Handle connection state
+    peerConnection.onconnectionstatechange = () => {
+        console.log('🔌 Connection state:', peerConnection.connectionState);
+    };
+
+    // Handle ICE connection state
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log('❄️ ICE connection state:', peerConnection.iceConnectionState);
+    };
 
     // Get screen stream using Electron's desktopCapturer
     // Note: sourceId must be from desktopCapturer.getSources()
@@ -217,19 +229,33 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     };
 
     // Listen for answer from guest
-    socket.once('answer', async (data) => {
+    socket.off('answer'); // Remove any old listeners
+    socket.on('answer', async (data) => {
+        console.log('📨 Received answer from guest:', data.from);
+        console.log('🔍 Current signaling state:', peerConnection.signalingState);
+        
         if (peerConnection.signalingState === 'have-local-offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            console.log('✅ Remote description set');
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                console.log('✅ Remote description set from answer');
+            } catch (error) {
+                console.error('❌ Error setting remote description:', error);
+            }
         } else {
-            console.warn('Ignoring answer in wrong state:', peerConnection.signalingState);
+            console.warn('⚠️ Ignoring answer in wrong state:', peerConnection.signalingState);
         }
     });
 
     // Listen for ICE candidates from guest
     socket.on('ice-candidate', async (data) => {
-        if (data.candidate) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        if (data.candidate && peerConnection.remoteDescription) {
+            console.log('📥 Adding ICE candidate from guest');
+            try {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                console.log('✅ ICE candidate added');
+            } catch (error) {
+                console.error('❌ Error adding ICE candidate:', error);
+            }
         }
     });
 
@@ -251,6 +277,8 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
 // Setup WebRTC for guest (receiver)
 async function setupWebRTCReceiver(socket, sessionId) {
+    console.log('🔄 Setting up WebRTC receiver for session:', sessionId);
+    
     const peerConnection = new RTCPeerConnection({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -260,59 +288,95 @@ async function setupWebRTCReceiver(socket, sessionId) {
 
     // Handle incoming stream
     peerConnection.ontrack = (event) => {
-        console.log('📺 Received remote stream');
+        console.log('📺 Received remote stream, tracks:', event.streams[0].getTracks().length);
         const stream = event.streams[0];
+        
         // Show the remote desktop viewer
         const viewer = document.getElementById('remote-desktop-viewer');
         const video = document.getElementById('remote-video');
         
         if (viewer && video) {
+            console.log('🎬 Setting video srcObject and showing viewer');
             video.srcObject = stream;
+            video.play().catch(e => console.error('Video play error:', e));
             viewer.classList.remove('hidden');
             console.log('✅ Remote desktop viewer shown with stream');
         } else {
-            console.error('Remote desktop viewer elements not found');
+            console.error('❌ Remote desktop viewer elements not found!', { viewer: !!viewer, video: !!video });
         }
+    };
+
+    // Handle connection state
+    peerConnection.onconnectionstatechange = () => {
+        console.log('🔌 Connection state:', peerConnection.connectionState);
+    };
+
+    // Handle ICE connection state
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log('❄️ ICE connection state:', peerConnection.iceConnectionState);
     };
 
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+            console.log('📤 Sending ICE candidate to host');
             socket.emit('ice-candidate', {
                 sessionId,
                 candidate: event.candidate
             });
+        } else {
+            console.log('✅ All ICE candidates sent');
         }
     };
 
-    // Listen for offer from host
-    socket.once('offer', async (data) => {
-        console.log('Received offer from host');
-        if (peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-            
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            
-            socket.emit('answer', {
-                sessionId,
-                targetId: data.from,
-                answer
-            });
-            console.log('✅ Answer sent to host');
-        } else {
-            console.warn('Ignoring offer in wrong state:', peerConnection.signalingState);
+    // Store peerConnection for offer handler
+    window.superdeskState.webrtc = { peerConnection };
+
+    // Listen for offer from host - MUST be set before emitting join-session
+    socket.off('offer'); // Remove any old listeners
+    socket.on('offer', async (data) => {
+        console.log('📨 Received offer from host:', data.from);
+        console.log('🔍 Current signaling state:', peerConnection.signalingState);
+        
+        try {
+            if (peerConnection.signalingState === 'stable') {
+                console.log('✅ Setting remote description with offer');
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                
+                console.log('📝 Creating answer');
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                
+                console.log('📤 Sending answer back to host');
+                socket.emit('answer', {
+                    sessionId,
+                    targetId: data.from,
+                    answer
+                });
+                console.log('✅ Answer sent successfully');
+            } else {
+                console.warn('⚠️ Ignoring offer, wrong state:', peerConnection.signalingState);
+            }
+        } catch (error) {
+            console.error('❌ Error handling offer:', error);
         }
     });
 
     // Listen for ICE candidates from host
+    socket.off('ice-candidate'); // Remove any old listeners
     socket.on('ice-candidate', async (data) => {
-        if (data.candidate) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        if (data.candidate && peerConnection.remoteDescription) {
+            console.log('📥 Adding ICE candidate from host');
+            try {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                console.log('✅ ICE candidate added');
+            } catch (error) {
+                console.error('❌ Error adding ICE candidate:', error);
+            }
         }
     });
 
-    window.superdeskState.webrtc = { peerConnection };
+    console.log('✅ WebRTC receiver setup complete');
     return peerConnection;
 }
 
