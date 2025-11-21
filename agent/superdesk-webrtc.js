@@ -171,20 +171,34 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         ]
     });
 
-    // Get screen stream
-    const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-            mandatory: {
-                chromeMediaSource: 'desktop',
-                chromeMediaSourceId: sourceId
+    // Get screen stream using Electron's desktopCapturer
+    // Note: sourceId must be from desktopCapturer.getSources()
+    let stream;
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: sourceId,
+                    minWidth: 1280,
+                    maxWidth: 1920,
+                    minHeight: 720,
+                    maxHeight: 1080,
+                    minFrameRate: 15,
+                    maxFrameRate: 30
+                }
             }
-        }
-    });
+        });
+    } catch (err) {
+        console.error('getUserMedia failed:', err);
+        throw new Error('Failed to capture screen: ' + err.message + '. Make sure you selected a valid source.');
+    }
 
     // Add tracks to peer connection
     stream.getTracks().forEach(track => {
         peerConnection.addTrack(track, stream);
+        console.log('Added track:', track.kind, track.label);
     });
 
     // Handle ICE candidates
@@ -482,6 +496,8 @@ async function confirmSourceSelection() {
     
     try {
         closeSourceModal();
+        
+        console.log('Starting screen share with sourceId:', window.availableSources.selected);
         
         await setupWebRTCSender(
             window.superdeskState.socket,

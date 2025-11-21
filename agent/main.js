@@ -288,6 +288,16 @@ app.whenReady().then(() => {
     return sources;
   });
 
+  // Grant permission for media access (required for getUserMedia with desktop sources)
+  const { session } = require('electron');
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true); // Allow media access
+    } else {
+      callback(false);
+    }
+  });
+
   createWindow();
 
   app.on('activate', () => {
