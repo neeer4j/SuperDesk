@@ -152,6 +152,18 @@ async function joinSession(sessionId) {
         console.log('🔄 Session ID:', sessionId);
         updateJoinButtonState('connecting');
         
+        // Update placeholder to show connecting state
+        const placeholder = document.getElementById('stream-placeholder');
+        if (placeholder) {
+            placeholder.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">🔄</div>
+                    <div style="font-size: 14px; color: #10b981; margin-bottom: 8px;">Connecting to host...</div>
+                    <div style="font-size: 12px; color: #6b7280;">Setting up secure connection</div>
+                </div>
+            `;
+        }
+        
         const socket = await initializeSocket();
         window.superdeskState.isHost = false;
         window.superdeskState.sessionId = sessionId;
@@ -171,6 +183,18 @@ async function joinSession(sessionId) {
         console.error('❌ Failed to join session:', error);
         alert('Failed to join session: ' + error.message);
         updateJoinButtonState('disconnected');
+        
+        // Show error in placeholder
+        const placeholder = document.getElementById('stream-placeholder');
+        if (placeholder) {
+            placeholder.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;">❌</div>
+                    <div style="font-size: 14px; color: #ef4444; margin-bottom: 8px;">Connection failed</div>
+                    <div style="font-size: 12px; color: #6b7280;">${error.message}</div>
+                </div>
+            `;
+        }
     }
 }
 
@@ -352,22 +376,38 @@ async function setupWebRTCReceiver(socket, sessionId) {
         
         const stream = event.streams[0];
         
-        // Show video in join-view container
-        const videoContainer = document.getElementById('join-video-container');
+        // Get video elements
         const video = document.getElementById('join-remote-video');
+        const placeholder = document.getElementById('stream-placeholder');
+        const controlsOverlay = document.getElementById('video-controls-overlay');
         
         console.log('📺 Looking for elements...');
-        console.log('   - videoContainer:', videoContainer ? 'FOUND' : 'NOT FOUND');
         console.log('   - video:', video ? 'FOUND' : 'NOT FOUND');
+        console.log('   - placeholder:', placeholder ? 'FOUND' : 'NOT FOUND');
+        console.log('   - controlsOverlay:', controlsOverlay ? 'FOUND' : 'NOT FOUND');
         
-        if (videoContainer && video) {
+        if (video) {
             console.log('📺 Setting srcObject and showing video...');
             video.srcObject = stream;
+            
+            // Hide placeholder, show video and controls
+            if (placeholder) {
+                placeholder.style.display = 'none';
+                console.log('✅ Placeholder hidden');
+            }
+            
+            if (controlsOverlay) {
+                controlsOverlay.classList.remove('hidden');
+                console.log('✅ Controls overlay shown');
+            }
+            
             video.play()
-                .then(() => console.log('✅ Video playing successfully'))
+                .then(() => {
+                    console.log('✅ Video playing successfully');
+                    console.log('📺 Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+                })
                 .catch(e => console.log('⚠️ Auto-play handled:', e.message));
-            videoContainer.classList.remove('hidden');
-            console.log('✅ Video container shown, hidden class removed');
+            
             console.log('📺 Video element state:', {
                 srcObject: video.srcObject ? 'SET' : 'NOT SET',
                 readyState: video.readyState,
@@ -378,8 +418,8 @@ async function setupWebRTCReceiver(socket, sessionId) {
             });
             updateDebugStatus('video', 'displayed');
         } else {
-            console.error('❌ Join video elements not found!');
-            updateDebugStatus('video', 'elements-missing');
+            console.error('❌ Video element not found!');
+            updateDebugStatus('video', 'element-missing');
         }
     };
 
