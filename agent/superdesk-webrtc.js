@@ -390,15 +390,20 @@ async function setupWebRTCReceiver(socket, sessionId) {
             console.log('📺 Setting srcObject and showing video...');
             video.srcObject = stream;
             
-            // Hide placeholder, show video and controls
+            // Hide placeholder and update status
             if (placeholder) {
                 placeholder.style.display = 'none';
                 console.log('✅ Placeholder hidden');
             }
             
-            if (controlsOverlay) {
-                controlsOverlay.classList.remove('hidden');
-                console.log('✅ Controls overlay shown');
+            // Update connection status indicator
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            if (statusIndicator && statusText) {
+                statusIndicator.style.background = '#10b981';
+                statusText.textContent = 'Streaming';
+                statusText.style.color = '#10b981';
+                console.log('✅ Status updated to streaming');
             }
             
             video.play()
