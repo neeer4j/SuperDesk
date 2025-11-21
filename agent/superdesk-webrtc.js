@@ -148,20 +148,27 @@ async function joinSession(sessionId) {
     }
 
     try {
+        console.log('🔄 ========== JOINING SESSION ==========');
+        console.log('🔄 Session ID:', sessionId);
         updateJoinButtonState('connecting');
         
         const socket = await initializeSocket();
         window.superdeskState.isHost = false;
         window.superdeskState.sessionId = sessionId;
 
-        socket.emit('join-session', sessionId);
-        
-        // Setup WebRTC for receiving
+        // CRITICAL: Setup WebRTC receiver FIRST, then join
+        // This ensures the 'offer' listener is ready before the host sends it
+        console.log('🔄 Setting up WebRTC receiver BEFORE joining...');
         await setupWebRTCReceiver(socket, sessionId);
+        console.log('✅ WebRTC receiver ready');
         
-        console.log('Joining session:', sessionId);
+        console.log('🔄 Now emitting join-session...');
+        socket.emit('join-session', sessionId);
+        console.log('✅ Join request sent');
+        
+        console.log('✅ ========== JOIN COMPLETE ==========');
     } catch (error) {
-        console.error('Failed to join session:', error);
+        console.error('❌ Failed to join session:', error);
         alert('Failed to join session: ' + error.message);
         updateJoinButtonState('disconnected');
     }
@@ -169,6 +176,10 @@ async function joinSession(sessionId) {
 
 // Setup WebRTC for host (sender)
 async function setupWebRTCSender(socket, sessionId, sourceId) {
+    console.log('🎥 ========== SETTING UP HOST (SENDER) ==========');
+    console.log('🎥 Session ID:', sessionId);
+    console.log('🎥 Source ID:', sourceId);
+    
     const peerConnection = new RTCPeerConnection({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -176,10 +187,24 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         ]
     });
 
+    // Log connection state changes
+    peerConnection.onconnectionstatechange = () => {
+        console.log('🔌 HOST Connection state:', peerConnection.connectionState);
+    };
+
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log('🧊 HOST ICE connection state:', peerConnection.iceConnectionState);
+    };
+
+    peerConnection.onsignalingstatechange = () => {
+        console.log('📡 HOST Signaling state:', peerConnection.signalingState);
+    };
+
     // Get screen stream using Electron's desktopCapturer
     // Note: sourceId must be from desktopCapturer.getSources()
     let stream;
     try {
+        console.log('🎥 Getting screen stream...');
         stream = await navigator.mediaDevices.getUserMedia({
             audio: false,
             video: {
@@ -195,62 +220,88 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 }
             }
         });
+        console.log('✅ Stream obtained:', stream.id);
+        console.log('✅ Video tracks:', stream.getVideoTracks().length);
     } catch (err) {
-        console.error('getUserMedia failed:', err);
+        console.error('❌ getUserMedia failed:', err);
         throw new Error('Failed to capture screen: ' + err.message + '. Make sure you selected a valid source.');
     }
 
     // Add tracks to peer connection
+    console.log('🎥 Adding tracks to peer connection...');
     stream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, stream);
-        console.log('Added track:', track.kind, track.label);
+        const sender = peerConnection.addTrack(track, stream);
+        console.log('✅ Added track:', track.kind, track.label, 'Sender:', sender);
     });
 
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+            console.log('🧊 HOST Sending ICE candidate');
             socket.emit('ice-candidate', {
                 sessionId,
                 candidate: event.candidate
             });
+        } else {
+            console.log('🧊 HOST ICE gathering complete');
         }
     };
 
     // Listen for answer from guest
+    console.log('👂 HOST Setting up answer listener...');
     socket.once('answer', async (data) => {
+        console.log('📨 HOST Received answer from guest');
+        console.log('📨 Signaling state:', peerConnection.signalingState);
+        
         if (peerConnection.signalingState === 'have-local-offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            console.log('✅ Remote description set');
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                console.log('✅ HOST Remote description set');
+            } catch (error) {
+                console.error('❌ HOST Error setting remote description:', error);
+            }
         } else {
-            console.warn('Ignoring answer in wrong state:', peerConnection.signalingState);
+            console.warn('⚠️ HOST Ignoring answer in wrong state:', peerConnection.signalingState);
         }
     });
 
     // Listen for ICE candidates from guest
     socket.on('ice-candidate', async (data) => {
         if (data.candidate) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            console.log('🧊 HOST Received ICE candidate from guest');
+            try {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                console.log('✅ HOST ICE candidate added');
+            } catch (error) {
+                console.error('❌ HOST Error adding ICE candidate:', error);
+            }
         }
     });
 
     // Create and send offer
+    console.log('📤 HOST Creating offer...');
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
+    console.log('✅ HOST Local description set');
 
+    console.log('📤 HOST Sending offer to session:', sessionId);
     socket.emit('offer', {
         sessionId,
         offer
     });
+    console.log('✅ HOST Offer sent');
 
     window.superdeskState.webrtc = { peerConnection, stream };
     window.superdeskState.sharingActive = true;
 
-    console.log('✅ Screen sharing started');
+    console.log('✅ ========== HOST SETUP COMPLETE ==========');
     return peerConnection;
 }
 
 // Setup WebRTC for guest (receiver)
 async function setupWebRTCReceiver(socket, sessionId) {
+    console.log('🔧 Setting up WebRTC receiver for session:', sessionId);
+    
     const peerConnection = new RTCPeerConnection({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -258,28 +309,66 @@ async function setupWebRTCReceiver(socket, sessionId) {
         ]
     });
 
+    // Log connection state changes
+    peerConnection.onconnectionstatechange = () => {
+        console.log('🔌 Connection state:', peerConnection.connectionState);
+        updateDebugStatus('connection', peerConnection.connectionState);
+    };
+
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log('🧊 ICE connection state:', peerConnection.iceConnectionState);
+        updateDebugStatus('ice', peerConnection.iceConnectionState);
+    };
+
+    peerConnection.onsignalingstatechange = () => {
+        console.log('📡 Signaling state:', peerConnection.signalingState);
+        updateDebugStatus('signaling', peerConnection.signalingState);
+    };
+
     // Handle incoming stream
     peerConnection.ontrack = (event) => {
-        console.log('📺 Received remote stream');
+        console.log('📺 ========== ONTRACK EVENT FIRED ==========');
+        console.log('📺 Stream:', event.streams[0]);
+        console.log('📺 Track:', event.track);
+        updateDebugStatus('stream', 'received');
+        
         const stream = event.streams[0];
         
         // Show video in join-view container
         const videoContainer = document.getElementById('join-video-container');
         const video = document.getElementById('join-remote-video');
         
+        console.log('📺 Looking for elements...');
+        console.log('   - videoContainer:', videoContainer ? 'FOUND' : 'NOT FOUND');
+        console.log('   - video:', video ? 'FOUND' : 'NOT FOUND');
+        
         if (videoContainer && video) {
+            console.log('📺 Setting srcObject and showing video...');
             video.srcObject = stream;
-            video.play().catch(e => console.log('Auto-play handled'));
+            video.play()
+                .then(() => console.log('✅ Video playing successfully'))
+                .catch(e => console.log('⚠️ Auto-play handled:', e.message));
             videoContainer.classList.remove('hidden');
-            console.log('✅ Video shown in join session area');
+            console.log('✅ Video container shown, hidden class removed');
+            console.log('📺 Video element state:', {
+                srcObject: video.srcObject ? 'SET' : 'NOT SET',
+                readyState: video.readyState,
+                paused: video.paused,
+                muted: video.muted,
+                width: video.videoWidth,
+                height: video.videoHeight
+            });
+            updateDebugStatus('video', 'displayed');
         } else {
-            console.error('❌ Join video elements not found');
+            console.error('❌ Join video elements not found!');
+            updateDebugStatus('video', 'elements-missing');
         }
     };
 
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+            console.log('🧊 Sending ICE candidate');
             socket.emit('ice-candidate', {
                 sessionId,
                 candidate: event.candidate
@@ -288,34 +377,74 @@ async function setupWebRTCReceiver(socket, sessionId) {
     };
 
     // Listen for offer from host
+    console.log('👂 Setting up offer listener...');
     socket.once('offer', async (data) => {
-        console.log('Received offer from host');
+        console.log('📨 ========== OFFER RECEIVED ==========');
+        console.log('📨 From:', data.from);
+        console.log('📨 Signaling state:', peerConnection.signalingState);
+        updateDebugStatus('offer', 'received');
+        
         if (peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-            
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            
-            socket.emit('answer', {
-                sessionId,
-                targetId: data.from,
-                answer
-            });
-            console.log('✅ Answer sent to host');
+            try {
+                console.log('📨 Setting remote description...');
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                console.log('✅ Remote description set');
+                
+                console.log('📨 Creating answer...');
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                console.log('✅ Local description set');
+                
+                socket.emit('answer', {
+                    sessionId,
+                    targetId: data.from,
+                    answer
+                });
+                console.log('📤 Answer sent to host');
+                updateDebugStatus('answer', 'sent');
+            } catch (error) {
+                console.error('❌ Error handling offer:', error);
+                updateDebugStatus('error', error.message);
+            }
         } else {
-            console.warn('Ignoring offer in wrong state:', peerConnection.signalingState);
+            console.warn('⚠️ Ignoring offer in wrong state:', peerConnection.signalingState);
+            updateDebugStatus('offer', 'wrong-state');
         }
     });
 
     // Listen for ICE candidates from host
     socket.on('ice-candidate', async (data) => {
         if (data.candidate) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            console.log('🧊 Received ICE candidate from host');
+            try {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                console.log('✅ ICE candidate added');
+            } catch (error) {
+                console.error('❌ Error adding ICE candidate:', error);
+            }
         }
     });
 
+    console.log('✅ WebRTC receiver setup complete');
+    updateDebugStatus('setup', 'complete');
+    
     window.superdeskState.webrtc = { peerConnection };
     return peerConnection;
+}
+
+// Debug status helper
+function updateDebugStatus(key, value) {
+    const debugDiv = document.getElementById('debug-status');
+    if (debugDiv) {
+        const timestamp = new Date().toLocaleTimeString();
+        const statusLine = `[${timestamp}] ${key}: ${value}\n`;
+        debugDiv.textContent = statusLine + debugDiv.textContent;
+        // Keep only last 20 lines
+        const lines = debugDiv.textContent.split('\n');
+        if (lines.length > 20) {
+            debugDiv.textContent = lines.slice(0, 20).join('\n');
+        }
+    }
 }
 
 // Display remote stream - now handled by HTML viewer
