@@ -32,9 +32,15 @@ if (-not $exe) {
 
 $dest = Join-Path -Path $env:USERPROFILE -ChildPath "Downloads\$OutName"
 
+# Create a timestamped installer filename so we can keep unique copies
+$timestamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
+$baseName = [System.IO.Path]::GetFileNameWithoutExtension($OutName)
+$ext = [System.IO.Path]::GetExtension($OutName)
+$timestampedName = "${baseName}-$timestamp$ext"
+$timestampedDest = Join-Path -Path $env:USERPROFILE -ChildPath "Downloads\$timestampedName"
+
 if (Test-Path $dest) {
     if ($KeepBackup) {
-        $timestamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
         $backup = "$dest.$timestamp.bak"
         Write-Host "Backing up existing installer to $backup"
         Copy-Item -Path $dest -Destination $backup -Force
@@ -46,6 +52,8 @@ if (Test-Path $dest) {
 
 Write-Host "Copying $($exe.FullName) -> $dest"
 Copy-Item -Path $exe.FullName -Destination $dest -Force
+Write-Host "Also copying a timestamped copy: $($exe.FullName) -> $timestampedDest"
+Copy-Item -Path $exe.FullName -Destination $timestampedDest -Force
 
 Write-Host "Installer copied to Downloads: $dest"
 
