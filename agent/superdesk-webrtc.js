@@ -209,6 +209,9 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            // Multiple TURN servers for reliability
             {
                 urls: 'turn:openrelay.metered.ca:80',
                 username: 'openrelayproject',
@@ -223,17 +226,40 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
+            },
+            // Backup TURN servers
+            {
+                urls: 'turn:relay.metered.ca:80',
+                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
+                credential: 'xXPW2z3Z9KmY/HQk'
+            },
+            {
+                urls: 'turn:relay.metered.ca:443',
+                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
+                credential: 'xXPW2z3Z9KmY/HQk'
+            },
+            {
+                urls: 'turn:relay.metered.ca:443?transport=tcp',
+                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
+                credential: 'xXPW2z3Z9KmY/HQk'
             }
         ],
-        iceCandidatePoolSize: 10
+        iceCandidatePoolSize: 10,
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require'
     });
 
-    // Log connection state changes
+    // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
         console.log('🔌 HOST Connection state:', peerConnection.connectionState);
         if (peerConnection.connectionState === 'failed') {
-            console.error('❌ WebRTC connection FAILED - Check firewall/NAT settings');
-            alert('Connection failed! Both devices need internet access. Try restarting the session.');
+            console.error('❌ WebRTC connection FAILED');
+            console.error('ICE state:', peerConnection.iceConnectionState);
+            console.error('Signaling state:', peerConnection.signalingState);
+            
+            // Try ICE restart
+            console.log('🔄 Attempting ICE restart...');
+            peerConnection.restartIce();
         }
     };
 
@@ -282,7 +308,9 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            console.log('🧊 HOST Sending ICE candidate');
+            console.log('🧊 HOST Sending ICE candidate:', event.candidate.type, event.candidate.protocol);
+            console.log('   Address:', event.candidate.address || 'N/A');
+            console.log('   Port:', event.candidate.port || 'N/A');
             socket.emit('ice-candidate', {
                 sessionId,
                 candidate: event.candidate
@@ -356,6 +384,9 @@ async function setupWebRTCReceiver(socket, sessionId) {
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            // Multiple TURN servers for reliability
             {
                 urls: 'turn:openrelay.metered.ca:80',
                 username: 'openrelayproject',
@@ -370,19 +401,43 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
+            },
+            // Backup TURN servers
+            {
+                urls: 'turn:relay.metered.ca:80',
+                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
+                credential: 'xXPW2z3Z9KmY/HQk'
+            },
+            {
+                urls: 'turn:relay.metered.ca:443',
+                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
+                credential: 'xXPW2z3Z9KmY/HQk'
+            },
+            {
+                urls: 'turn:relay.metered.ca:443?transport=tcp',
+                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
+                credential: 'xXPW2z3Z9KmY/HQk'
             }
         ],
-        iceCandidatePoolSize: 10
+        iceCandidatePoolSize: 10,
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require'
     });
 
-    // Log connection state changes
+    // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
-        console.log('🔌 Connection state:', peerConnection.connectionState);
+        console.log('🔌 GUEST Connection state:', peerConnection.connectionState);
         updateDebugStatus('connection', peerConnection.connectionState);
         
         if (peerConnection.connectionState === 'failed') {
-            console.error('❌ WebRTC connection FAILED - Check firewall/NAT settings');
-            updateDebugStatus('error', 'Connection failed - check internet/firewall');
+            console.error('❌ GUEST WebRTC connection FAILED');
+            console.error('ICE state:', peerConnection.iceConnectionState);
+            console.error('Signaling state:', peerConnection.signalingState);
+            updateDebugStatus('error', 'Connection failed - trying ICE restart');
+            
+            // Try ICE restart
+            console.log('🔄 GUEST Attempting ICE restart...');
+            peerConnection.restartIce();
         }
         
         // Update health indicator
@@ -474,7 +529,10 @@ async function setupWebRTCReceiver(socket, sessionId) {
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            console.log('🧊 Sending ICE candidate');
+            console.log('🧊 GUEST Sending ICE candidate:', event.candidate.type, event.candidate.protocol);
+            console.log('   Address:', event.candidate.address || 'N/A');
+            console.log('   Port:', event.candidate.port || 'N/A');
+            updateDebugStatus('ice-candidate', event.candidate.type);
             socket.emit('ice-candidate', {
                 sessionId,
                 candidate: event.candidate
