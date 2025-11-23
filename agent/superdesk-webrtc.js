@@ -1221,6 +1221,12 @@ window.enableRemoteControl = enableRemoteControl;
 window.disableRemoteControl = disableRemoteControl;
 window.endSession = endSession;
 
+// Export WebRTC setup functions for guest to use
+window.superdeskWebRTC = {
+    setupWebRTCSender: setupWebRTCSender,
+    setupWebRTCReceiver: setupWebRTCReceiver
+};
+
 // Initialize on load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

@@ -1159,7 +1159,8 @@
 
         // Join Session Implementation
         window.joinSession = async function(sessionId) {
-            console.log('Joining session:', sessionId);
+            console.log('🎯 ========== JOINING SESSION AS GUEST ==========');
+            console.log('🎯 Session ID:', sessionId);
             
             try {
                 // Initialize socket if not already connected
@@ -1168,14 +1169,15 @@
                         ? 'http://localhost:3001'
                         : 'https://superdesk-7m7f.onrender.com';
                     
+                    console.log('🔌 Connecting to server:', serverUrl);
                     window.socket = io(serverUrl);
                     
                     window.socket.on('connect', () => {
-                        console.log('Connected to signaling server');
+                        console.log('✅ Connected to signaling server');
                     });
 
                     window.socket.on('connect_error', (error) => {
-                        console.error('Connection error:', error);
+                        console.error('❌ Connection error:', error);
                         alert('Failed to connect to server. Please check your connection.');
                     });
                 }
@@ -1201,111 +1203,37 @@
                     }
                 });
 
+                console.log('📤 Emitting join-session event...');
                 // Join the session
                 window.socket.emit('join-session', sessionId);
 
                 // Handle session joined confirmation
-                window.socket.once('session-joined', () => {
-                    console.log('Successfully joined session:', sessionId);
+                window.socket.once('session-joined', async () => {
+                    console.log('✅ Successfully joined session:', sessionId);
+                    
+                    // Show join view
+                    const hostView = document.getElementById('host-view');
+                    const joinView = document.getElementById('join-view');
+                    if (hostView) hostView.style.display = 'none';
+                    if (joinView) joinView.style.display = 'block';
+                    
                     alert(`Connected to session ${sessionId}. Waiting for screen sharing to start...`);
+                    
+                    // Set up WebRTC receiver using the proper function from superdesk-webrtc.js
+                    console.log('🎥 Setting up WebRTC receiver...');
+                    if (typeof window.superdeskWebRTC !== 'undefined' && window.superdeskWebRTC.setupWebRTCReceiver) {
+                        await window.superdeskWebRTC.setupWebRTCReceiver(window.socket, sessionId);
+                        console.log('✅ WebRTC receiver setup complete');
+                    } else {
+                        console.error('❌ superdeskWebRTC.setupWebRTCReceiver not found!');
+                        alert('Error: WebRTC receiver setup failed. Please reload the page.');
+                    }
                 });
 
                 // Handle session not found
                 window.socket.once('session-error', (error) => {
-                    console.error('Session error:', error);
+                    console.error('❌ Session error:', error);
                     alert(`Error: ${error}. Please check the session ID and try again.`);
-                });
-
-                // Set up WebRTC peer connection to receive remote stream
-                const peerConnection = new RTCPeerConnection({
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ]
-                });
-
-                // Handle incoming remote stream
-                peerConnection.ontrack = (event) => {
-                    console.log('Received remote track:', event.track.kind);
-                    
-                    // Create or get video element to display remote screen
-                    let remoteVideo = document.getElementById('remote-video');
-                    if (!remoteVideo) {
-                        remoteVideo = document.createElement('video');
-                        remoteVideo.id = 'remote-video';
-                        remoteVideo.autoplay = true;
-                        remoteVideo.style.cssText = `
-                            position: fixed;
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                            height: 100%;
-                            object-fit: contain;
-                            background: #000;
-                            z-index: 9999;
-                        `;
-                        document.body.appendChild(remoteVideo);
-
-                        // Add close button
-                        const closeBtn = document.createElement('button');
-                        closeBtn.textContent = '✕ Close Remote View';
-                        closeBtn.style.cssText = `
-                            position: fixed;
-                            top: 20px;
-                            right: 20px;
-                            z-index: 10000;
-                            padding: 12px 24px;
-                            background: #dc2626;
-                            color: white;
-                            border: none;
-                            border-radius: 8px;
-                            cursor: pointer;
-                            font-weight: 600;
-                        `;
-                        closeBtn.onclick = () => {
-                            remoteVideo.remove();
-                            closeBtn.remove();
-                            peerConnection.close();
-                            window.socket.disconnect();
-                        };
-                        document.body.appendChild(closeBtn);
-                    }
-
-                    if (!remoteVideo.srcObject) {
-                        remoteVideo.srcObject = event.streams[0];
-                    }
-                };
-
-                // Handle ICE candidates
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        window.socket.emit('ice-candidate', {
-                            sessionId,
-                            candidate: event.candidate
-                        });
-                    }
-                };
-
-                // Listen for offer from host
-                window.socket.on('offer', async (data) => {
-                    console.log('Received offer from host');
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-                    
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    
-                    window.socket.emit('answer', {
-                        sessionId,
-                        targetId: data.from,
-                        answer
-                    });
-                });
-
-                // Listen for ICE candidates from host
-                window.socket.on('ice-candidate', async (data) => {
-                    if (data.candidate) {
-                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-                    }
                 });
 
             } catch (error) {
