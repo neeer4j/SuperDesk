@@ -976,14 +976,29 @@
             });
 
             // Join session button
-            document.getElementById('connect-session-btn').addEventListener('click', () => {
+            document.getElementById('connect-session-btn').addEventListener('click', async () => {
                 const sessionId = document.getElementById('join-session-input').value.trim().toUpperCase();
                 if (!sessionId) {
                     alert('Please enter a session ID');
                     return;
                 }
-                // Join the session
-                window.joinSession(sessionId);
+                
+                // Show that we're switching to guest mode
+                console.log('🎯 Switching to GUEST mode - joining session:', sessionId);
+                const btn = document.getElementById('connect-session-btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Joining...';
+                btn.disabled = true;
+                
+                try {
+                    // Join the session as GUEST
+                    await window.joinSession(sessionId);
+                } catch (error) {
+                    console.error('❌ Join failed:', error);
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    alert('Failed to join session. Please check the session ID and try again.');
+                }
             });
 
             // Logout button (back to login)

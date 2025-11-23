@@ -1229,11 +1229,13 @@ window.superdeskWebRTC = {
 };
 
 // Initialize on load
-// NOTE: Do NOT auto-create session - let user choose to host or join
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('✅ SuperDesk initialized - Ready to host or join');
+        console.log('✅ SuperDesk initialized - Creating session for hosting');
+        // Auto-create session on load so session ID is always available
+        createSession();
     });
 } else {
-    console.log('✅ SuperDesk initialized - Ready to host or join');
+    console.log('✅ SuperDesk initialized - Creating session for hosting');
+    createSession();
 }
