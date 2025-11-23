@@ -204,6 +204,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     console.log('🎥 Session ID:', sessionId);
     console.log('🎥 Source ID:', sourceId);
     
+    console.log('🔧 Configuring ICE servers with multiple TURN options...');
     const peerConnection = new RTCPeerConnection({
         iceServers: [
             // Google STUN servers
@@ -212,33 +213,30 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
             { urls: 'stun:stun4.l.google.com:19302' },
-            // Public TURN servers (OpenRelay by Metered)
+            // OpenRelay TURN servers (Free public TURN)
             {
-                urls: 'turn:openrelay.metered.ca:80',
+                urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:80?transport=tcp', 'turn:openrelay.metered.ca:80?transport=udp'],
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
             },
             {
-                urls: 'turn:openrelay.metered.ca:443',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            {
-                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                urls: ['turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
             },
             // Numb TURN servers
             {
-                urls: 'turn:numb.viagenie.ca',
+                urls: ['turn:numb.viagenie.ca', 'turn:numb.viagenie.ca:3478', 'turns:numb.viagenie.ca:5349'],
                 username: 'webrtc@live.com',
                 credential: 'muazkh'
             },
-            // StunProtocol TURN servers
+            // Twilio free STUN
+            { urls: 'stun:global.stun.twilio.com:3478' },
+            // Additional free TURN
             {
-                urls: 'turn:turn.stunprotocol.org:3478',
-                username: 'test',
-                credential: 'test'
+                urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
+                username: 'webrtc',
+                credential: 'webrtc'
             }
         ],
         iceTransportPolicy: 'all',
@@ -246,6 +244,8 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
     });
+    
+    console.log('✅ HOST ICE configuration complete');
 
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
@@ -352,17 +352,39 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     }, 1000);
 
     // Handle ICE candidates
+    let hostCandidates = { host: 0, srflx: 0, relay: 0 };
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            console.log('🧊 HOST Sending ICE candidate:', event.candidate.type, event.candidate.protocol);
+            const type = event.candidate.type;
+            hostCandidates[type] = (hostCandidates[type] || 0) + 1;
+            
+            console.log('🧊 HOST ICE candidate #' + (hostCandidates.host + hostCandidates.srflx + hostCandidates.relay) + ':', type, event.candidate.protocol);
             console.log('   Address:', event.candidate.address || 'N/A');
             console.log('   Port:', event.candidate.port || 'N/A');
+            
+            if (type === 'relay') {
+                console.log('✅ TURN RELAY WORKING! Got relay candidate from:', event.candidate.relatedAddress);
+            }
+            
             socket.emit('ice-candidate', {
                 sessionId,
                 candidate: event.candidate
             });
         } else {
             console.log('🧊 HOST ICE gathering complete');
+            console.log('📊 HOST ICE Candidate Summary:');
+            console.log('   - host (local):', hostCandidates.host);
+            console.log('   - srflx (STUN):', hostCandidates.srflx);
+            console.log('   - relay (TURN):', hostCandidates.relay);
+            
+            if (hostCandidates.relay === 0) {
+                console.error('❌ NO TURN RELAY CANDIDATES! TURN servers not working!');
+                console.error('❌ This will cause connection failures on different networks!');
+                console.error('💡 Possible causes:');
+                console.error('   1. TURN servers unreachable or down');
+                console.error('   2. Invalid TURN credentials');
+                console.error('   3. Firewall blocking TURN ports');
+            }
         }
     };
 
@@ -439,6 +461,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
     console.log('🎥 ========== SETTING UP RECEIVER (GUEST) ==========');
     console.log('🎥 Session ID:', sessionId);
     
+    console.log('🔧 Configuring ICE servers with multiple TURN options...');
     const peerConnection = new RTCPeerConnection({
         iceServers: [
             // Google STUN servers
@@ -447,33 +470,30 @@ async function setupWebRTCReceiver(socket, sessionId) {
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
             { urls: 'stun:stun4.l.google.com:19302' },
-            // Public TURN servers (OpenRelay by Metered)
+            // OpenRelay TURN servers (Free public TURN)
             {
-                urls: 'turn:openrelay.metered.ca:80',
+                urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:80?transport=tcp', 'turn:openrelay.metered.ca:80?transport=udp'],
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
             },
             {
-                urls: 'turn:openrelay.metered.ca:443',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            {
-                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                urls: ['turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
             },
             // Numb TURN servers
             {
-                urls: 'turn:numb.viagenie.ca',
+                urls: ['turn:numb.viagenie.ca', 'turn:numb.viagenie.ca:3478', 'turns:numb.viagenie.ca:5349'],
                 username: 'webrtc@live.com',
                 credential: 'muazkh'
             },
-            // StunProtocol TURN servers
+            // Twilio free STUN
+            { urls: 'stun:global.stun.twilio.com:3478' },
+            // Additional free TURN
             {
-                urls: 'turn:turn.stunprotocol.org:3478',
-                username: 'test',
-                credential: 'test'
+                urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
+                username: 'webrtc',
+                credential: 'webrtc'
             }
         ],
         iceTransportPolicy: 'all',
@@ -481,6 +501,8 @@ async function setupWebRTCReceiver(socket, sessionId) {
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
     });
+    
+    console.log('✅ GUEST ICE configuration complete');
 
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
@@ -629,16 +651,37 @@ async function setupWebRTCReceiver(socket, sessionId) {
     };
 
     // Handle ICE candidates
+    let guestCandidates = { host: 0, srflx: 0, relay: 0 };
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            console.log('🧊 GUEST Sending ICE candidate:', event.candidate.type, event.candidate.protocol);
+            const type = event.candidate.type;
+            guestCandidates[type] = (guestCandidates[type] || 0) + 1;
+            
+            console.log('🧊 GUEST ICE candidate #' + (guestCandidates.host + guestCandidates.srflx + guestCandidates.relay) + ':', type, event.candidate.protocol);
             console.log('   Address:', event.candidate.address || 'N/A');
             console.log('   Port:', event.candidate.port || 'N/A');
+            
+            if (type === 'relay') {
+                console.log('✅ TURN RELAY WORKING! Got relay candidate from:', event.candidate.relatedAddress);
+            }
+            
             updateDebugStatus('ice-candidate', event.candidate.type);
             socket.emit('ice-candidate', {
                 sessionId,
                 candidate: event.candidate
             });
+        } else {
+            console.log('🧊 GUEST ICE gathering complete');
+            console.log('📊 GUEST ICE Candidate Summary:');
+            console.log('   - host (local):', guestCandidates.host);
+            console.log('   - srflx (STUN):', guestCandidates.srflx);
+            console.log('   - relay (TURN):', guestCandidates.relay);
+            
+            if (guestCandidates.relay === 0) {
+                console.error('❌ NO TURN RELAY CANDIDATES! TURN servers not working!');
+                console.error('❌ Connection will fail if on different networks!');
+                console.error('💡 Try: Check if TURN servers are reachable from your network');
+            }
         }
     };
 
