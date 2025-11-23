@@ -206,25 +206,13 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     
     const peerConnection = new RTCPeerConnection({
         iceServers: [
+            // Google STUN servers
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            // Twilio TURN servers (highly reliable)
-            {
-                urls: 'turn:global.turn.twilio.com:3478?transport=udp',
-                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
-                credential: 'tE2DajzSJwnsSbc123'
-            },
-            {
-                urls: 'turn:global.turn.twilio.com:3478?transport=tcp',
-                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
-                credential: 'tE2DajzSJwnsSbc123'
-            },
-            {
-                urls: 'turn:global.turn.twilio.com:443?transport=tcp',
-                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
-                credential: 'tE2DajzSJwnsSbc123'
-            },
-            // Metered TURN servers
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            // Public TURN servers (OpenRelay by Metered)
             {
                 urls: 'turn:openrelay.metered.ca:80',
                 username: 'openrelayproject',
@@ -239,6 +227,18 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
+            },
+            // Numb TURN servers
+            {
+                urls: 'turn:numb.viagenie.ca',
+                username: 'webrtc@live.com',
+                credential: 'muazkh'
+            },
+            // StunProtocol TURN servers
+            {
+                urls: 'turn:turn.stunprotocol.org:3478',
+                username: 'test',
+                credential: 'test'
             }
         ],
         iceTransportPolicy: 'all',
@@ -436,29 +436,18 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
 // Setup WebRTC for guest (receiver)
 async function setupWebRTCReceiver(socket, sessionId) {
-    console.log('🔧 Setting up WebRTC receiver for session:', sessionId);
+    console.log('🎥 ========== SETTING UP RECEIVER (GUEST) ==========');
+    console.log('🎥 Session ID:', sessionId);
     
     const peerConnection = new RTCPeerConnection({
         iceServers: [
+            // Google STUN servers
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            // Twilio TURN servers (highly reliable)
-            {
-                urls: 'turn:global.turn.twilio.com:3478?transport=udp',
-                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
-                credential: 'tE2DajzSJwnsSbc123'
-            },
-            {
-                urls: 'turn:global.turn.twilio.com:3478?transport=tcp',
-                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
-                credential: 'tE2DajzSJwnsSbc123'
-            },
-            {
-                urls: 'turn:global.turn.twilio.com:443?transport=tcp',
-                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
-                credential: 'tE2DajzSJwnsSbc123'
-            },
-            // Metered TURN servers
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            // Public TURN servers (OpenRelay by Metered)
             {
                 urls: 'turn:openrelay.metered.ca:80',
                 username: 'openrelayproject',
@@ -473,6 +462,18 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
+            },
+            // Numb TURN servers
+            {
+                urls: 'turn:numb.viagenie.ca',
+                username: 'webrtc@live.com',
+                credential: 'muazkh'
+            },
+            // StunProtocol TURN servers
+            {
+                urls: 'turn:turn.stunprotocol.org:3478',
+                username: 'test',
+                credential: 'test'
             }
         ],
         iceTransportPolicy: 'all',
@@ -1228,10 +1229,11 @@ window.superdeskWebRTC = {
 };
 
 // Initialize on load
+// NOTE: Do NOT auto-create session - let user choose to host or join
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        createSession(); // Auto-create session for host
+        console.log('✅ SuperDesk initialized - Ready to host or join');
     });
 } else {
-    createSession();
+    console.log('✅ SuperDesk initialized - Ready to host or join');
 }
