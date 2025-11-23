@@ -208,10 +208,23 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            // Multiple TURN servers for reliability
+            // Twilio TURN servers (highly reliable)
+            {
+                urls: 'turn:global.turn.twilio.com:3478?transport=udp',
+                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
+                credential: 'tE2DajzSJwnsSbc123'
+            },
+            {
+                urls: 'turn:global.turn.twilio.com:3478?transport=tcp',
+                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
+                credential: 'tE2DajzSJwnsSbc123'
+            },
+            {
+                urls: 'turn:global.turn.twilio.com:443?transport=tcp',
+                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
+                credential: 'tE2DajzSJwnsSbc123'
+            },
+            // Metered TURN servers
             {
                 urls: 'turn:openrelay.metered.ca:80',
                 username: 'openrelayproject',
@@ -226,24 +239,9 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
-            },
-            // Backup TURN servers
-            {
-                urls: 'turn:relay.metered.ca:80',
-                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
-                credential: 'xXPW2z3Z9KmY/HQk'
-            },
-            {
-                urls: 'turn:relay.metered.ca:443',
-                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
-                credential: 'xXPW2z3Z9KmY/HQk'
-            },
-            {
-                urls: 'turn:relay.metered.ca:443?transport=tcp',
-                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
-                credential: 'xXPW2z3Z9KmY/HQk'
             }
         ],
+        iceTransportPolicy: 'all',
         iceCandidatePoolSize: 10,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
@@ -265,6 +263,22 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
     peerConnection.oniceconnectionstatechange = () => {
         console.log('🧊 HOST ICE connection state:', peerConnection.iceConnectionState);
+        
+        if (peerConnection.iceConnectionState === 'checking') {
+            console.log('🔄 HOST Checking ICE candidates...');
+        } else if (peerConnection.iceConnectionState === 'connected') {
+            console.log('✅ HOST ICE CONNECTED! Connection established.');
+        } else if (peerConnection.iceConnectionState === 'completed') {
+            console.log('✅ HOST ICE COMPLETED! Connection finalized.');
+        } else if (peerConnection.iceConnectionState === 'failed') {
+            console.error('❌ HOST ICE FAILED - No valid candidate pair found');
+            console.error('💡 Possible issues:');
+            console.error('   1. Both devices on same machine (use different devices)');
+            console.error('   2. Firewall blocking UDP/TCP ports');
+            console.error('   3. TURN servers not reachable');
+        } else if (peerConnection.iceConnectionState === 'disconnected') {
+            console.warn('⚠️ HOST ICE DISCONNECTED - Connection lost');
+        }
     };
 
     peerConnection.onsignalingstatechange = () => {
@@ -383,10 +397,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            // Multiple TURN servers for reliability
+            // Twilio TURN servers (highly reliable)
+            {
+                urls: 'turn:global.turn.twilio.com:3478?transport=udp',
+                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
+                credential: 'tE2DajzSJwnsSbc123'
+            },
+            {
+                urls: 'turn:global.turn.twilio.com:3478?transport=tcp',
+                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
+                credential: 'tE2DajzSJwnsSbc123'
+            },
+            {
+                urls: 'turn:global.turn.twilio.com:443?transport=tcp',
+                username: 'dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269',
+                credential: 'tE2DajzSJwnsSbc123'
+            },
+            // Metered TURN servers
             {
                 urls: 'turn:openrelay.metered.ca:80',
                 username: 'openrelayproject',
@@ -401,24 +428,9 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                 username: 'openrelayproject',
                 credential: 'openrelayproject'
-            },
-            // Backup TURN servers
-            {
-                urls: 'turn:relay.metered.ca:80',
-                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
-                credential: 'xXPW2z3Z9KmY/HQk'
-            },
-            {
-                urls: 'turn:relay.metered.ca:443',
-                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
-                credential: 'xXPW2z3Z9KmY/HQk'
-            },
-            {
-                urls: 'turn:relay.metered.ca:443?transport=tcp',
-                username: 'e4a3f7f36f4b9a8c0d2e1f3a',
-                credential: 'xXPW2z3Z9KmY/HQk'
             }
         ],
+        iceTransportPolicy: 'all',
         iceCandidatePoolSize: 10,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
@@ -447,8 +459,39 @@ async function setupWebRTCReceiver(socket, sessionId) {
     };
 
     peerConnection.oniceconnectionstatechange = () => {
-        console.log('🧊 ICE connection state:', peerConnection.iceConnectionState);
+        console.log('🧊 GUEST ICE connection state:', peerConnection.iceConnectionState);
         updateDebugStatus('ice', peerConnection.iceConnectionState);
+        
+        if (peerConnection.iceConnectionState === 'checking') {
+            console.log('🔄 GUEST Checking ICE candidates...');
+            updateDebugStatus('status', 'Negotiating connection');
+        } else if (peerConnection.iceConnectionState === 'connected') {
+            console.log('✅ GUEST ICE CONNECTED! Video should appear now.');
+            updateDebugStatus('status', 'Connected - waiting for video');
+            
+            // Log selected candidate pair
+            peerConnection.getStats().then(stats => {
+                stats.forEach(report => {
+                    if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                        console.log('📊 Selected candidate pair:', report);
+                        console.log('   Local:', report.localCandidateId);
+                        console.log('   Remote:', report.remoteCandidateId);
+                    }
+                });
+            });
+        } else if (peerConnection.iceConnectionState === 'completed') {
+            console.log('✅ GUEST ICE COMPLETED! Connection finalized.');
+        } else if (peerConnection.iceConnectionState === 'failed') {
+            console.error('❌ GUEST ICE FAILED - No valid candidate pair found');
+            updateDebugStatus('error', 'ICE failed - check firewall');
+            console.error('💡 Possible issues:');
+            console.error('   1. Testing on SAME MACHINE? Use 2 different devices!');
+            console.error('   2. Both on same WiFi? Try different networks!');
+            console.error('   3. Firewall blocking all ports?');
+        } else if (peerConnection.iceConnectionState === 'disconnected') {
+            console.warn('⚠️ GUEST ICE DISCONNECTED - Connection lost');
+            updateDebugStatus('warning', 'Connection lost');
+        }
         
         // Update health indicator for ICE states
         if (typeof updateHealthIndicator === 'function') {
