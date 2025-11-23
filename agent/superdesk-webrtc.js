@@ -313,11 +313,43 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     }
 
     // Add tracks to peer connection
-    console.log('🎥 Adding tracks to peer connection...');
-    stream.getTracks().forEach(track => {
+    console.log('🎥 ========== ADDING TRACKS TO PEER CONNECTION ==========');
+    const tracks = stream.getTracks();
+    console.log('🎥 Total tracks to add:', tracks.length);
+    
+    tracks.forEach((track, index) => {
+        console.log(`🎥 Track #${index + 1}:`, {
+            kind: track.kind,
+            label: track.label,
+            id: track.id,
+            enabled: track.enabled,
+            muted: track.muted,
+            readyState: track.readyState
+        });
+        
         const sender = peerConnection.addTrack(track, stream);
-        console.log('✅ Added track:', track.kind, track.label, 'Sender:', sender);
+        console.log('✅ Track added successfully, Sender:', {
+            track: sender.track ? 'SET' : 'NOT SET',
+            transport: sender.transport ? 'SET' : 'NOT SET'
+        });
     });
+    
+    console.log('🎥 All tracks added. Total senders:', peerConnection.getSenders().length);
+    
+    // Verify tracks were actually added
+    setTimeout(() => {
+        const senders = peerConnection.getSenders();
+        console.log('🔍 HOST: Verifying senders after 1 second...');
+        console.log('🔍 Total senders:', senders.length);
+        senders.forEach((sender, i) => {
+            console.log(`🔍 Sender #${i + 1}:`, {
+                hasTrack: !!sender.track,
+                trackKind: sender.track?.kind,
+                trackEnabled: sender.track?.enabled,
+                trackReadyState: sender.track?.readyState
+            });
+        });
+    }, 1000);
 
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
@@ -337,18 +369,25 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     // Listen for answer from guest
     console.log('👂 HOST Setting up answer listener...');
     socket.once('answer', async (data) => {
-        console.log('📨 HOST Received answer from guest');
-        console.log('📨 Signaling state:', peerConnection.signalingState);
+        console.log('📨 ========== HOST RECEIVED ANSWER ==========');
+        console.log('📨 Answer type:', data.answer?.type);
+        console.log('📨 Answer SDP length:', data.answer?.sdp?.length || 0);
+        console.log('📨 From guest:', data.from);
+        console.log('📨 Current signaling state:', peerConnection.signalingState);
         
         if (peerConnection.signalingState === 'have-local-offer') {
             try {
+                console.log('📨 Setting remote description with answer...');
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                console.log('✅ HOST Remote description set');
+                console.log('✅ HOST Remote description set successfully');
+                console.log('✅ New signaling state:', peerConnection.signalingState);
             } catch (error) {
                 console.error('❌ HOST Error setting remote description:', error);
+                console.error('❌ Error details:', error.message, error.name);
             }
         } else {
-            console.warn('⚠️ HOST Ignoring answer in wrong state:', peerConnection.signalingState);
+            console.warn('⚠️ HOST Ignoring answer - wrong state:', peerConnection.signalingState);
+            console.warn('⚠️ Expected: have-local-offer');
         }
     });
 
@@ -368,14 +407,20 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     // Create and send offer
     console.log('📤 HOST Creating offer...');
     const offer = await peerConnection.createOffer();
+    console.log('📤 Offer created, type:', offer.type);
+    console.log('📤 Offer SDP length:', offer.sdp?.length || 0);
+    
     await peerConnection.setLocalDescription(offer);
     console.log('✅ HOST Local description set');
+    console.log('✅ Signaling state after setLocalDescription:', peerConnection.signalingState);
 
-    console.log('📤 HOST Sending offer to session:', sessionId);
-    socket.emit('offer', {
+    const offerPayload = {
         sessionId,
         offer
-    });
+    };
+    console.log('📤 HOST Sending offer payload:', { sessionId, offerType: offer.type });
+    socket.emit('offer', offerPayload);
+    console.log('📤 ✅ Offer emitted to session:', sessionId);
     console.log('✅ HOST Offer sent');
 
     window.superdeskState.webrtc = { peerConnection, stream };
@@ -509,10 +554,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
     };
 
     // Handle incoming stream
+    let tracksReceived = 0;
     peerConnection.ontrack = (event) => {
-        console.log('📺 ========== ONTRACK EVENT FIRED ==========');
-        console.log('📺 Stream:', event.streams[0]);
-        console.log('📺 Track:', event.track);
+        tracksReceived++;
+        console.log('📺 ========== ONTRACK EVENT FIRED #' + tracksReceived + ' ==========');
+        console.log('📺 Track kind:', event.track.kind);
+        console.log('📺 Track id:', event.track.id);
+        console.log('📺 Track label:', event.track.label);
+        console.log('📺 Track readyState:', event.track.readyState);
+        console.log('📺 Track enabled:', event.track.enabled);
+        console.log('📺 Track muted:', event.track.muted);
+        console.log('📺 Streams count:', event.streams.length);
+        if (event.streams.length > 0) {
+            console.log('📺 Stream ID:', event.streams[0].id);
+            console.log('📺 Stream active:', event.streams[0].active);
+            console.log('📺 Stream video tracks:', event.streams[0].getVideoTracks().length);
+            console.log('📺 Stream audio tracks:', event.streams[0].getAudioTracks().length);
+        }
         updateDebugStatus('stream', 'received');
         
         const stream = event.streams[0];
@@ -586,35 +644,62 @@ async function setupWebRTCReceiver(socket, sessionId) {
     // Listen for offer from host
     console.log('👂 Setting up offer listener...');
     socket.once('offer', async (data) => {
-        console.log('📨 ========== OFFER RECEIVED ==========');
-        console.log('📨 From:', data.from);
-        console.log('📨 Signaling state:', peerConnection.signalingState);
+        console.log('📨 ========== GUEST RECEIVED OFFER ==========');
+        console.log('📨 Offer type:', data.offer?.type);
+        console.log('📨 Offer SDP length:', data.offer?.sdp?.length || 0);
+        console.log('📨 From host:', data.from);
+        console.log('📨 Session ID:', data.sessionId);
+        console.log('📨 Current signaling state:', peerConnection.signalingState);
         updateDebugStatus('offer', 'received');
         
         if (peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer') {
             try {
-                console.log('📨 Setting remote description...');
+                console.log('📨 Setting remote description with offer...');
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-                console.log('✅ Remote description set');
+                console.log('✅ Remote description set successfully');
+                console.log('✅ New signaling state:', peerConnection.signalingState);
                 
                 console.log('📨 Creating answer...');
                 const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                console.log('✅ Local description set');
+                console.log('📨 Answer created, type:', answer.type);
+                console.log('📨 Answer SDP length:', answer.sdp?.length || 0);
                 
-                socket.emit('answer', {
+                await peerConnection.setLocalDescription(answer);
+                console.log('✅ Local description (answer) set');
+                console.log('✅ Signaling state after setLocalDescription:', peerConnection.signalingState);
+                
+                // Check what transceivers are expecting
+                console.log('🔍 GUEST: Checking expected tracks...');
+                const transceivers = peerConnection.getTransceivers();
+                console.log('🔍 Total transceivers:', transceivers.length);
+                transceivers.forEach((t, i) => {
+                    console.log(`🔍 Transceiver #${i + 1}:`, {
+                        direction: t.direction,
+                        currentDirection: t.currentDirection,
+                        mid: t.mid,
+                        hasReceiver: !!t.receiver,
+                        receiverTrack: t.receiver?.track ? t.receiver.track.kind : 'NO TRACK'
+                    });
+                });
+                
+                const answerPayload = {
                     sessionId,
                     targetId: data.from,
                     answer
-                });
-                console.log('📤 Answer sent to host');
+                };
+                console.log('📤 GUEST Sending answer to host:', data.from);
+                console.log('📤 Answer payload:', { sessionId, targetId: data.from, answerType: answer.type });
+                socket.emit('answer', answerPayload);
+                console.log('📤 ✅ Answer emitted');
                 updateDebugStatus('answer', 'sent');
             } catch (error) {
                 console.error('❌ Error handling offer:', error);
+                console.error('❌ Error details:', error.message, error.name, error.stack);
                 updateDebugStatus('error', error.message);
             }
         } else {
-            console.warn('⚠️ Ignoring offer in wrong state:', peerConnection.signalingState);
+            console.warn('⚠️ Ignoring offer - wrong state:', peerConnection.signalingState);
+            console.warn('⚠️ Expected: stable or have-remote-offer');
             updateDebugStatus('offer', 'wrong-state');
         }
     });
@@ -634,6 +719,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
 
     console.log('✅ WebRTC receiver setup complete');
     updateDebugStatus('setup', 'complete');
+    
+    // Log if NO tracks received after 10 seconds
+    setTimeout(() => {
+        if (tracksReceived === 0) {
+            console.error('❌ ========== NO TRACKS RECEIVED after 10 seconds! ==========');
+            console.error('❌ WebRTC connection completed BUT no media tracks received');
+            console.error('❌ Possible causes:');
+            console.error('   1. HOST not actually capturing/sharing screen');
+            console.error('   2. HOST screen capture permission denied');
+            console.error('   3. HOST addTrack() not called');
+            console.error('   4. Firewall blocking media (but allowing signaling)');
+            console.log('🔍 Current connection state:', peerConnection.connectionState);
+            console.log('🔍 Current ICE state:', peerConnection.iceConnectionState);
+            console.log('🔍 Current signaling state:', peerConnection.signalingState);
+            updateDebugStatus('error', 'no-tracks-received');
+        }
+    }, 10000);
     
     // Start connection health monitoring
     const healthMonitor = monitorConnectionHealth(peerConnection);
