@@ -961,9 +961,17 @@
 
             // Share buttons
             document.getElementById('start-share-btn').addEventListener('click', () => {
-                // This will trigger the existing share functionality
-                if (window.startScreenShare) {
-                    window.startScreenShare();
+                const btn = document.getElementById('start-share-btn');
+                if (window.superdeskState && window.superdeskState.sharingActive) {
+                    // Stop sharing
+                    if (window.stopScreenShare) {
+                        window.stopScreenShare();
+                    }
+                } else {
+                    // Start sharing
+                    if (window.startScreenShare) {
+                        window.startScreenShare();
+                    }
                 }
             });
 

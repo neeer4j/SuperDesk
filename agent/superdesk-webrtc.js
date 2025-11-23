@@ -207,13 +207,34 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     const peerConnection = new RTCPeerConnection({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            {
+                urls: 'turn:openrelay.metered.ca:80',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            },
+            {
+                urls: 'turn:openrelay.metered.ca:443',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            },
+            {
+                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            }
+        ],
+        iceCandidatePoolSize: 10
     });
 
     // Log connection state changes
     peerConnection.onconnectionstatechange = () => {
         console.log('🔌 HOST Connection state:', peerConnection.connectionState);
+        if (peerConnection.connectionState === 'failed') {
+            console.error('❌ WebRTC connection FAILED - Check firewall/NAT settings');
+            alert('Connection failed! Both devices need internet access. Try restarting the session.');
+        }
     };
 
     peerConnection.oniceconnectionstatechange = () => {
@@ -333,14 +354,36 @@ async function setupWebRTCReceiver(socket, sessionId) {
     const peerConnection = new RTCPeerConnection({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            {
+                urls: 'turn:openrelay.metered.ca:80',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            },
+            {
+                urls: 'turn:openrelay.metered.ca:443',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            },
+            {
+                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            }
+        ],
+        iceCandidatePoolSize: 10
     });
 
     // Log connection state changes
     peerConnection.onconnectionstatechange = () => {
         console.log('🔌 Connection state:', peerConnection.connectionState);
         updateDebugStatus('connection', peerConnection.connectionState);
+        
+        if (peerConnection.connectionState === 'failed') {
+            console.error('❌ WebRTC connection FAILED - Check firewall/NAT settings');
+            updateDebugStatus('error', 'Connection failed - check internet/firewall');
+        }
         
         // Update health indicator
         if (typeof updateHealthIndicator === 'function') {
@@ -845,10 +888,48 @@ function handleKeyUp(e) {
     });
 }
 
+// Stop screen sharing
+function stopScreenShare() {
+    console.log('🛑 Stopping screen share...');
+    
+    // Stop all tracks
+    if (window.superdeskState.webrtc && window.superdeskState.webrtc.stream) {
+        window.superdeskState.webrtc.stream.getTracks().forEach(track => {
+            track.stop();
+            console.log('Stopped track:', track.kind);
+        });
+    }
+    
+    // Close peer connection
+    if (window.superdeskState.webrtc && window.superdeskState.webrtc.peerConnection) {
+        window.superdeskState.webrtc.peerConnection.close();
+        console.log('Closed peer connection');
+    }
+    
+    // Reset state
+    window.superdeskState.sharingActive = false;
+    window.superdeskState.webrtc = null;
+    
+    // Update button
+    const shareBtn = document.getElementById('start-share-btn');
+    if (shareBtn) {
+        shareBtn.textContent = 'Start Screen Share';
+        shareBtn.style.background = '#613da9';
+    }
+    
+    console.log('✅ Screen sharing stopped');
+    showNotification('Sharing Stopped', 'Screen sharing has been stopped');
+}
+
 // End session
 function endSession() {
     if (window.superdeskState.socket) {
         window.superdeskState.socket.emit('end-session', window.superdeskState.sessionId);
+    }
+    
+    // Stop sharing if active
+    if (window.superdeskState.sharingActive) {
+        stopScreenShare();
     }
     
     // Cleanup
@@ -930,6 +1011,7 @@ function showNotification(title, message) {
 window.createSession = createSession;
 window.joinSession = joinSession;
 window.startScreenShare = startScreenShare;
+window.stopScreenShare = stopScreenShare;
 window.selectSourceAndConfirm = selectSourceAndConfirm;
 window.confirmSourceSelection = confirmSourceSelection;
 window.enableRemoteControl = enableRemoteControl;
