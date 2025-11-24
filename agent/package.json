@@ -21,6 +21,8 @@
   "build": {
     "appId": "com.superdesk.agent",
     "productName": "SuperDesk Agent",
+    "copyright": "(c) SuperDesk",
+    "publisherName": "SuperDesk",
     "directories": {
       "output": "dist"
     },
@@ -36,7 +38,8 @@
     "extraFiles": [],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "publisherName": "SuperDesk"
     },
     "nsis": {
       "oneClick": false,
