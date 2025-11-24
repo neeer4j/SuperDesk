@@ -12,6 +12,55 @@ window.superdeskState = {
     serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://superdesk-7m7f.onrender.com'
 };
 
+// Fetch TURN/STUN configuration from server
+async function fetchWebRTCConfig() {
+    try {
+        console.log('🔧 Fetching WebRTC config from server...');
+        const response = await fetch(`${window.superdeskState.serverUrl}/api/webrtc-config`);
+        
+        if (!response.ok) {
+            console.warn('⚠️ Failed to fetch WebRTC config from server, using fallback TURN servers');
+            return getFallbackIceServers();
+        }
+        
+        const config = await response.json();
+        console.log('✅ Received WebRTC config from server:', config);
+        
+        if (config.iceServers && config.iceServers.length > 0) {
+            console.log('🎯 Using Cloudflare TURN servers:', config.iceServers.length, 'servers');
+            return config.iceServers;
+        } else {
+            console.warn('⚠️ Server returned empty ICE servers, using fallback');
+            return getFallbackIceServers();
+        }
+    } catch (error) {
+        console.error('❌ Error fetching WebRTC config:', error);
+        console.log('🔄 Using fallback TURN servers');
+        return getFallbackIceServers();
+    }
+}
+
+// Fallback ICE servers if server config fails
+function getFallbackIceServers() {
+    return [
+        // Google STUN servers
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        // OpenRelay TURN servers (Free public TURN)
+        {
+            urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:80?transport=tcp'],
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        // Numb TURN servers
+        {
+            urls: ['turn:numb.viagenie.ca', 'turn:numb.viagenie.ca:3478'],
+            username: 'webrtc@live.com',
+            credential: 'muazkh'
+        }
+    ];
+}
+
 // Initialize Socket.IO connection
 async function initializeSocket() {
     if (window.superdeskState.socket && window.superdeskState.socket.connected) {
@@ -204,48 +253,19 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     console.log('🎥 Session ID:', sessionId);
     console.log('🎥 Source ID:', sourceId);
     
-    console.log('🔧 Configuring ICE servers with multiple TURN options...');
+    console.log('🔧 Fetching ICE servers from backend...');
+    const iceServers = await fetchWebRTCConfig();
+    
+    console.log('🔧 Configuring RTCPeerConnection with', iceServers.length, 'ICE servers');
     const peerConnection = new RTCPeerConnection({
-        iceServers: [
-            // Google STUN servers
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            // OpenRelay TURN servers (Free public TURN)
-            {
-                urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:80?transport=tcp', 'turn:openrelay.metered.ca:80?transport=udp'],
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            {
-                urls: ['turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            // Numb TURN servers
-            {
-                urls: ['turn:numb.viagenie.ca', 'turn:numb.viagenie.ca:3478', 'turns:numb.viagenie.ca:5349'],
-                username: 'webrtc@live.com',
-                credential: 'muazkh'
-            },
-            // Twilio free STUN
-            { urls: 'stun:global.stun.twilio.com:3478' },
-            // Additional free TURN
-            {
-                urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-                username: 'webrtc',
-                credential: 'webrtc'
-            }
-        ],
+        iceServers: iceServers,
         iceTransportPolicy: 'all',
         iceCandidatePoolSize: 10,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
     });
     
-    console.log('✅ HOST ICE configuration complete');
+    console.log('✅ HOST ICE configuration complete with Cloudflare TURN servers');
 
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
@@ -461,48 +481,19 @@ async function setupWebRTCReceiver(socket, sessionId) {
     console.log('🎥 ========== SETTING UP RECEIVER (GUEST) ==========');
     console.log('🎥 Session ID:', sessionId);
     
-    console.log('🔧 Configuring ICE servers with multiple TURN options...');
+    console.log('🔧 Fetching ICE servers from backend...');
+    const iceServers = await fetchWebRTCConfig();
+    
+    console.log('🔧 Configuring RTCPeerConnection with', iceServers.length, 'ICE servers');
     const peerConnection = new RTCPeerConnection({
-        iceServers: [
-            // Google STUN servers
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            // OpenRelay TURN servers (Free public TURN)
-            {
-                urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:80?transport=tcp', 'turn:openrelay.metered.ca:80?transport=udp'],
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            {
-                urls: ['turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            // Numb TURN servers
-            {
-                urls: ['turn:numb.viagenie.ca', 'turn:numb.viagenie.ca:3478', 'turns:numb.viagenie.ca:5349'],
-                username: 'webrtc@live.com',
-                credential: 'muazkh'
-            },
-            // Twilio free STUN
-            { urls: 'stun:global.stun.twilio.com:3478' },
-            // Additional free TURN
-            {
-                urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-                username: 'webrtc',
-                credential: 'webrtc'
-            }
-        ],
+        iceServers: iceServers,
         iceTransportPolicy: 'all',
         iceCandidatePoolSize: 10,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
     });
     
-    console.log('✅ GUEST ICE configuration complete');
+    console.log('✅ GUEST ICE configuration complete with Cloudflare TURN servers');
 
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
