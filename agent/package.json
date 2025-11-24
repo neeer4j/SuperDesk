@@ -22,7 +22,6 @@
     "appId": "com.superdesk.agent",
     "productName": "SuperDesk Agent",
     "copyright": "(c) SuperDesk",
-    "publisherName": "SuperDesk",
     "directories": {
       "output": "dist"
     },
