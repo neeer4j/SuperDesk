@@ -1,7 +1,7 @@
 {
   "name": "superdesk-agent",
   "version": "1.0.0",
-  "description": "SuperDesk Windows desktop agent",
+  "description": "SuperDesk desktop agent",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -21,6 +21,7 @@
   "build": {
     "appId": "com.superdesk.agent",
     "productName": "SuperDesk Agent",
+    "copyright": "(c) SuperDesk",
     "directories": {
       "output": "dist"
     },
@@ -36,7 +37,8 @@
     "extraFiles": [],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "publisherName": "SuperDesk"
     },
     "nsis": {
       "oneClick": false,
@@ -49,6 +51,6 @@
     "screen-capture",
     "windows"
   ],
-  "author": "Your Name",
+  "author": "SuperDesk",
   "license": "MIT"
 }
