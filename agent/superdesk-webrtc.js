@@ -152,20 +152,21 @@ async function initializeSocket() {
             }
         });
 
-        // Handle enable/disable remote control from guest
-        socket.on('enable-remote-control', (data) => {
+        // Handle enable/disable remote control notifications from server
+        // Server emits 'remote-control-enabled' / 'remote-control-disabled' to the host
+        socket.on('remote-control-enabled', (data) => {
             if (!window.superdeskState.isHost) return;
-            
-            console.log('Guest enabled remote control');
+
+            console.log('Guest enabled remote control (server notification)');
             if (window.appControls && window.appControls.ipcSend) {
                 window.appControls.ipcSend('robot-set-enabled', true);
             }
         });
 
-        socket.on('disable-remote-control', (data) => {
+        socket.on('remote-control-disabled', (data) => {
             if (!window.superdeskState.isHost) return;
-            
-            console.log('Guest disabled remote control');
+
+            console.log('Guest disabled remote control (server notification)');
             if (window.appControls && window.appControls.ipcSend) {
                 window.appControls.ipcSend('robot-set-enabled', false);
                 window.appControls.ipcSend('robot-release-keys');
@@ -612,6 +613,12 @@ async function setupWebRTCReceiver(socket, sessionId) {
             console.log('📺 Setting srcObject and showing video...');
             video.srcObject = stream;
             
+            // Show the remote desktop popup
+            if (typeof window.showRemoteDesktopPopup === 'function') {
+                window.showRemoteDesktopPopup();
+                console.log('✅ Remote desktop popup opened');
+            }
+            
             // Hide placeholder and update status
             if (placeholder) {
                 placeholder.style.display = 'none';
@@ -1009,6 +1016,16 @@ async function confirmSourceSelection() {
 
 // Enable remote control
 function enableRemoteControl() {
+    console.log('🟢 enableRemoteControl() called');
+    console.log('  - Current state:', window.superdeskState?.remoteControlEnabled);
+    console.log('  - Socket connected:', window.superdeskState?.socket?.connected);
+    console.log('  - Session ID:', window.superdeskState?.sessionId);
+    
+    if (!window.superdeskState || !window.superdeskState.socket) {
+        console.error('❌ Cannot enable remote control: socket not available');
+        return;
+    }
+    
     window.superdeskState.remoteControlEnabled = true;
     window.superdeskState.socket.emit('enable-remote-control', {
         sessionId: window.superdeskState.sessionId
@@ -1018,11 +1035,15 @@ function enableRemoteControl() {
     const video = document.getElementById('remote-video');
     const joinVideo = document.getElementById('join-remote-video');
     
+    console.log('  - video element found:', !!video);
+    console.log('  - joinVideo element found:', !!joinVideo);
+    
     if (video) {
         video.addEventListener('mousemove', handleMouseMove);
         video.addEventListener('mousedown', handleMouseDown);
         video.addEventListener('mouseup', handleMouseUp);
         video.addEventListener('click', handleMouseClick);
+        console.log('  ✅ Event listeners attached to remote-video');
     }
     
     if (joinVideo) {
@@ -1030,12 +1051,13 @@ function enableRemoteControl() {
         joinVideo.addEventListener('mousedown', handleMouseDown);
         joinVideo.addEventListener('mouseup', handleMouseUp);
         joinVideo.addEventListener('click', handleMouseClick);
+        console.log('  ✅ Event listeners attached to join-remote-video');
     }
     
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
     
-    console.log('Remote control enabled');
+    console.log('✅ Remote control enabled successfully');
 }
 
 // Disable remote control
@@ -1069,13 +1091,30 @@ function disableRemoteControl() {
 }
 
 // Mouse event handlers
+let mouseMoveCount = 0;
 function handleMouseMove(e) {
-    if (!window.superdeskState.remoteControlEnabled) return;
+    if (!window.superdeskState.remoteControlEnabled) {
+        if (mouseMoveCount === 0) {
+            console.warn('⚠️ Mouse move detected but remote control NOT enabled');
+            mouseMoveCount++;
+        }
+        return;
+    }
+    
+    mouseMoveCount++;
+    if (mouseMoveCount === 1 || mouseMoveCount % 100 === 0) {
+        console.log(`🖱️ Mouse move event #${mouseMoveCount}`);
+    }
     
     const video = e.target;
     const rect = video.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
+    
+    if (!window.superdeskState.socket || !window.superdeskState.socket.connected) {
+        console.error('❌ Cannot send mouse event: socket not connected');
+        return;
+    }
     
     window.superdeskState.socket.emit('mouse-event', {
         sessionId: window.superdeskState.sessionId,
