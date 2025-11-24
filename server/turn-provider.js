@@ -1,167 +1,67 @@
-// server/turn-provider.js
-// Concrete implementation for fetching TURN credentials from Cloudflare.
-// Exports: async function getTurnServers(ttlSeconds = 3600) -> Array of { urls, username, credential }
-
+// Unified Cloudflare TURN provider
 function getFetch() {
   if (typeof global.fetch === 'function') return global.fetch;
-  try {
-    // node-fetch v2/v3 compatibility
-    // v3 uses ESM; requiring may return a function under .default for some setups
-    const nf = require('node-fetch');
-    return typeof nf === 'function' ? nf : nf.default;
-  } catch (e) {
-    return null;
-  }
+  try { const nf = require('node-fetch'); return typeof nf === 'function' ? nf : nf.default; } catch (e) { return null; }
 }
 
-const fetch = getFetch();
+const fetchImpl = getFetch();
+
+function maskToken(t) { if (!t) return '(none)'; if (t.length <= 8) return t; return `${t.slice(0,4)}...${t.slice(-4)}`; }
+
+async function callUrl(url, token, ttlSeconds) {
+  const res = await fetchImpl(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ttl: ttlSeconds })
+  });
+  const text = await res.text().catch(() => '');
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch (e) { json = null; }
+  return { ok: res.ok, status: res.status, statusText: res.statusText, text, json };
+}
+
+function normalizeResponse(data) {
+  const result = (data && data.result) || data || {};
+  const payload = result.credentials || result.iceServers || result;
+  const urls = payload?.uris || payload?.urls || payload?.turn_urls || payload?.ice_servers || [];
+  const username = payload?.username || payload?.user || payload?.auth?.username;
+  const credential = payload?.password || payload?.credential || payload?.auth?.password;
+  if (!Array.isArray(urls) || !urls.length || !username || !credential) return null;
+  return urls.map(u => ({ urls: u, username, credential }));
+}
 
 module.exports = {
   async getTurnServers(ttlSeconds = 3600) {
-    if (!fetch) {
-      throw new Error('Fetch implementation unavailable. Install node-fetch or run on Node 18+');
-    }
-
-    // Prefer explicit TURN key (Cloudflare TURN Key API)
-    const turnKeyId = process.env.CLOUDFLARE_TURN_KEY_ID || process.env.TURN_KEY_ID;
-    const turnKeyToken = process.env.CLOUDFLARE_TURN_KEY_API_TOKEN || process.env.CLOUDFLARE_TURN_KEY_TOKEN || process.env.TURN_KEY_API_TOKEN;
-
-    // Legacy/account-level credentials
-    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY;
-
+    if (!fetchImpl) throw new Error('Fetch implementation unavailable. Install node-fetch or use Node 18+');
+    const turnKeyId = process.env.CLOUDFLARE_TURN_KEY_ID || process.env.TURN_KEY_ID || '';
+    const turnKeyToken = process.env.CLOUDFLARE_TURN_KEY_API_TOKEN || process.env.CLOUDFLARE_TURN_KEY_TOKEN || process.env.TURN_KEY_API_TOKEN || '';
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || '';
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY || '';
     const hasTurnKey = Boolean(turnKeyId && turnKeyToken);
     const hasLegacy = Boolean(accountId && apiToken);
-
-    if (!hasTurnKey && !hasLegacy) {
-      // No Cloudflare credentials configured
-      return null;
+    console.log('[TURN] Configuration: hasTurnKey=', hasTurnKey, 'hasLegacy=', hasLegacy);
+    console.log('[TURN] turnKeyId=', turnKeyId ? turnKeyId : '(none)', 'turnKeyToken=', maskToken(turnKeyToken));
+    console.log('[TURN] accountId=', accountId ? accountId : '(none)', 'apiToken=', maskToken(apiToken));
+    let lastError = null;
+    if (hasTurnKey) {
+      const url = `https://rtc.live.cloudflare.com/v1/turn/keys/${turnKeyId}/credentials/generate`;
+      console.log('[TURN] Trying TURN Key API:', url);
+      try {
+        const r = await callUrl(url, turnKeyToken, ttlSeconds);
+        if (!r.ok) { lastError = new Error(`TURN Key API failed: ${r.status} ${r.statusText} - ${r.text}`); console.warn('[TURN] TURN Key API response:', r.status, r.statusText, r.text); }
+        else { console.log('[TURN] TURN Key API returned JSON:', JSON.stringify(r.json)); const servers = normalizeResponse(r.json); if (servers) return servers; lastError = new Error('TURN Key API returned unexpected payload shape'); }
+      } catch (err) { lastError = err; console.error('[TURN] Error calling TURN Key API:', err && err.message ? err.message : err); }
     }
-
-    const url = hasTurnKey
-      ? `https://rtc.live.cloudflare.com/v1/turn/keys/${turnKeyId}/credentials/generate`
-      : `https://api.cloudflare.com/client/v4/accounts/${accountId}/realtime/turn-credentials`;
-
-    const token = hasTurnKey ? turnKeyToken : apiToken;
-
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ ttl: ttlSeconds })
-    });
-
-    if (!resp.ok) {
-      const txt = await resp.text().catch(() => '');
-      throw new Error(`Cloudflare TURN request failed: ${resp.status} ${resp.statusText} - ${txt}`);
+    if (hasLegacy) {
+      const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/realtime/turn-credentials`;
+      console.log('[TURN] Trying account-level Realtime API:', url);
+      try {
+        const r = await callUrl(url, apiToken, ttlSeconds);
+        if (!r.ok) { lastError = new Error(`Account-level Realtime API failed: ${r.status} ${r.statusText} - ${r.text}`); console.warn('[TURN] Account Realtime response:', r.status, r.statusText, r.text); }
+        else { console.log('[TURN] Account Realtime API returned JSON:', JSON.stringify(r.json)); const servers = normalizeResponse(r.json); if (servers) return servers; lastError = new Error('Account-level Realtime API returned unexpected payload shape'); }
+      } catch (err) { lastError = err; console.error('[TURN] Error calling account-level Realtime API:', err && err.message ? err.message : err); }
     }
-
-    const data = await resp.json();
-    const result = data.result || data;
-    const payload = result.credentials || result.iceServers || result;
-
-    const urls = payload.uris || payload.urls || payload.turn_urls || payload.ice_servers || [];
-    const username = payload.username || payload.user || (payload.auth && payload.auth.username);
-    const credential = payload.password || payload.credential || (payload.auth && payload.auth.password);
-
-    if (!Array.isArray(urls) || !urls.length || !username || !credential) {
-      throw new Error(`Incomplete Cloudflare TURN response: ${JSON.stringify({ urls, username: !!username, credential: !!credential })}`);
-    }
-
-    return urls.map(u => ({ urls: u, username, credential }));
-  }
-};
-// server/turn-provider.js
-// Cloudflare Realtime TURN provider implementation (template)
-// Copy of this file may contain secrets via env vars - DO NOT commit real secrets to git.
-
-// Supported env variables:
-// - CLOUDFLARE_TURN_KEY_ID / CLOUDFLARE_TURN_KEY_API_TOKEN (preferred for rtc.live.cloudflare.com)
-// - CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN (legacy /realtime/turn-credentials endpoint)
-
-// This implementation attempts to use global fetch (Node 18+). If not available, it will try to require 'node-fetch'.
-
-let fetchFn = global.fetch;
-if (!fetchFn) {
-  try {
-    // node-fetch v3 is ESM; this require may only work on older node-fetch versions.
-    fetchFn = require('node-fetch');
-  } catch (e) {
-    throw new Error('No global fetch available and node-fetch is not installed. Please run `npm install node-fetch` or use Node 18+');
-  }
-}
-
-module.exports = {
-  // Request ephemeral TURN credentials from Cloudflare Realtime API
-  // Returns an array of objects: { urls: 'turn:...', username: '...', credential: '...' }
-  async getTurnServers(ttlSeconds = 3600) {
-    const turnKeyId = process.env.CLOUDFLARE_TURN_KEY_ID || process.env.TURN_KEY_ID;
-    const turnKeyToken = process.env.CLOUDFLARE_TURN_KEY_API_TOKEN || process.env.CLOUDFLARE_TURN_KEY_TOKEN || process.env.TURN_KEY_API_TOKEN;
-    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY;
-
-    const hasTurnKey = Boolean(turnKeyId && turnKeyToken);
-    const hasLegacyRealtime = Boolean(accountId && apiToken);
-
-    if (!hasTurnKey && !hasLegacyRealtime) {
-      console.log('Cloudflare TURN provider not configured: set TURN key env or account-level env');
-      return null;
-    }
-
-    const url = hasTurnKey
-      ? `https://rtc.live.cloudflare.com/v1/turn/keys/${turnKeyId}/credentials/generate`
-      : `https://api.cloudflare.com/client/v4/accounts/${accountId}/realtime/turn-credentials`;
-    const bearerToken = hasTurnKey ? turnKeyToken : apiToken;
-
-    try {
-      const resp = await fetchFn(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${bearerToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ ttl: ttlSeconds })
-      });
-
-      if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(`Cloudflare TURN request failed: ${resp.status} ${resp.statusText} - ${text}`);
-      }
-
-      const data = await resp.json();
-      console.log('[TURN] Raw Cloudflare response:', JSON.stringify(data, null, 2));
-      
-      // Handle different response structures:
-      // 1. TURN key API: { "iceServers": { "urls": [...], "username": "...", "credential": "..." } }
-      // 2. Legacy Realtime: { "result": { "credentials": { ... } } }
-      const result = data.result || data;
-      const payload = result.credentials || result.iceServers || result;
-      
-      if (!payload || (!payload.urls && !payload.turn_urls && !payload.ice_servers && !payload.uris)) {
-        const msg = `Unexpected Cloudflare TURN response shape: ${JSON.stringify(data)}`;
-        console.warn(msg);
-        throw new Error(msg);
-      }
-
-      // Normalize possible field names
-      const urls = payload.uris || payload.urls || payload.turn_urls || payload.ice_servers || [];
-      const username = payload.username || payload.user || payload.auth?.username;
-      const credential = payload.password || payload.credential || payload.auth?.password;
-
-      if (!Array.isArray(urls) || !urls.length || !username || !credential) {
-        const msg = `Incomplete Cloudflare TURN response: ${JSON.stringify({ urls, username, credential })}`;
-        console.warn(msg);
-        throw new Error(msg);
-      }
-
-      const servers = urls.map(u => ({ urls: u, username, credential }));
-      console.log('Obtained Cloudflare TURN servers:', servers.map(s => s.urls));
-      return servers;
-    } catch (err) {
-      console.error('Error fetching Cloudflare TURN credentials:', err);
-      return null;
-    }
+    if (lastError) throw lastError;
+    return null;
   }
 };
