@@ -13,6 +13,29 @@ try {
   // dotenv not installed or .env not present - that's fine for production where env vars are set externally
 }
 
+/*
+  Environment variables (placeholders):
+
+  # Static TURN config (optional):
+  TURN_URLS=turn:turn1.example.com:3478,turn:turn2.example.com:3478
+  TURN_USERNAME=static_turn_username
+  TURN_CREDENTIAL=static_turn_password
+
+  # Cloudflare TURN (recommended):
+  # Option A (TURN Key API):
+  CLOUDFLARE_TURN_KEY_ID=your_turn_key_id_here
+  CLOUDFLARE_TURN_KEY_API_TOKEN=your_turn_key_api_token_here
+
+  # Option B (legacy account-level Realtime):
+  CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
+  CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
+
+  # Alternative / aliases recognized by server:
+  TURN_KEY_ID, TURN_KEY_API_TOKEN, PROVIDER_API_KEY
+
+  Copy `server/.env.example` -> `server/.env` and fill these values for local testing.
+*/
+
 // Optional TURN provider integration (e.g., Cloudflare). If you add `server/turn-provider.js`
 // that module should export async function getTurnServers(ttlSeconds) returning an array of
 // { urls, username, credential } objects or null.

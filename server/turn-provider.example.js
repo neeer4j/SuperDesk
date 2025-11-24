@@ -18,6 +18,26 @@
 
 const fetch = require('node-fetch'); // `node-fetch` may be required in older Node versions
 
+/*
+  Environment variables you can set in `server/.env`:
+
+  # Cloudflare TURN (preferred):
+  CLOUDFLARE_TURN_KEY_ID=your_turn_key_id_here
+  CLOUDFLARE_TURN_KEY_API_TOKEN=your_turn_key_api_token_here
+
+  # Or (legacy) Cloudflare account-level Realtime credentials:
+  CLOUDFLARE_ACCOUNT_ID=your_account_id
+  CLOUDFLARE_API_TOKEN=your_account_api_token
+
+  # Fallback static TURN server list:
+  TURN_URLS=turn:turn1.example.com:3478,turn:turn2.example.com:3478
+  TURN_USERNAME=static_turn_username
+  TURN_CREDENTIAL=static_turn_password
+
+  Copy this file to `turn-provider.js` and implement `getTurnServers()` to use
+  the provider API and these env vars. Do NOT commit real secrets to git.
+*/
+
 module.exports = {
   // Implement this function in your local copy (server/turn-provider.js)
   // It must return an array of ICE server objects or null if unavailable.
