@@ -1,4 +1,79 @@
 // server/turn-provider.js
+// Concrete implementation for fetching TURN credentials from Cloudflare.
+// Exports: async function getTurnServers(ttlSeconds = 3600) -> Array of { urls, username, credential }
+
+function getFetch() {
+  if (typeof global.fetch === 'function') return global.fetch;
+  try {
+    // node-fetch v2/v3 compatibility
+    // v3 uses ESM; requiring may return a function under .default for some setups
+    const nf = require('node-fetch');
+    return typeof nf === 'function' ? nf : nf.default;
+  } catch (e) {
+    return null;
+  }
+}
+
+const fetch = getFetch();
+
+module.exports = {
+  async getTurnServers(ttlSeconds = 3600) {
+    if (!fetch) {
+      throw new Error('Fetch implementation unavailable. Install node-fetch or run on Node 18+');
+    }
+
+    // Prefer explicit TURN key (Cloudflare TURN Key API)
+    const turnKeyId = process.env.CLOUDFLARE_TURN_KEY_ID || process.env.TURN_KEY_ID;
+    const turnKeyToken = process.env.CLOUDFLARE_TURN_KEY_API_TOKEN || process.env.CLOUDFLARE_TURN_KEY_TOKEN || process.env.TURN_KEY_API_TOKEN;
+
+    // Legacy/account-level credentials
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.PROVIDER_API_KEY;
+
+    const hasTurnKey = Boolean(turnKeyId && turnKeyToken);
+    const hasLegacy = Boolean(accountId && apiToken);
+
+    if (!hasTurnKey && !hasLegacy) {
+      // No Cloudflare credentials configured
+      return null;
+    }
+
+    const url = hasTurnKey
+      ? `https://rtc.live.cloudflare.com/v1/turn/keys/${turnKeyId}/credentials/generate`
+      : `https://api.cloudflare.com/client/v4/accounts/${accountId}/realtime/turn-credentials`;
+
+    const token = hasTurnKey ? turnKeyToken : apiToken;
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ttl: ttlSeconds })
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text().catch(() => '');
+      throw new Error(`Cloudflare TURN request failed: ${resp.status} ${resp.statusText} - ${txt}`);
+    }
+
+    const data = await resp.json();
+    const result = data.result || data;
+    const payload = result.credentials || result.iceServers || result;
+
+    const urls = payload.uris || payload.urls || payload.turn_urls || payload.ice_servers || [];
+    const username = payload.username || payload.user || (payload.auth && payload.auth.username);
+    const credential = payload.password || payload.credential || (payload.auth && payload.auth.password);
+
+    if (!Array.isArray(urls) || !urls.length || !username || !credential) {
+      throw new Error(`Incomplete Cloudflare TURN response: ${JSON.stringify({ urls, username: !!username, credential: !!credential })}`);
+    }
+
+    return urls.map(u => ({ urls: u, username, credential }));
+  }
+};
+// server/turn-provider.js
 // Cloudflare Realtime TURN provider implementation (template)
 // Copy of this file may contain secrets via env vars - DO NOT commit real secrets to git.
 
