@@ -843,9 +843,9 @@
                                 <span id="status-text">Waiting...</span>
                             </span>
                             <div style="display: flex; gap: 8px;">
-                                <button id="control-toggle-btn" onclick="toggleControl()" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">🖱️ Enable Control</button>
-                                <button id="fullscreen-toggle-btn" onclick="toggleFullscreen()" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">⛶ Fullscreen</button>
-                                <button onclick="endSession()" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">✕ End</button>
+                                <button id="control-toggle-btn" onclick="window.toggleControl && window.toggleControl()" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">🖱️ Enable Control</button>
+                                <button id="fullscreen-toggle-btn" onclick="window.toggleFullscreen && window.toggleFullscreen()" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">⛶ Fullscreen</button>
+                                <button onclick="window.endSession && window.endSession()" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">✕ End</button>
                             </div>
                         </div>
                     </div>
@@ -1333,35 +1333,60 @@
         }
 
         // Control toggle for join-view video
-        function toggleControl() {
+        window.toggleControl = function() {
+            console.log('🖱️ toggleControl called');
             const btn = document.getElementById('control-toggle-btn');
+            
             if (window.superdeskState && window.superdeskState.remoteControlEnabled) {
-                if (typeof disableRemoteControl === 'function') {
-                    disableRemoteControl();
+                console.log('Disabling remote control...');
+                if (typeof window.disableRemoteControl === 'function') {
+                    window.disableRemoteControl();
                 }
                 btn.textContent = '🖱️ Enable Control';
                 btn.style.background = 'rgba(255,255,255,0.1)';
             } else {
-                if (typeof enableRemoteControl === 'function') {
-                    enableRemoteControl();
+                console.log('Enabling remote control...');
+                if (typeof window.enableRemoteControl === 'function') {
+                    window.enableRemoteControl();
                 }
                 btn.textContent = '🖱️ Control Active';
                 btn.style.background = '#10b981';
             }
-        }
+        };
 
         // Fullscreen toggle for join-view video
-        function toggleFullscreen() {
+        window.toggleFullscreen = function() {
+            console.log('⛶ toggleFullscreen called');
             const container = document.getElementById('join-video-container');
             const btn = document.getElementById('fullscreen-toggle-btn');
+            
             if (!document.fullscreenElement) {
-                container.requestFullscreen();
-                btn.textContent = '⛶ Exit';
+                console.log('Requesting fullscreen...');
+                if (container.requestFullscreen) {
+                    container.requestFullscreen().catch(err => {
+                        console.error('Error attempting to enable fullscreen:', err);
+                        alert('Failed to enter fullscreen mode');
+                    });
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                } else if (container.mozRequestFullScreen) {
+                    container.mozRequestFullScreen();
+                } else if (container.msRequestFullscreen) {
+                    container.msRequestFullscreen();
+                }
             } else {
-                document.exitFullscreen();
-                btn.textContent = '⛶ Fullscreen';
+                console.log('Exiting fullscreen...');
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
             }
-        }
+        };
 
         // Copy debug log to clipboard
         function copyDebugLog() {
@@ -1406,16 +1431,22 @@
             }
         }
 
-        // Listen for fullscreen change
-        document.addEventListener('fullscreenchange', () => {
-            const btn = document.getElementById('toggle-fullscreen-btn');
-            const btnInline = document.getElementById('fullscreen-toggle-btn');
-            if (btn) {
-                btn.textContent = document.fullscreenElement ? '↙️ Exit Fullscreen' : '↗️ Fullscreen';
-            }
-            if (btnInline) {
-                btnInline.textContent = document.fullscreenElement ? '⛶ Exit' : '⛶ Fullscreen';
-            }
+        // Listen for fullscreen change (cross-browser)
+        ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'msfullscreenchange'].forEach(event => {
+            document.addEventListener(event, () => {
+                const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+                const btn = document.getElementById('toggle-fullscreen-btn');
+                const btnInline = document.getElementById('fullscreen-toggle-btn');
+                
+                console.log('Fullscreen state changed:', isFullscreen);
+                
+                if (btn) {
+                    btn.textContent = isFullscreen ? '↙️ Exit Fullscreen' : '↗️ Fullscreen';
+                }
+                if (btnInline) {
+                    btnInline.textContent = isFullscreen ? '⛶ Exit' : '⛶ Fullscreen';
+                }
+            });
         });
     </script>
 
