@@ -1448,6 +1448,40 @@
                 }
             });
         });
+
+        // Add direct event listeners to buttons as backup
+        setTimeout(() => {
+            const controlBtn = document.getElementById('control-toggle-btn');
+            const fullscreenBtn = document.getElementById('fullscreen-toggle-btn');
+            
+            if (controlBtn) {
+                controlBtn.addEventListener('click', function(e) {
+                    console.log('🖱️ Control button clicked directly');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (window.toggleControl) {
+                        window.toggleControl();
+                    } else {
+                        console.error('❌ window.toggleControl not found!');
+                    }
+                });
+                console.log('✅ Control button listener attached');
+            }
+            
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', function(e) {
+                    console.log('⛶ Fullscreen button clicked directly');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (window.toggleFullscreen) {
+                        window.toggleFullscreen();
+                    } else {
+                        console.error('❌ window.toggleFullscreen not found!');
+                    }
+                });
+                console.log('✅ Fullscreen button listener attached');
+            }
+        }, 1000);
     </script>
 
     <!-- Remote Desktop Viewer (for guests) -->

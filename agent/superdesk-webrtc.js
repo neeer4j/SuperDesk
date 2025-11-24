@@ -437,6 +437,13 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     socket.on('ice-candidate', async (data) => {
         if (data.candidate) {
             console.log('🧊 HOST Received ICE candidate from guest');
+            
+            // Check if connection is still open
+            if (peerConnection.signalingState === 'closed') {
+                console.warn('⚠️ HOST Ignoring ICE candidate - connection already closed');
+                return;
+            }
+            
             try {
                 await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                 console.log('✅ HOST ICE candidate added');
@@ -467,6 +474,8 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
     window.superdeskState.webrtc = { peerConnection, stream };
     window.superdeskState.sharingActive = true;
+    
+    console.log('✅ HOST WebRTC state saved globally - ready for remote control');
 
     // Start connection health monitoring
     const healthMonitor = monitorConnectionHealth(peerConnection);
@@ -742,17 +751,28 @@ async function setupWebRTCReceiver(socket, sessionId) {
     // Listen for ICE candidates from host
     socket.on('ice-candidate', async (data) => {
         if (data.candidate) {
-            console.log('🧊 Received ICE candidate from host');
+            console.log('🧊 GUEST Received ICE candidate from host');
+            
+            // Check if connection is still open
+            if (peerConnection.signalingState === 'closed') {
+                console.warn('⚠️ GUEST Ignoring ICE candidate - connection already closed');
+                return;
+            }
+            
             try {
                 await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-                console.log('✅ ICE candidate added');
+                console.log('✅ GUEST ICE candidate added');
             } catch (error) {
-                console.error('❌ Error adding ICE candidate:', error);
+                console.error('❌ GUEST Error adding ICE candidate:', error);
             }
         }
     });
 
+    // Store peer connection globally for remote control access
+    window.superdeskState.webrtc = { peerConnection };
+    
     console.log('✅ WebRTC receiver setup complete');
+    console.log('✅ GUEST WebRTC state saved globally - ready for remote control');
     updateDebugStatus('setup', 'complete');
     
     // Log if NO tracks received after 10 seconds
