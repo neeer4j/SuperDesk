@@ -1024,12 +1024,33 @@
 
             // Paste session ID button
             document.getElementById('paste-session-btn').addEventListener('click', async () => {
+                const inputField = document.getElementById('join-session-input');
                 try {
+                    // Try modern clipboard API first
                     const text = await navigator.clipboard.readText();
-                    document.getElementById('join-session-input').value = text.trim().toUpperCase();
+                    inputField.value = text.trim().toUpperCase();
                 } catch (err) {
-                    console.error('Failed to paste:', err);
-                    alert('Failed to paste from clipboard');
+                    console.error('Clipboard API failed, trying fallback:', err);
+                    // Fallback: focus input and use execCommand paste
+                    try {
+                        inputField.focus();
+                        inputField.select();
+                        const success = document.execCommand('paste');
+                        if (success) {
+                            // execCommand paste will paste into the focused input
+                            setTimeout(() => {
+                                inputField.value = inputField.value.trim().toUpperCase();
+                            }, 10);
+                        } else {
+                            // If execCommand also fails, prompt user to paste manually
+                            alert('Please paste manually (Ctrl+V) into the input field');
+                            inputField.focus();
+                        }
+                    } catch (fallbackErr) {
+                        console.error('Fallback paste failed:', fallbackErr);
+                        alert('Please paste manually (Ctrl+V) into the input field');
+                        inputField.focus();
+                    }
                 }
             });
         }
@@ -1497,8 +1518,8 @@
 
     <!-- Remote Desktop Popup Viewer (for guests joining sessions) -->
     <div id="remote-desktop-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999;">
-        <!-- Video element -->
-        <video id="join-remote-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: contain; background: #000;"></video>
+        <!-- Video element with hidden cursor for single-cursor control -->
+        <video id="join-remote-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: contain; background: #000; cursor: none;"></video>
         
         <!-- Control bar at top -->
         <div id="popup-controls" style="position: absolute; top: 0; left: 0; right: 0; background: linear-gradient(rgba(0,0,0,0.9), transparent); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000000;">

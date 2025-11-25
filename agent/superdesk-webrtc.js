@@ -119,15 +119,21 @@ async function initializeSocket() {
         socket.on('mouse-event', async (data) => {
             if (!window.superdeskState.isHost) return;
             
+            console.log('🖱️ HOST received mouse event:', { type: data.type, x: data.x, y: data.y, button: data.button });
+            
             try {
                 // Use IPC to send mouse events to main process for nut-js execution
+                // data.x and data.y are already normalized (0..1), pass them directly
                 if (window.appControls && window.appControls.ipcSend) {
                     window.appControls.ipcSend('robot-mouse-event', {
-                        type: data.type === 'move' ? 'mousemove' : data.type === 'down' ? 'mousedown' : 'mouseup',
-                        x: data.x * 1920, // Scale to reference width
-                        y: data.y * 1080, // Scale to reference height
+                        type: data.type,  // Keep original type: 'move', 'down', 'up', 'click'
+                        x: data.x,        // Already normalized 0..1
+                        y: data.y,        // Already normalized 0..1
                         button: data.button || 0
                     });
+                    console.log('✅ HOST sent IPC robot-mouse-event');
+                } else {
+                    console.error('❌ window.appControls.ipcSend not available');
                 }
             } catch (err) {
                 console.error('Failed to send mouse event to main process:', err);
@@ -138,14 +144,19 @@ async function initializeSocket() {
         socket.on('keyboard-event', async (data) => {
             if (!window.superdeskState.isHost) return;
             
+            console.log('⌨️ HOST received keyboard event:', { type: data.type, key: data.key, code: data.code });
+            
             try {
                 // Use IPC to send keyboard events to main process for nut-js execution
                 if (window.appControls && window.appControls.ipcSend) {
                     window.appControls.ipcSend('robot-keyboard-event', {
-                        type: data.type, // 'keydown' or 'keyup'
+                        type: data.type === 'down' ? 'keydown' : 'keyup',  // Map 'down'/'up' to 'keydown'/'keyup'
                         key: data.key,
                         code: data.code
                     });
+                    console.log('✅ HOST sent IPC robot-keyboard-event');
+                } else {
+                    console.error('❌ window.appControls.ipcSend not available');
                 }
             } catch (err) {
                 console.error('Failed to send keyboard event to main process:', err);
@@ -1039,23 +1050,25 @@ function enableRemoteControl() {
     console.log('  - joinVideo element found:', !!joinVideo);
     
     if (video) {
-        video.addEventListener('mousemove', handleMouseMove);
-        video.addEventListener('mousedown', handleMouseDown);
-        video.addEventListener('mouseup', handleMouseUp);
-        video.addEventListener('click', handleMouseClick);
-        console.log('  ✅ Event listeners attached to remote-video');
+        // Use capture to ensure we intercept events before any other handlers
+        video.addEventListener('mousemove', handleMouseMove, { capture: true });
+        video.addEventListener('mousedown', handleMouseDown, { capture: true });
+        video.addEventListener('mouseup', handleMouseUp, { capture: true });
+        video.addEventListener('click', handleMouseClick, { capture: true });
+        console.log('  ✅ Event listeners attached to remote-video (capture)');
     }
     
     if (joinVideo) {
-        joinVideo.addEventListener('mousemove', handleMouseMove);
-        joinVideo.addEventListener('mousedown', handleMouseDown);
-        joinVideo.addEventListener('mouseup', handleMouseUp);
-        joinVideo.addEventListener('click', handleMouseClick);
-        console.log('  ✅ Event listeners attached to join-remote-video');
+        joinVideo.addEventListener('mousemove', handleMouseMove, { capture: true });
+        joinVideo.addEventListener('mousedown', handleMouseDown, { capture: true });
+        joinVideo.addEventListener('mouseup', handleMouseUp, { capture: true });
+        joinVideo.addEventListener('click', handleMouseClick, { capture: true });
+        console.log('  ✅ Event listeners attached to join-remote-video (capture)');
     }
     
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
+    // Use capture so key events are captured regardless of focus inside the UI
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    document.addEventListener('keyup', handleKeyUp, { capture: true });
     
     console.log('✅ Remote control enabled successfully');
 }
@@ -1071,21 +1084,21 @@ function disableRemoteControl() {
     const joinVideo = document.getElementById('join-remote-video');
     
     if (video) {
-        video.removeEventListener('mousemove', handleMouseMove);
-        video.removeEventListener('mousedown', handleMouseDown);
-        video.removeEventListener('mouseup', handleMouseUp);
-        video.removeEventListener('click', handleMouseClick);
+        video.removeEventListener('mousemove', handleMouseMove, { capture: true });
+        video.removeEventListener('mousedown', handleMouseDown, { capture: true });
+        video.removeEventListener('mouseup', handleMouseUp, { capture: true });
+        video.removeEventListener('click', handleMouseClick, { capture: true });
     }
     
     if (joinVideo) {
-        joinVideo.removeEventListener('mousemove', handleMouseMove);
-        joinVideo.removeEventListener('mousedown', handleMouseDown);
-        joinVideo.removeEventListener('mouseup', handleMouseUp);
-        joinVideo.removeEventListener('click', handleMouseClick);
+        joinVideo.removeEventListener('mousemove', handleMouseMove, { capture: true });
+        joinVideo.removeEventListener('mousedown', handleMouseDown, { capture: true });
+        joinVideo.removeEventListener('mouseup', handleMouseUp, { capture: true });
+        joinVideo.removeEventListener('click', handleMouseClick, { capture: true });
     }
     
-    document.removeEventListener('keydown', handleKeyDown);
-    document.removeEventListener('keyup', handleKeyUp);
+    document.removeEventListener('keydown', handleKeyDown, { capture: true });
+    document.removeEventListener('keyup', handleKeyUp, { capture: true });
     
     console.log('Remote control disabled');
 }
@@ -1126,39 +1139,65 @@ function handleMouseMove(e) {
 
 function handleMouseClick(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
-    
+    const video = e.target;
+    const rect = video.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
     window.superdeskState.socket.emit('mouse-event', {
         sessionId: window.superdeskState.sessionId,
         type: 'click',
-        button: e.button
+        button: e.button,
+        x,
+        y
     });
 }
 
 function handleMouseDown(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
-    
+    const video = e.target;
+    const rect = video.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
     window.superdeskState.socket.emit('mouse-event', {
         sessionId: window.superdeskState.sessionId,
         type: 'down',
-        button: e.button
+        button: e.button,
+        x,
+        y
     });
 }
 
 function handleMouseUp(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
-    
+    const video = e.target;
+    const rect = video.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
     window.superdeskState.socket.emit('mouse-event', {
         sessionId: window.superdeskState.sessionId,
         type: 'up',
-        button: e.button
+        button: e.button,
+        x,
+        y
     });
 }
 
 // Keyboard event handlers
+let keyEventCount = 0;
 function handleKeyDown(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
     
     e.preventDefault();
+    e.stopPropagation();
+    
+    keyEventCount++;
+    if (keyEventCount === 1 || keyEventCount % 10 === 0) {
+        console.log(`⌨️ Key down event #${keyEventCount}:`, e.key, e.code);
+    }
+    
     window.superdeskState.socket.emit('keyboard-event', {
         sessionId: window.superdeskState.sessionId,
         type: 'down',
@@ -1177,6 +1216,8 @@ function handleKeyUp(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
     
     e.preventDefault();
+    e.stopPropagation();
+    
     window.superdeskState.socket.emit('keyboard-event', {
         sessionId: window.superdeskState.sessionId,
         type: 'up',

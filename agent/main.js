@@ -2,6 +2,11 @@ const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen } =
 const path = require('path');
 const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
 
+console.log('✅ nut-js modules loaded successfully');
+console.log('   - mouse:', typeof mouse);
+console.log('   - keyboard:', typeof keyboard);
+console.log('   - screen:', typeof screen);
+
 let mainWindow;
 
 const REMOTE_REFERENCE_WIDTH = 1920;
@@ -30,8 +35,17 @@ function clamp(value, min, max) {
 }
 
 function translateCoordinates(x, y) {
-  const clampedX = clamp(x ?? 0, 0, REMOTE_REFERENCE_WIDTH);
-  const clampedY = clamp(y ?? 0, 0, REMOTE_REFERENCE_HEIGHT);
+  // Accept either normalized coords (0..1) or coords scaled to REMOTE_REFERENCE_*
+  let normX = x ?? 0;
+  let normY = y ?? 0;
+
+  // If values are normalized (<= 1), convert to REMOTE_REFERENCE scale
+  if (typeof normX === 'number' && normX <= 1) normX = normX * REMOTE_REFERENCE_WIDTH;
+  if (typeof normY === 'number' && normY <= 1) normY = normY * REMOTE_REFERENCE_HEIGHT;
+
+  const clampedX = clamp(normX, 0, REMOTE_REFERENCE_WIDTH);
+  const clampedY = clamp(normY, 0, REMOTE_REFERENCE_HEIGHT);
+
   return {
     x: Math.round((clampedX / REMOTE_REFERENCE_WIDTH) * screenSize.width),
     y: Math.round((clampedY / REMOTE_REFERENCE_HEIGHT) * screenSize.height)
@@ -171,7 +185,9 @@ ipcMain.on('window-close', () => {
 
 ipcMain.on('robot-set-enabled', (_event, enabled) => {
   remoteControlEnabled = !!enabled;
-  console.log('[robot] set-enabled:', remoteControlEnabled);
+  console.log('[robot] 🎮 set-enabled:', remoteControlEnabled);
+  console.log('[robot] Screen size:', screenSize);
+  console.log('[robot] Reference resolution:', REMOTE_REFERENCE_WIDTH, 'x', REMOTE_REFERENCE_HEIGHT);
   if (!remoteControlEnabled) {
     releaseActiveKeys();
   }
@@ -182,28 +198,50 @@ ipcMain.on('robot-release-keys', () => {
 });
 
 ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
-  if (!remoteControlEnabled) return;
+  if (!remoteControlEnabled) {
+    console.log('[robot] mouse event ignored - remote control not enabled');
+    return;
+  }
   const { type, x, y, button } = data;
   const coords = translateCoordinates(x, y);
 
   try {
-    // Debug: log a small sample of events
+    // Debug: log a small sample of events with screen info
     if (Math.random() < 0.02) {
-      console.log('[robot] mouse', { type, x, y, mapped: coords, button });
+      console.log('[robot] mouse', { 
+        type, 
+        inputX: x, 
+        inputY: y, 
+        normalizedX: x <= 1 ? x : (x / REMOTE_REFERENCE_WIDTH),
+        normalizedY: y <= 1 ? y : (y / REMOTE_REFERENCE_HEIGHT),
+        mappedX: coords.x, 
+        mappedY: coords.y,
+        screenWidth: screenSize.width,
+        screenHeight: screenSize.height,
+        button 
+      });
     }
     switch (type) {
+      case 'move':
       case 'mousemove':
         await mouse.setPosition({ x: coords.x, y: coords.y });
         break;
+      case 'down':
       case 'mousedown':
         await mouse.setPosition({ x: coords.x, y: coords.y });
         await mouse.pressButton(mapNutButton(button));
         break;
+      case 'up':
       case 'mouseup':
         await mouse.setPosition({ x: coords.x, y: coords.y });
         await mouse.releaseButton(mapNutButton(button));
         break;
+      case 'click':
+        await mouse.setPosition({ x: coords.x, y: coords.y });
+        await mouse.click(mapNutButton(button));
+        break;
       default:
+        console.log('[robot] Unknown mouse event type:', type);
         break;
     }
   } catch (error) {
@@ -212,18 +250,22 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
 });
 
 ipcMain.on('robot-keyboard-event', async (_event, data = {}) => {
-  if (!remoteControlEnabled) return;
+  if (!remoteControlEnabled) {
+    console.log('[robot] keyboard event ignored - remote control not enabled');
+    return;
+  }
   const { type, key, code } = data;
   const nutKey = toNutKey(code, key);
 
   if (!nutKey) {
-    console.log('Unmapped keyboard event:', data);
+    console.log('[robot] ❌ Unmapped keyboard event:', data);
     return;
   }
 
   try {
-    if (Math.random() < 0.05) {
-      console.log('[robot] key', { type, key, code, nutKey });
+    // Log more keyboard events to verify they're working
+    if (Math.random() < 0.1) {
+      console.log('[robot] ⌨️ key', { type, key, code, nutKey, activeKeysCount: activeKeys.size });
     }
     if (type === 'keydown') {
       if (activeKeys.has(nutKey)) return;
