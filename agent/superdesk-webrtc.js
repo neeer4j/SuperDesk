@@ -170,6 +170,9 @@ async function initializeSocket() {
 
             console.log('Guest enabled remote control (server notification)');
             if (window.appControls && window.appControls.ipcSend) {
+                // Refresh screen size to get current dimensions
+                window.appControls.ipcSend('robot-refresh-screen-size');
+                // Enable remote control
                 window.appControls.ipcSend('robot-set-enabled', true);
             }
         });
@@ -181,6 +184,15 @@ async function initializeSocket() {
             if (window.appControls && window.appControls.ipcSend) {
                 window.appControls.ipcSend('robot-set-enabled', false);
                 window.appControls.ipcSend('robot-release-keys');
+            }
+        });
+
+        // Host stopped sharing - guest should stop sending events
+        socket.on('host-stopped-sharing', () => {
+            console.log('🛑 Host stopped sharing - disabling remote control');
+            if (!window.superdeskState.isHost && window.superdeskState.remoteControlEnabled) {
+                disableRemoteControl();
+                showNotification('Sharing Stopped', 'Host has stopped screen sharing');
             }
         });
     });
@@ -621,13 +633,20 @@ async function setupWebRTCReceiver(socket, sessionId) {
         console.log('   - controlsOverlay:', controlsOverlay ? 'FOUND' : 'NOT FOUND');
         
         if (video) {
-            console.log('📺 Setting srcObject and showing video...');
+            console.log('📺 Setting srcObject...');
             video.srcObject = stream;
-            
-            // Show the remote desktop popup
-            if (typeof window.showRemoteDesktopPopup === 'function') {
-                window.showRemoteDesktopPopup();
-                console.log('✅ Remote desktop popup opened');
+
+            // Only show popup when stream has at least one active video track
+            const hasVideoTrack = stream && stream.getVideoTracks && stream.getVideoTracks().length > 0;
+            const videoTrackActive = hasVideoTrack ? stream.getVideoTracks()[0].readyState !== 'ended' : false;
+            if (hasVideoTrack && videoTrackActive) {
+                // Show the remote desktop popup
+                if (typeof window.showRemoteDesktopPopup === 'function') {
+                    window.showRemoteDesktopPopup();
+                    console.log('✅ Remote desktop popup opened');
+                }
+            } else {
+                console.warn('⚠️ Received stream but no active video tracks - not opening popup');
             }
             
             // Hide placeholder and update status
@@ -1042,7 +1061,7 @@ function enableRemoteControl() {
         sessionId: window.superdeskState.sessionId
     });
     
-    // Setup mouse/keyboard event capture on both video elements
+    // Setup mouse/keyboard event capture on video element(s)
     const video = document.getElementById('remote-video');
     const joinVideo = document.getElementById('join-remote-video');
     
@@ -1071,6 +1090,14 @@ function enableRemoteControl() {
     document.addEventListener('keyup', handleKeyUp, { capture: true });
     
     console.log('✅ Remote control enabled successfully');
+    // Hide guest cursor over video when control is enabled
+    if (joinVideo) {
+        try {
+            joinVideo.classList.add('control-active');
+        } catch (e) {
+            console.warn('Could not add control-active class to joinVideo', e);
+        }
+    }
 }
 
 // Disable remote control
@@ -1095,6 +1122,12 @@ function disableRemoteControl() {
         joinVideo.removeEventListener('mousedown', handleMouseDown, { capture: true });
         joinVideo.removeEventListener('mouseup', handleMouseUp, { capture: true });
         joinVideo.removeEventListener('click', handleMouseClick, { capture: true });
+        // Restore guest cursor visibility
+        try {
+            joinVideo.classList.remove('control-active');
+        } catch (e) {
+            console.warn('Could not remove control-active class from joinVideo', e);
+        }
     }
     
     document.removeEventListener('keydown', handleKeyDown, { capture: true });
@@ -1230,6 +1263,23 @@ function handleKeyUp(e) {
 function stopScreenShare() {
     console.log('🛑 Stopping screen share...');
     
+    // Disable remote control if we're the host
+    if (window.superdeskState.isHost && window.superdeskState.remoteControlEnabled) {
+        console.log('🛑 Disabling remote control on host...');
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('robot-set-enabled', false);
+            window.appControls.ipcSend('robot-release-keys');
+        }
+        window.superdeskState.remoteControlEnabled = false;
+    }
+    
+    // Notify server and all guests that sharing has stopped
+    if (window.superdeskState.socket) {
+        window.superdeskState.socket.emit('stop-sharing', {
+            sessionId: window.superdeskState.sessionId
+        });
+    }
+    
     // Stop all tracks
     if (window.superdeskState.webrtc && window.superdeskState.webrtc.stream) {
         window.superdeskState.webrtc.stream.getTracks().forEach(track => {
@@ -1255,12 +1305,19 @@ function stopScreenShare() {
         shareBtn.style.background = '#613da9';
     }
     
-    console.log('✅ Screen sharing stopped');
+    console.log('✅ Screen sharing stopped and remote control disabled');
     showNotification('Sharing Stopped', 'Screen sharing has been stopped');
 }
 
 // End session
 function endSession() {
+    console.log('🛑 Ending session...');
+    
+    // Disable remote control if active (this restores cursor)
+    if (window.superdeskState.remoteControlEnabled) {
+        disableRemoteControl();
+    }
+    
     if (window.superdeskState.socket) {
         window.superdeskState.socket.emit('end-session', window.superdeskState.sessionId);
     }
@@ -1278,6 +1335,20 @@ function endSession() {
         if (window.superdeskState.webrtc.peerConnection) {
             window.superdeskState.webrtc.peerConnection.close();
         }
+    }
+    
+    // Close the popup if guest
+    if (typeof window.hideRemoteDesktopPopup === 'function') {
+        window.hideRemoteDesktopPopup();
+        console.log('✅ Popup closed');
+    }
+    
+    // Restore cursor visibility for guest
+    const joinVideo = document.getElementById('join-remote-video');
+    if (joinVideo) {
+        joinVideo.classList.remove('control-active');
+        joinVideo.srcObject = null;
+        console.log('✅ Guest cursor restored');
     }
     
     const videoContainer = document.getElementById('remote-video-container');
@@ -1300,6 +1371,15 @@ function endSession() {
         shareBtn.style.opacity = '0.5';
     }
     
+    // Reset join button
+    const joinBtn = document.getElementById('connect-session-btn');
+    if (joinBtn) {
+        joinBtn.textContent = 'Connect to Session';
+        joinBtn.disabled = false;
+        joinBtn.style.opacity = '1';
+    }
+    
+    console.log('✅ Session ended successfully');
     showNotification('Session Ended', 'The remote desktop session has ended');
 }
 

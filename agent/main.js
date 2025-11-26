@@ -2,10 +2,15 @@ const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen } =
 const path = require('path');
 const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
 
+// Configure nut-js for instant mouse movement (no animation)
+mouse.config.autoDelayMs = 0;
+mouse.config.mouseSpeed = 10000; // Very fast movement
+
 console.log('✅ nut-js modules loaded successfully');
 console.log('   - mouse:', typeof mouse);
 console.log('   - keyboard:', typeof keyboard);
 console.log('   - screen:', typeof screen);
+console.log('   - mouse speed configured:', mouse.config.mouseSpeed);
 
 let mainWindow;
 
@@ -35,20 +40,19 @@ function clamp(value, min, max) {
 }
 
 function translateCoordinates(x, y) {
-  // Accept either normalized coords (0..1) or coords scaled to REMOTE_REFERENCE_*
+  // Guest sends normalized coords (0..1), map directly to host's actual screen size
+  // This makes it dynamic and works with any monitor size/resolution
   let normX = x ?? 0;
   let normY = y ?? 0;
 
-  // If values are normalized (<= 1), convert to REMOTE_REFERENCE scale
-  if (typeof normX === 'number' && normX <= 1) normX = normX * REMOTE_REFERENCE_WIDTH;
-  if (typeof normY === 'number' && normY <= 1) normY = normY * REMOTE_REFERENCE_HEIGHT;
+  // Ensure coordinates are in normalized range (0-1)
+  normX = clamp(normX, 0, 1);
+  normY = clamp(normY, 0, 1);
 
-  const clampedX = clamp(normX, 0, REMOTE_REFERENCE_WIDTH);
-  const clampedY = clamp(normY, 0, REMOTE_REFERENCE_HEIGHT);
-
+  // Map normalized coordinates directly to actual screen dimensions
   return {
-    x: Math.round((clampedX / REMOTE_REFERENCE_WIDTH) * screenSize.width),
-    y: Math.round((clampedY / REMOTE_REFERENCE_HEIGHT) * screenSize.height)
+    x: Math.round(normX * screenSize.width),
+    y: Math.round(normY * screenSize.height)
   };
 }
 
@@ -210,14 +214,14 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
     if (Math.random() < 0.02) {
       console.log('[robot] mouse', { 
         type, 
-        inputX: x, 
-        inputY: y, 
-        normalizedX: x <= 1 ? x : (x / REMOTE_REFERENCE_WIDTH),
-        normalizedY: y <= 1 ? y : (y / REMOTE_REFERENCE_HEIGHT),
+        normalizedX: x,
+        normalizedY: y,
         mappedX: coords.x, 
         mappedY: coords.y,
         screenWidth: screenSize.width,
         screenHeight: screenSize.height,
+        percentX: ((coords.x / screenSize.width) * 100).toFixed(1) + '%',
+        percentY: ((coords.y / screenSize.height) * 100).toFixed(1) + '%',
         button 
       });
     }

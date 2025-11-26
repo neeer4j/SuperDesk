@@ -330,6 +330,12 @@ io.on('connection', (socket) => {
     socket.to(data.sessionId).emit('remote-control-disabled');
   });
 
+  // Host stopped sharing - notify guests to stop sending events
+  socket.on('stop-sharing', (data) => {
+    console.log('🛑 Host stopped sharing for session:', data.sessionId);
+    socket.to(data.sessionId).emit('host-stopped-sharing');
+  });
+
   // Screen sharing events
   socket.on('request-screen-share', (data) => {
     console.log('Screen share requested:', data);

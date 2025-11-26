@@ -610,12 +610,16 @@
             letter-spacing: 3px;
             box-sizing: border-box;
             width: 100%;
-        }
             margin-bottom: 24px;
         }
 
         .join-input-container {
             position: relative;
+        }
+
+        /* When control is active, hide the guest cursor over the video */
+        #join-remote-video.control-active {
+            cursor: none !important;
         }
     </style>
 </head>
@@ -665,8 +669,8 @@
                 <!-- OTP Step -->
                 <div id="otp-step" class="hidden">
                     <div class="auth-header">
-                        <h1 class="auth-title">Verify OTP</h1>
-                        <p class="auth-subtitle">Enter the OTP code sent to your email</p>
+                        <h1 class="auth-title">Enter OTP</h1>
+                        <p class="auth-subtitle">Check your email for the verification code</p>
                     </div>
                     <input 
                         type="text" 
@@ -674,8 +678,7 @@
                         id="otp-input" 
                         placeholder="Enter 6-digit OTP"
                         maxlength="6"
-                    >
-                    
+                    />
                     <button class="btn btn-primary" id="verify-otp-btn">Verify OTP</button>
                     <button class="btn btn-text" id="back-to-email-btn">Back to Email</button>
                 </div>
@@ -914,21 +917,31 @@
             // Google sign-in removed
             // Titlebar controls now handled via window.appControls in HTML onclick
 
-            // Auth buttons
-            document.getElementById('send-otp-btn').addEventListener('click', sendOTP);
-            document.getElementById('verify-otp-btn').addEventListener('click', verifyOTP);
-            document.getElementById('continue-bypass-btn').addEventListener('click', continueBypass);
-            document.getElementById('back-to-email-btn').addEventListener('click', backToEmail);
-            document.getElementById('signout-btn').addEventListener('click', signOut);
+            // Auth buttons - add null checks
+            const sendOtpBtn = document.getElementById('send-otp-btn');
+            const verifyOtpBtn = document.getElementById('verify-otp-btn');
+            const continueBypassBtn = document.getElementById('continue-bypass-btn');
+            const backToEmailBtn = document.getElementById('back-to-email-btn');
+            const signoutBtn = document.getElementById('signout-btn');
+            
+            if (sendOtpBtn) sendOtpBtn.addEventListener('click', sendOTP);
+            if (verifyOtpBtn) verifyOtpBtn.addEventListener('click', verifyOTP);
+            if (continueBypassBtn) continueBypassBtn.addEventListener('click', continueBypass);
+            if (backToEmailBtn) backToEmailBtn.addEventListener('click', backToEmail);
+            if (signoutBtn) signoutBtn.addEventListener('click', signOut);
 
-            // Enter key handlers
-            emailInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') sendOTP();
-            });
+            // Enter key handlers - add null checks
+            if (emailInput) {
+                emailInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendOTP();
+                });
+            }
 
-            otpInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') verifyOTP();
-            });
+            if (otpInput) {
+                otpInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') verifyOTP();
+                });
+            }
 
             // Navigation
             document.querySelectorAll('.nav-item').forEach(item => {
@@ -938,24 +951,29 @@
                 });
             });
 
-            // Share buttons
-            document.getElementById('start-share-btn').addEventListener('click', () => {
-                const btn = document.getElementById('start-share-btn');
-                if (window.superdeskState && window.superdeskState.sharingActive) {
-                    // Stop sharing
-                    if (window.stopScreenShare) {
-                        window.stopScreenShare();
+            // Share buttons - add null check
+            const startShareBtn = document.getElementById('start-share-btn');
+            if (startShareBtn) {
+                startShareBtn.addEventListener('click', () => {
+                    const btn = document.getElementById('start-share-btn');
+                    if (window.superdeskState && window.superdeskState.sharingActive) {
+                        // Stop sharing
+                        if (window.stopScreenShare) {
+                            window.stopScreenShare();
+                        }
+                    } else {
+                        // Start sharing
+                        if (window.startScreenShare) {
+                            window.startScreenShare();
+                        }
                     }
-                } else {
-                    // Start sharing
-                    if (window.startScreenShare) {
-                        window.startScreenShare();
-                    }
-                }
-            });
+                });
+            }
 
-            // Join session button
-            document.getElementById('connect-session-btn').addEventListener('click', async () => {
+            // Join session button - add null check
+            const connectSessionBtn = document.getElementById('connect-session-btn');
+            if (connectSessionBtn) {
+                connectSessionBtn.addEventListener('click', async () => {
                 const sessionId = document.getElementById('join-session-input').value.trim().toUpperCase();
                 if (!sessionId) {
                     alert('Please enter a session ID');
@@ -978,15 +996,21 @@
                     btn.disabled = false;
                     alert('Failed to join session. Please check the session ID and try again.');
                 }
-            });
+                });
+            }
 
-            // Logout button (back to login)
-            document.getElementById('logout-button').addEventListener('click', () => {
-                signOut();
-            });
+            // Logout button (back to login) - add null check
+            const logoutButton = document.getElementById('logout-button');
+            if (logoutButton) {
+                logoutButton.addEventListener('click', () => {
+                    signOut();
+                });
+            }
 
-            // Copy session ID button
-            document.getElementById('copy-session-btn').addEventListener('click', async () => {
+            // Copy session ID button - add null check
+            const copySessionBtn = document.getElementById('copy-session-btn');
+            if (copySessionBtn) {
+                copySessionBtn.addEventListener('click', async () => {
                 const sessionId = document.getElementById('session-id').textContent;
                 try {
                     // Request clipboard permission if needed
@@ -1020,10 +1044,13 @@
                     }
                     document.body.removeChild(tempInput);
                 }
-            });
+                });
+            }
 
-            // Paste session ID button
-            document.getElementById('paste-session-btn').addEventListener('click', async () => {
+            // Paste session ID button - add null check
+            const pasteSessionBtn = document.getElementById('paste-session-btn');
+            if (pasteSessionBtn) {
+                pasteSessionBtn.addEventListener('click', async () => {
                 const inputField = document.getElementById('join-session-input');
                 try {
                     // Try modern clipboard API first
@@ -1052,7 +1079,8 @@
                         inputField.focus();
                     }
                 }
-            });
+                });
+            }
         }
 
         async function sendOTP() {
@@ -1303,17 +1331,55 @@
             }
         }
 
+        // Auto-hide controls timer
+        let controlBarHideTimer = null;
+        
+        function showControlBar() {
+            const controls = document.getElementById('popup-controls');
+            if (controls) {
+                controls.style.opacity = '1';
+                
+                // Clear existing timer
+                if (controlBarHideTimer) clearTimeout(controlBarHideTimer);
+                
+                // Auto-hide after 3 seconds
+                controlBarHideTimer = setTimeout(() => {
+                    controls.style.opacity = '0';
+                }, 3000);
+            }
+        }
+        
         // Show remote desktop popup
         window.showRemoteDesktopPopup = function() {
             console.log('📺 Opening remote desktop popup...');
             const popup = document.getElementById('remote-desktop-popup');
             const waitingMsg = document.getElementById('waiting-message');
+            const video = document.getElementById('join-remote-video');
             
-            if (popup) {
-                popup.style.display = 'block';
-                console.log('✅ Remote desktop popup opened');
+            // Only open popup when there is a visible/active video stream
+            const hasActiveVideo = video && video.srcObject && video.srcObject.getVideoTracks && video.srcObject.getVideoTracks().length > 0 && video.srcObject.getVideoTracks()[0].readyState !== 'ended';
+
+            if (!hasActiveVideo) {
+                console.warn('⚠️ showRemoteDesktopPopup called but no active video stream present - aborting');
+                return;
             }
-            
+
+            if (popup) {
+                popup.style.display = 'flex';
+                showControlBar();
+                console.log('✅ Remote desktop popup opened');
+
+                // Show controls when mouse moves to top 100px (attach listener once)
+                if (video && !video.dataset.moveListenerAttached) {
+                    video.addEventListener('mousemove', (e) => {
+                        if (e.clientY < 100) {
+                            showControlBar();
+                        }
+                    });
+                    video.dataset.moveListenerAttached = 'true';
+                }
+            }
+
             if (waitingMsg) {
                 waitingMsg.style.display = 'none';
             }
@@ -1361,7 +1427,7 @@
                 if (typeof window.enableRemoteControl === 'function') {
                     window.enableRemoteControl();
                 }
-                btn.textContent = '🖱️ Control Active';
+                btn.textContent = '🖱️ Active';
                 btn.style.background = '#10b981';
                 if (indicator) indicator.style.display = 'block';
                 console.log('✅ Remote control enabled');
@@ -1502,50 +1568,50 @@
                 endBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('✕ End button clicked');
-                    if (window.hideRemoteDesktopPopup) {
-                        window.hideRemoteDesktopPopup();
-                    }
+                    console.log('✕ End session button clicked');
+                    // End session will handle everything including hiding popup and restoring cursor
                     if (window.endSession) {
                         window.endSession();
                     }
                 }, { once: false });
                 endBtn.dataset.listenerAttached = 'true';
-                console.log('✅ End button listener attached');
+                console.log('✅ End session button listener attached');
             }
         }, 1000);
     </script>
 
     <!-- Remote Desktop Popup Viewer (for guests joining sessions) -->
-    <div id="remote-desktop-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999;">
-        <!-- Video element with hidden cursor for single-cursor control -->
-        <video id="join-remote-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: contain; background: #000; cursor: none;"></video>
-        
-        <!-- Control bar at top -->
-        <div id="popup-controls" style="position: absolute; top: 0; left: 0; right: 0; background: linear-gradient(rgba(0,0,0,0.9), transparent); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000000;">
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <div style="color: white; font-size: 16px; font-weight: 600;">Remote Desktop Session</div>
-                <div id="connection-status" style="display: flex; align-items: center; gap: 8px;">
-                    <span id="status-indicator" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span>
-                    <span id="status-text" style="color: #9ca3af; font-size: 13px;">Connected</span>
-                </div>
+    <div id="remote-desktop-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; flex-direction: column;">
+        <!-- Compact control bar at top (auto-hide after 3s) -->
+        <div id="popup-controls" style="position: absolute; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.85); padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000001; pointer-events: none; transition: opacity 0.3s;">
+            <div style="display: flex; align-items: center; gap: 12px; pointer-events: none;">
+                <span id="status-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+                <div style="color: #9ca3af; font-size: 11px;">Remote Session</div>
             </div>
-            <div style="display: flex; gap: 12px;">
-                <button id="control-toggle-btn" style="padding: 10px 20px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">
-                    🖱️ Enable Control
+            <div style="display: flex; gap: 8px; pointer-events: auto;">
+                <button id="control-toggle-btn" style="padding: 6px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: white; cursor: pointer; font-size: 12px; font-weight: 500;">
+                    🖱️ Control
                 </button>
-                <button id="fullscreen-toggle-btn" style="padding: 10px 20px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">
-                    ⛶ Fullscreen
+                <button id="fullscreen-toggle-btn" style="padding: 6px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: white; cursor: pointer; font-size: 12px; font-weight: 500;">
+                    ⛶
                 </button>
-                <button id="end-session-btn" style="padding: 10px 20px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">
-                    ✕ Close
+                <button id="end-session-btn" style="padding: 6px 14px; background: #ef4444; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 12px; font-weight: 500;">
+                    ✕
                 </button>
             </div>
         </div>
         
-        <!-- Remote control indicator -->
-        <div id="control-indicator" style="display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(16, 185, 129, 0.95); padding: 12px 24px; border-radius: 8px; color: white; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-            🖱️ Remote Control Active
+           <!-- Video element - FULL screen, NO overlays blocking it -->
+           <!-- Use object-fit: fill so the video covers the full popup area (avoids letterboxing)
+               and DO NOT hide the guest cursor by default. Cursor will be hidden only when
+               remote control is ENABLED by adding the `control-active` class. -->
+           <video id="join-remote-video" autoplay playsinline muted
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: fill; background: #000; z-index: 1000000;">
+           </video>
+        
+        <!-- Minimal control indicator at bottom corner -->
+        <div id="control-indicator" style="display: none; position: absolute; bottom: 8px; right: 8px; background: rgba(16, 185, 129, 0.9); padding: 6px 12px; border-radius: 6px; color: white; font-size: 11px; font-weight: 500; pointer-events: none; z-index: 1000002;">
+            🖱️ Control Active
         </div>
     </div>
 
