@@ -21,13 +21,27 @@ let screenSize = { width: 1920, height: 1080 };
 const activeKeys = new Set();
 
 
-function refreshScreenSize() {
+async function refreshScreenSize() {
   try {
-    // Use Electron's screen API to get the primary display size
+    // Use nut-js's native screen API to get the ACTUAL screen resolution
+    // that nut-js will use for mouse positioning.
+    // This accounts for DPI scaling correctly!
+    const nutWidth = await screen.width();
+    const nutHeight = await screen.height();
+    
+    screenSize = { width: nutWidth, height: nutHeight };
+    
+    // Also log Electron's values for comparison
     const primaryDisplay = electronScreen.getPrimaryDisplay();
-    screenSize = primaryDisplay.size;
+    console.log('[robot] Screen refresh - nut-js native size:', screenSize);
+    console.log('[robot] Screen refresh - Electron logical size:', primaryDisplay.size);
+    console.log('[robot] Screen refresh - Electron scaleFactor:', primaryDisplay.scaleFactor);
+    console.log('[robot] Screen refresh - Electron bounds:', primaryDisplay.bounds);
   } catch (error) {
     console.error('Failed to get screen size:', error);
+    // Fallback to Electron's size if nut-js fails
+    const primaryDisplay = electronScreen.getPrimaryDisplay();
+    screenSize = primaryDisplay.size;
   }
 }
 
@@ -49,10 +63,12 @@ function translateCoordinates(x, y) {
   normX = clamp(normX, 0, 1);
   normY = clamp(normY, 0, 1);
 
-  // Map normalized coordinates directly to actual screen dimensions
+  // Map normalized coordinates to screen pixels
+  // 0.0 maps to 0, 1.0 maps to (screenSize - 1) to reach edges
+  // Using Math.floor instead of round for more predictable edge behavior
   return {
-    x: Math.round(normX * screenSize.width),
-    y: Math.round(normY * screenSize.height)
+    x: Math.floor(normX * (screenSize.width - 1)),
+    y: Math.floor(normY * (screenSize.height - 1))
   };
 }
 
@@ -168,9 +184,9 @@ async function releaseActiveKeys() {
   activeKeys.clear();
 }
 
-ipcMain.on('robot-refresh-screen-size', () => {
+ipcMain.on('robot-refresh-screen-size', async () => {
   console.log('[robot] refresh-screen-size requested');
-  refreshScreenSize();
+  await refreshScreenSize();
   console.log('[robot] screenSize now:', screenSize);
 });
 
@@ -187,11 +203,18 @@ ipcMain.on('window-close', () => {
   }
 });
 
-ipcMain.on('robot-set-enabled', (_event, enabled) => {
+ipcMain.on('robot-set-enabled', async (_event, enabled) => {
   remoteControlEnabled = !!enabled;
+  
+  // Refresh screen size when enabling to ensure we have current dimensions
+  if (remoteControlEnabled) {
+    await refreshScreenSize();
+  }
+  
   console.log('[robot] 🎮 set-enabled:', remoteControlEnabled);
   console.log('[robot] Screen size:', screenSize);
   console.log('[robot] Reference resolution:', REMOTE_REFERENCE_WIDTH, 'x', REMOTE_REFERENCE_HEIGHT);
+  
   if (!remoteControlEnabled) {
     releaseActiveKeys();
   }
@@ -210,39 +233,42 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
   const coords = translateCoordinates(x, y);
 
   try {
-    // Debug: log a small sample of events with screen info
-    if (Math.random() < 0.02) {
+    // Log every 50th event to avoid spam but still see what's happening
+    if (Math.random() < 0.02 || x > 0.9 || y > 0.9) {
       console.log('[robot] mouse', { 
         type, 
-        normalizedX: x,
-        normalizedY: y,
-        mappedX: coords.x, 
-        mappedY: coords.y,
-        screenWidth: screenSize.width,
-        screenHeight: screenSize.height,
-        percentX: ((coords.x / screenSize.width) * 100).toFixed(1) + '%',
-        percentY: ((coords.y / screenSize.height) * 100).toFixed(1) + '%',
-        button 
+        inputX: x,
+        inputY: y,
+        outputX: coords.x, 
+        outputY: coords.y,
+        screenW: screenSize.width,
+        screenH: screenSize.height,
+        pctX: ((coords.x / screenSize.width) * 100).toFixed(1) + '%',
+        pctY: ((coords.y / screenSize.height) * 100).toFixed(1) + '%'
       });
     }
     switch (type) {
       case 'move':
       case 'mousemove':
-        await mouse.setPosition({ x: coords.x, y: coords.y });
+        // Fire-and-forget for instant movement (no await = no latency)
+        mouse.setPosition({ x: coords.x, y: coords.y }).catch(err => console.error('[robot] move error:', err));
         break;
       case 'down':
       case 'mousedown':
-        await mouse.setPosition({ x: coords.x, y: coords.y });
-        await mouse.pressButton(mapNutButton(button));
+        mouse.setPosition({ x: coords.x, y: coords.y }).then(() => 
+          mouse.pressButton(mapNutButton(button))
+        ).catch(err => console.error('[robot] down error:', err));
         break;
       case 'up':
       case 'mouseup':
-        await mouse.setPosition({ x: coords.x, y: coords.y });
-        await mouse.releaseButton(mapNutButton(button));
+        mouse.setPosition({ x: coords.x, y: coords.y }).then(() => 
+          mouse.releaseButton(mapNutButton(button))
+        ).catch(err => console.error('[robot] up error:', err));
         break;
       case 'click':
-        await mouse.setPosition({ x: coords.x, y: coords.y });
-        await mouse.click(mapNutButton(button));
+        mouse.setPosition({ x: coords.x, y: coords.y }).then(() => 
+          mouse.click(mapNutButton(button))
+        ).catch(err => console.error('[robot] click error:', err));
         break;
       default:
         console.log('[robot] Unknown mouse event type:', type);

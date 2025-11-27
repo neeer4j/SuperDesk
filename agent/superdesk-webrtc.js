@@ -187,15 +187,78 @@ async function initializeSocket() {
             }
         });
 
-        // Host stopped sharing - guest should stop sending events
+        // Host stopped sharing - guest should stop sending events and show exit UI
         socket.on('host-stopped-sharing', () => {
             console.log('🛑 Host stopped sharing - disabling remote control');
-            if (!window.superdeskState.isHost && window.superdeskState.remoteControlEnabled) {
-                disableRemoteControl();
-                showNotification('Sharing Stopped', 'Host has stopped screen sharing');
+            if (!window.superdeskState.isHost) {
+                // Disable remote control
+                if (window.superdeskState.remoteControlEnabled) {
+                    disableRemoteControl();
+                }
+                
+                // Reset control button to default state
+                const controlBtn = document.getElementById('control-toggle-btn');
+                if (controlBtn) {
+                    controlBtn.textContent = '🖱️ Enable Control';
+                    controlBtn.style.background = 'rgba(255,255,255,0.15)';
+                }
+                const indicator = document.getElementById('control-indicator');
+                if (indicator) indicator.style.display = 'none';
+                
+                // Show "Sharing Ended" overlay on the popup
+                showSharingEndedOverlay();
             }
         });
     });
+}
+
+// Show overlay when host stops sharing
+function showSharingEndedOverlay() {
+    const popup = document.getElementById('remote-desktop-popup');
+    if (!popup || popup.style.display === 'none') return;
+    
+    // Ensure guest cursor is visible
+    const joinVideo = document.getElementById('join-remote-video');
+    if (joinVideo) {
+        joinVideo.classList.remove('control-active');
+        joinVideo.style.cursor = 'default';
+    }
+    
+    // Make sure body cursor is visible
+    document.body.style.cursor = 'default';
+    
+    // Hide controls bar
+    const controls = document.getElementById('popup-controls');
+    if (controls) controls.style.display = 'none';
+    
+    // Create overlay with visible cursor
+    let overlay = document.getElementById('sharing-ended-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'sharing-ended-overlay';
+        overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000003; cursor: default;';
+        overlay.innerHTML = `
+            <div style="text-align: center; cursor: default;">
+                <div style="font-size: 64px; margin-bottom: 20px;">🛑</div>
+                <div style="color: white; font-size: 24px; font-weight: 600; margin-bottom: 12px;">Screen Sharing Ended</div>
+                <div style="color: #9ca3af; font-size: 14px; margin-bottom: 30px;">The host has stopped sharing their screen</div>
+                <button id="exit-session-btn" style="padding: 12px 32px; background: #613da9; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 16px; font-weight: 500; transition: background 0.2s;">
+                    Exit Session
+                </button>
+            </div>
+        `;
+        popup.appendChild(overlay);
+        
+        // Add click handler for exit button
+        document.getElementById('exit-session-btn').addEventListener('click', () => {
+            if (typeof window.hideRemoteDesktopPopup === 'function') {
+                window.hideRemoteDesktopPopup();
+            }
+            overlay.remove();
+            // Show controls again for next session
+            if (controls) controls.style.display = 'flex';
+        });
+    }
 }
 
 // Create session (Host)
@@ -1133,11 +1196,23 @@ function disableRemoteControl() {
     document.removeEventListener('keydown', handleKeyDown, { capture: true });
     document.removeEventListener('keyup', handleKeyUp, { capture: true });
     
+    // Reset control button to default styling
+    const controlBtn = document.getElementById('control-toggle-btn');
+    if (controlBtn) {
+        controlBtn.textContent = '🖱️ Enable Control';
+        controlBtn.style.background = 'rgba(255,255,255,0.15)';
+    }
+    const indicator = document.getElementById('control-indicator');
+    if (indicator) indicator.style.display = 'none';
+    
     console.log('Remote control disabled');
 }
 
-// Mouse event handlers
+// Mouse event handlers with RAF-based batching for minimum latency
 let mouseMoveCount = 0;
+let pendingMouseMove = null;
+let rafScheduled = false;
+
 function handleMouseMove(e) {
     if (!window.superdeskState.remoteControlEnabled) {
         if (mouseMoveCount === 0) {
@@ -1148,9 +1223,6 @@ function handleMouseMove(e) {
     }
     
     mouseMoveCount++;
-    if (mouseMoveCount === 1 || mouseMoveCount % 100 === 0) {
-        console.log(`🖱️ Mouse move event #${mouseMoveCount}`);
-    }
     
     const video = e.target;
     const rect = video.getBoundingClientRect();
@@ -1158,16 +1230,29 @@ function handleMouseMove(e) {
     const y = (e.clientY - rect.top) / rect.height;
     
     if (!window.superdeskState.socket || !window.superdeskState.socket.connected) {
-        console.error('❌ Cannot send mouse event: socket not connected');
         return;
     }
     
-    window.superdeskState.socket.emit('mouse-event', {
-        sessionId: window.superdeskState.sessionId,
-        type: 'move',
-        x,
-        y
-    });
+    // Always store the latest position
+    pendingMouseMove = { x, y };
+    
+    // Use requestAnimationFrame for optimal timing - syncs with display refresh
+    if (!rafScheduled) {
+        rafScheduled = true;
+        requestAnimationFrame(() => {
+            rafScheduled = false;
+            if (pendingMouseMove && window.superdeskState.socket) {
+                const { x, y } = pendingMouseMove;
+                pendingMouseMove = null;
+                window.superdeskState.socket.emit('mouse-event', {
+                    sessionId: window.superdeskState.sessionId,
+                    type: 'move',
+                    x,
+                    y
+                });
+            }
+        });
+    }
 }
 
 function handleMouseClick(e) {
@@ -1264,7 +1349,7 @@ function stopScreenShare() {
     console.log('🛑 Stopping screen share...');
     
     // Disable remote control if we're the host
-    if (window.superdeskState.isHost && window.superdeskState.remoteControlEnabled) {
+    if (window.superdeskState.isHost) {
         console.log('🛑 Disabling remote control on host...');
         if (window.appControls && window.appControls.ipcSend) {
             window.appControls.ipcSend('robot-set-enabled', false);
@@ -1298,11 +1383,11 @@ function stopScreenShare() {
     window.superdeskState.sharingActive = false;
     window.superdeskState.webrtc = null;
     
-    // Update button
+    // Update button to WHITE (default state)
     const shareBtn = document.getElementById('start-share-btn');
     if (shareBtn) {
         shareBtn.textContent = 'Start Screen Share';
-        shareBtn.style.background = '#613da9';
+        shareBtn.style.background = 'rgba(255,255,255,0.15)';  // White/transparent default
     }
     
     console.log('✅ Screen sharing stopped and remote control disabled');
@@ -1313,10 +1398,18 @@ function stopScreenShare() {
 function endSession() {
     console.log('🛑 Ending session...');
     
-    // Disable remote control if active (this restores cursor)
+    // FIRST: Disable remote control on main process (stops cursor movement immediately)
+    if (window.appControls && window.appControls.ipcSend) {
+        console.log('🛑 Sending robot-set-enabled FALSE to main process');
+        window.appControls.ipcSend('robot-set-enabled', false);
+        window.appControls.ipcSend('robot-release-keys');
+    }
+    
+    // Disable remote control state
     if (window.superdeskState.remoteControlEnabled) {
         disableRemoteControl();
     }
+    window.superdeskState.remoteControlEnabled = false;
     
     if (window.superdeskState.socket) {
         window.superdeskState.socket.emit('end-session', window.superdeskState.sessionId);
@@ -1362,11 +1455,11 @@ function endSession() {
     window.superdeskState.remoteControlEnabled = false;
     window.superdeskState.webrtc = null;
     
-    // Reset UI
+    // Reset UI - Start Screen Share button to WHITE (disabled state)
     const shareBtn = document.getElementById('start-share-btn');
     if (shareBtn) {
         shareBtn.textContent = 'Start Screen Share';
-        shareBtn.style.background = '#613da9';
+        shareBtn.style.background = 'rgba(255,255,255,0.15)';  // White/transparent
         shareBtn.disabled = true;
         shareBtn.style.opacity = '0.5';
     }

@@ -1582,23 +1582,18 @@
 
     <!-- Remote Desktop Popup Viewer (for guests joining sessions) -->
     <div id="remote-desktop-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; flex-direction: column;">
-        <!-- Compact control bar at top (auto-hide after 3s) -->
-        <div id="popup-controls" style="position: absolute; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.85); padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000001; pointer-events: none; transition: opacity 0.3s;">
-            <div style="display: flex; align-items: center; gap: 12px; pointer-events: none;">
-                <span id="status-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-                <div style="color: #9ca3af; font-size: 11px;">Remote Session</div>
-            </div>
-            <div style="display: flex; gap: 8px; pointer-events: auto;">
-                <button id="control-toggle-btn" style="padding: 6px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: white; cursor: pointer; font-size: 12px; font-weight: 500;">
-                    🖱️ Control
-                </button>
-                <button id="fullscreen-toggle-btn" style="padding: 6px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: white; cursor: pointer; font-size: 12px; font-weight: 500;">
-                    ⛶
-                </button>
-                <button id="end-session-btn" style="padding: 6px 14px; background: #ef4444; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 12px; font-weight: 500;">
-                    ✕
-                </button>
-            </div>
+        <!-- Centered control bar at top (auto-hide after 3s) -->
+        <div id="popup-controls" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); padding: 8px 16px; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 1000001; pointer-events: auto; transition: opacity 0.3s; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px);">
+            <span id="status-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <button id="control-toggle-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;">
+                🖱️ Enable Control
+            </button>
+            <button id="fullscreen-toggle-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;">
+                ⛶ Fullscreen
+            </button>
+            <button id="end-session-btn" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;">
+                ✕ Close
+            </button>
         </div>
         
            <!-- Video element - FULL screen, NO overlays blocking it -->
