@@ -621,6 +621,250 @@
         #join-remote-video.control-active {
             cursor: none !important;
         }
+
+        /* Settings Button */
+        .settings-button {
+            width: 100%;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(97, 61, 169, 0.15);
+            color: #613da9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .settings-button:hover {
+            background: rgba(97, 61, 169, 0.25);
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: absolute;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            height: 100%;
+            background: #613da9;
+            transition: right 0.3s ease-in-out;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .settings-panel.active {
+            right: 0;
+        }
+
+        .settings-header {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .settings-back-btn {
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .settings-back-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .settings-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .settings-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .settings-section {
+            margin-bottom: 24px;
+        }
+
+        .settings-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .settings-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+        }
+
+        .settings-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .settings-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-item-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .settings-item-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .settings-item-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .settings-item-desc {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #10b981;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active::after {
+            left: 24px;
+        }
+
+        /* Settings Action Buttons */
+        .settings-action-btn {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .settings-action-btn.danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ff6b6b;
+        }
+
+        .settings-action-btn.danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .settings-action-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .settings-action-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Settings Footer */
+        .settings-footer {
+            padding: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .settings-version {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 4px;
+        }
+
+        .settings-copyright {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Dropdown Select */
+        .settings-select {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .settings-select option {
+            background: #613da9;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -723,7 +967,150 @@
                 </button>
             </div>
 
-            <button class="btn btn-danger" id="signout-btn">Sign Out</button>
+            <button class="settings-button" id="settings-btn">
+                <span>⚙️</span>
+                <span>Settings</span>
+            </button>
+        </div>
+
+        <!-- Settings Panel (slides in from right) -->
+        <div class="settings-panel" id="settings-panel">
+            <div class="settings-header">
+                <button class="settings-back-btn" id="settings-back-btn">←</button>
+                <h2 class="settings-title">Settings</h2>
+            </div>
+            
+            <div class="settings-content">
+                <!-- Account Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Account</div>
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">👤</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label" id="settings-user-email">user@example.com</div>
+                                <div class="settings-item-desc">Signed in</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preferences Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Preferences</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🔔</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Notifications</div>
+                                <div class="settings-item-desc">Get notified when someone joins</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch active" id="toggle-notifications" onclick="toggleSetting('notifications')"></div>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🔊</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Sound Effects</div>
+                                <div class="settings-item-desc">Play sounds for events</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch active" id="toggle-sounds" onclick="toggleSetting('sounds')"></div>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🚀</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Start on System Boot</div>
+                                <div class="settings-item-desc">Launch SuperDesk automatically</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch" id="toggle-autostart" onclick="toggleSetting('autostart')"></div>
+                    </div>
+                </div>
+
+                <!-- Connection Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Connection</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">📺</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Video Quality</div>
+                                <div class="settings-item-desc">Adjust stream quality</div>
+                            </div>
+                        </div>
+                        <select class="settings-select" id="video-quality" onchange="updateVideoQuality(this.value)">
+                            <option value="auto">Auto</option>
+                            <option value="high">High (1080p)</option>
+                            <option value="medium">Medium (720p)</option>
+                            <option value="low">Low (480p)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🎵</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Share Audio</div>
+                                <div class="settings-item-desc">Include system audio in share</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch active" id="toggle-audio" onclick="toggleSetting('audio')"></div>
+                    </div>
+                </div>
+
+                <!-- Privacy Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Privacy & Security</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🔒</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Require Approval</div>
+                                <div class="settings-item-desc">Approve before remote control</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch active" id="toggle-approval" onclick="toggleSetting('approval')"></div>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">📜</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Session History</div>
+                                <div class="settings-item-desc">Keep connection logs</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch" id="toggle-history" onclick="toggleSetting('history')"></div>
+                    </div>
+                </div>
+
+                <!-- Actions Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Actions</div>
+                    <button class="settings-action-btn secondary" onclick="clearSessionData()">
+                        🗑️ Clear Session Data
+                    </button>
+                    <button class="settings-action-btn secondary" onclick="checkForUpdates()">
+                        🔄 Check for Updates
+                    </button>
+                    <button class="settings-action-btn danger" id="settings-signout-btn">
+                        🚪 Sign Out
+                    </button>
+                </div>
+            </div>
+            
+            <div class="settings-footer">
+                <div class="settings-version">SuperDesk v1.0.0</div>
+                <div class="settings-copyright">© 2025 SuperDesk. All rights reserved.</div>
+            </div>
         </div>
 
         <!-- Right Content (70%) -->
@@ -922,13 +1309,17 @@
             const verifyOtpBtn = document.getElementById('verify-otp-btn');
             const continueBypassBtn = document.getElementById('continue-bypass-btn');
             const backToEmailBtn = document.getElementById('back-to-email-btn');
-            const signoutBtn = document.getElementById('signout-btn');
+            const settingsBtn = document.getElementById('settings-btn');
+            const settingsBackBtn = document.getElementById('settings-back-btn');
+            const settingsSignoutBtn = document.getElementById('settings-signout-btn');
             
             if (sendOtpBtn) sendOtpBtn.addEventListener('click', sendOTP);
             if (verifyOtpBtn) verifyOtpBtn.addEventListener('click', verifyOTP);
             if (continueBypassBtn) continueBypassBtn.addEventListener('click', continueBypass);
             if (backToEmailBtn) backToEmailBtn.addEventListener('click', backToEmail);
-            if (signoutBtn) signoutBtn.addEventListener('click', signOut);
+            if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+            if (settingsBackBtn) settingsBackBtn.addEventListener('click', closeSettings);
+            if (settingsSignoutBtn) settingsSignoutBtn.addEventListener('click', signOut);
 
             // Enter key handlers - add null checks
             if (emailInput) {
@@ -1175,6 +1566,121 @@
             authScreen.style.display = 'none';
             dashboardScreen.style.display = 'flex';
             userEmailDisplay.textContent = currentUser?.email || 'user@example.com';
+            // Update settings panel email display
+            const settingsEmail = document.getElementById('settings-user-email');
+            if (settingsEmail) {
+                settingsEmail.textContent = currentUser?.email || 'user@example.com';
+            }
+            // Load saved settings
+            loadSettings();
+        }
+
+        // Settings Panel Functions
+        function openSettings() {
+            const panel = document.getElementById('settings-panel');
+            if (panel) {
+                panel.classList.add('active');
+            }
+        }
+
+        function closeSettings() {
+            const panel = document.getElementById('settings-panel');
+            if (panel) {
+                panel.classList.remove('active');
+            }
+        }
+
+        // Settings storage
+        const defaultSettings = {
+            notifications: true,
+            sounds: true,
+            autostart: false,
+            audio: true,
+            approval: true,
+            history: false,
+            videoQuality: 'auto'
+        };
+
+        function loadSettings() {
+            try {
+                const saved = localStorage.getItem('superdeskSettings');
+                const settings = saved ? JSON.parse(saved) : defaultSettings;
+                
+                // Apply toggle states
+                Object.keys(settings).forEach(key => {
+                    const toggle = document.getElementById(`toggle-${key}`);
+                    if (toggle) {
+                        if (settings[key]) {
+                            toggle.classList.add('active');
+                        } else {
+                            toggle.classList.remove('active');
+                        }
+                    }
+                });
+                
+                // Apply video quality
+                const qualitySelect = document.getElementById('video-quality');
+                if (qualitySelect && settings.videoQuality) {
+                    qualitySelect.value = settings.videoQuality;
+                }
+            } catch (e) {
+                console.error('Failed to load settings:', e);
+            }
+        }
+
+        function saveSettings() {
+            try {
+                const settings = {};
+                ['notifications', 'sounds', 'autostart', 'audio', 'approval', 'history'].forEach(key => {
+                    const toggle = document.getElementById(`toggle-${key}`);
+                    settings[key] = toggle ? toggle.classList.contains('active') : defaultSettings[key];
+                });
+                
+                const qualitySelect = document.getElementById('video-quality');
+                settings.videoQuality = qualitySelect ? qualitySelect.value : 'auto';
+                
+                localStorage.setItem('superdeskSettings', JSON.stringify(settings));
+            } catch (e) {
+                console.error('Failed to save settings:', e);
+            }
+        }
+
+        function toggleSetting(settingName) {
+            const toggle = document.getElementById(`toggle-${settingName}`);
+            if (toggle) {
+                toggle.classList.toggle('active');
+                saveSettings();
+                
+                // Handle special cases
+                if (settingName === 'autostart') {
+                    // Communicate with main process for autostart
+                    if (window.electronAPI && window.electronAPI.setAutoStart) {
+                        window.electronAPI.setAutoStart(toggle.classList.contains('active'));
+                    }
+                }
+            }
+        }
+
+        function updateVideoQuality(quality) {
+            saveSettings();
+            // Apply video quality change if sharing is active
+            if (window.superdeskState && window.superdeskState.sharingActive) {
+                console.log('Video quality changed to:', quality);
+                // Quality change would be applied on next share
+            }
+        }
+
+        function clearSessionData() {
+            if (confirm('This will clear all session data. Are you sure?')) {
+                localStorage.removeItem('superdeskSettings');
+                loadSettings();
+                alert('Session data cleared!');
+            }
+        }
+
+        function checkForUpdates() {
+            // Placeholder for update check functionality
+            alert('You are running the latest version of SuperDesk!');
         }
 
         function switchView(view) {
