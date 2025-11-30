@@ -270,6 +270,28 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
           mouse.click(mapNutButton(button))
         ).catch(err => console.error('[robot] click error:', err));
         break;
+      case 'scroll':
+      case 'wheel':
+        // Handle scroll/wheel events
+        const { deltaX, deltaY } = data;
+        // Move mouse to position first, then scroll
+        // nut-js scroll: positive = scroll down, negative = scroll up
+        // Browser wheel deltaY: positive = scroll down, negative = scroll up
+        // So we can use deltaY directly (divided to get reasonable scroll amount)
+        const scrollAmount = Math.round(deltaY / 30); // Normalize to reasonable scroll steps
+        if (scrollAmount !== 0) {
+          mouse.setPosition({ x: coords.x, y: coords.y }).then(() => 
+            mouse.scrollDown(scrollAmount)
+          ).catch(err => console.error('[robot] scroll error:', err));
+        }
+        // Handle horizontal scroll if needed
+        if (deltaX && Math.abs(deltaX) > 10) {
+          const hScrollAmount = Math.round(deltaX / 30);
+          // Note: nut-js doesn't have native horizontal scroll, 
+          // but we can try using scrollRight/scrollLeft if available
+          console.log('[robot] Horizontal scroll requested:', hScrollAmount);
+        }
+        break;
       default:
         console.log('[robot] Unknown mouse event type:', type);
         break;

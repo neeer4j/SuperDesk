@@ -107,7 +107,9 @@ async function initializeSocket() {
 
         socket.on('session-error', (error) => {
             console.error('Session error:', error);
-            alert(`Error: ${error}`);
+            if (window.superdeskModal) {
+                window.superdeskModal.error(`${error}`, 'Session Error');
+            }
         });
 
         socket.on('session-ended', () => {
@@ -272,14 +274,18 @@ async function createSession() {
         console.log('Creating session...');
     } catch (error) {
         console.error('Failed to create session:', error);
-        alert('Failed to create session. Check your internet connection.');
+        if (window.superdeskModal) {
+            window.superdeskModal.error('Failed to create session. Check your internet connection.', 'Connection Error');
+        }
     }
 }
 
 // Join session (Guest)
 async function joinSession(sessionId) {
     if (!sessionId || sessionId.length !== 8) {
-        alert('Please enter a valid 8-character session ID');
+        if (window.superdeskModal) {
+            window.superdeskModal.warning('Please enter a valid 8-character session ID', 'Invalid Session ID');
+        }
         return;
     }
 
@@ -317,7 +323,9 @@ async function joinSession(sessionId) {
         console.log('✅ ========== JOIN COMPLETE ==========');
     } catch (error) {
         console.error('❌ Failed to join session:', error);
-        alert('Failed to join session: ' + error.message);
+        if (window.superdeskModal) {
+            window.superdeskModal.error('Failed to join session: ' + error.message, 'Join Failed');
+        }
         updateJoinButtonState('disconnected');
         
         // Show error in placeholder
@@ -979,7 +987,9 @@ window.availableSources = {
 
 async function startScreenShare() {
     if (!window.superdeskState.guestConnected) {
-        alert('No guest connected yet. Please wait for someone to join your session.');
+        if (window.superdeskModal) {
+            window.superdeskModal.warning('No guest connected yet. Please wait for someone to join your session.', 'No Guest Connected');
+        }
         return;
     }
 
@@ -1007,7 +1017,9 @@ async function startScreenShare() {
 
     } catch (error) {
         console.error('Failed to start screen share:', error);
-        alert('Failed to start screen sharing: ' + error.message);
+        if (window.superdeskModal) {
+            window.superdeskModal.error('Failed to start screen sharing: ' + error.message, 'Screen Share Error');
+        }
     }
 }
 
@@ -1081,7 +1093,9 @@ function selectSourceAndConfirm(sourceId) {
 async function confirmSourceSelection() {
     if (!window.availableSources.selected) {
         console.error('No source selected');
-        alert('Please select a screen or window to share');
+        if (window.superdeskModal) {
+            window.superdeskModal.warning('Please select a screen or window to share', 'No Source Selected');
+        }
         return;
     }
     
@@ -1103,7 +1117,9 @@ async function confirmSourceSelection() {
 
     } catch (error) {
         console.error('Failed to start screen sharing:', error);
-        alert('Failed to start screen sharing: ' + error.message);
+        if (window.superdeskModal) {
+            window.superdeskModal.error('Failed to start screen sharing: ' + error.message, 'Screen Share Error');
+        }
     }
 }
 
@@ -1137,6 +1153,7 @@ function enableRemoteControl() {
         video.addEventListener('mousedown', handleMouseDown, { capture: true });
         video.addEventListener('mouseup', handleMouseUp, { capture: true });
         video.addEventListener('click', handleMouseClick, { capture: true });
+        video.addEventListener('wheel', handleMouseWheel, { capture: true, passive: false });
         console.log('  ✅ Event listeners attached to remote-video (capture)');
     }
     
@@ -1145,6 +1162,7 @@ function enableRemoteControl() {
         joinVideo.addEventListener('mousedown', handleMouseDown, { capture: true });
         joinVideo.addEventListener('mouseup', handleMouseUp, { capture: true });
         joinVideo.addEventListener('click', handleMouseClick, { capture: true });
+        joinVideo.addEventListener('wheel', handleMouseWheel, { capture: true, passive: false });
         console.log('  ✅ Event listeners attached to join-remote-video (capture)');
     }
     
@@ -1178,6 +1196,7 @@ function disableRemoteControl() {
         video.removeEventListener('mousedown', handleMouseDown, { capture: true });
         video.removeEventListener('mouseup', handleMouseUp, { capture: true });
         video.removeEventListener('click', handleMouseClick, { capture: true });
+        video.removeEventListener('wheel', handleMouseWheel, { capture: true });
     }
     
     if (joinVideo) {
@@ -1185,6 +1204,7 @@ function disableRemoteControl() {
         joinVideo.removeEventListener('mousedown', handleMouseDown, { capture: true });
         joinVideo.removeEventListener('mouseup', handleMouseUp, { capture: true });
         joinVideo.removeEventListener('click', handleMouseClick, { capture: true });
+        joinVideo.removeEventListener('wheel', handleMouseWheel, { capture: true });
         // Restore guest cursor visibility
         try {
             joinVideo.classList.remove('control-active');
@@ -1298,6 +1318,40 @@ function handleMouseUp(e) {
         sessionId: window.superdeskState.sessionId,
         type: 'up',
         button: e.button,
+        x,
+        y
+    });
+}
+
+// Mouse wheel/scroll handler
+let wheelEventCount = 0;
+function handleMouseWheel(e) {
+    if (!window.superdeskState.remoteControlEnabled) return;
+    
+    // Prevent page scrolling
+    e.preventDefault();
+    e.stopPropagation();
+    
+    wheelEventCount++;
+    if (wheelEventCount === 1 || wheelEventCount % 5 === 0) {
+        console.log(`🖱️ Wheel event #${wheelEventCount}:`, { deltaX: e.deltaX, deltaY: e.deltaY });
+    }
+    
+    const video = e.target;
+    const rect = video.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    
+    // Normalize delta values - different browsers report different scales
+    // Most browsers use 100 for one "click" of the scroll wheel
+    const deltaX = Math.sign(e.deltaX) * Math.min(Math.abs(e.deltaX), 120);
+    const deltaY = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120);
+
+    window.superdeskState.socket.emit('mouse-event', {
+        sessionId: window.superdeskState.sessionId,
+        type: 'scroll',
+        deltaX: deltaX,
+        deltaY: deltaY,
         x,
         y
     });
@@ -1510,11 +1564,10 @@ function updateJoinButtonState(state) {
 
 // Show notification
 function showNotification(title, message) {
-    // Simple alert for now
-    // TODO: Implement better notification UI
     console.log(`${title}: ${message}`);
-    if (typeof alert !== 'undefined') {
-        alert(`${title}\n\n${message}`);
+    // Use custom modal if available, otherwise just log
+    if (window.superdeskModal) {
+        window.superdeskModal.success(message, title);
     }
 }
 

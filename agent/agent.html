@@ -865,6 +865,184 @@
             background: #613da9;
             color: white;
         }
+
+        /* Custom Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        .settings-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .settings-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .settings-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Custom Themed Modal Popup */
+        .superdesk-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease-out;
+        }
+
+        .superdesk-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .superdesk-modal {
+            background: linear-gradient(145deg, #7c4dbd 0%, #5a3498 100%);
+            border-radius: 16px;
+            padding: 0;
+            min-width: 320px;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.2s ease-out;
+            overflow: hidden;
+        }
+
+        .superdesk-modal-overlay.active .superdesk-modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .superdesk-modal-header {
+            padding: 20px 24px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .superdesk-modal-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .superdesk-modal-icon.info {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .superdesk-modal-icon.success {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .superdesk-modal-icon.warning {
+            background: rgba(245, 158, 11, 0.2);
+        }
+
+        .superdesk-modal-icon.error {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .superdesk-modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .superdesk-modal-body {
+            padding: 20px 24px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.6;
+        }
+
+        .superdesk-modal-footer {
+            padding: 16px 24px 20px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .superdesk-modal-btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .superdesk-modal-btn.primary {
+            background: white;
+            color: #613da9;
+        }
+
+        .superdesk-modal-btn.primary:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+        }
+
+        .superdesk-modal-btn.secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .superdesk-modal-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Modal Input Field */
+        .superdesk-modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            margin-top: 12px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .superdesk-modal-input:focus {
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .superdesk-modal-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -1367,7 +1545,7 @@
                 connectSessionBtn.addEventListener('click', async () => {
                 const sessionId = document.getElementById('join-session-input').value.trim().toUpperCase();
                 if (!sessionId) {
-                    alert('Please enter a session ID');
+                    window.superdeskModal.warning('Please enter a session ID', 'Missing Session ID');
                     return;
                 }
                 
@@ -1385,7 +1563,7 @@
                     console.error('❌ Join failed:', error);
                     btn.textContent = originalText;
                     btn.disabled = false;
-                    alert('Failed to join session. Please check the session ID and try again.');
+                    window.superdeskModal.error('Failed to join session. Please check the session ID and try again.', 'Connection Failed');
                 }
                 });
             }
@@ -1431,7 +1609,7 @@
                         btn.textContent = 'Copied!';
                         setTimeout(() => btn.textContent = 'Copy', 2000);
                     } catch (fallbackErr) {
-                        alert('Failed to copy. Please copy manually: ' + sessionId);
+                        window.superdeskModal.warning('Failed to copy. Please copy manually: ' + sessionId, 'Copy Failed');
                     }
                     document.body.removeChild(tempInput);
                 }
@@ -1461,12 +1639,12 @@
                             }, 10);
                         } else {
                             // If execCommand also fails, prompt user to paste manually
-                            alert('Please paste manually (Ctrl+V) into the input field');
+                            window.superdeskModal.alert('Please paste manually (Ctrl+V) into the input field', 'Paste Required');
                             inputField.focus();
                         }
                     } catch (fallbackErr) {
                         console.error('Fallback paste failed:', fallbackErr);
-                        alert('Please paste manually (Ctrl+V) into the input field');
+                        window.superdeskModal.alert('Please paste manually (Ctrl+V) into the input field', 'Paste Required');
                         inputField.focus();
                     }
                 }
@@ -1477,7 +1655,7 @@
         async function sendOTP() {
             const email = emailInput.value.trim();
             if (!email) {
-                alert('Please enter your email');
+                window.superdeskModal.warning('Please enter your email', 'Email Required');
                 return;
             }
 
@@ -1495,11 +1673,11 @@
 
                 if (error) throw error;
 
-                alert('Check your email for the OTP code!');
+                window.superdeskModal.success('Check your email for the OTP code!', 'OTP Sent');
                 emailStep.classList.add('hidden');
                 otpStep.classList.remove('hidden');
             } catch (error) {
-                alert('Error: ' + error.message);
+                window.superdeskModal.error('Error: ' + error.message, 'Failed to Send OTP');
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Send OTP';
@@ -1511,7 +1689,7 @@
             const email = emailInput.value.trim();
 
             if (!otp) {
-                alert('Please enter the OTP code');
+                window.superdeskModal.warning('Please enter the OTP code', 'OTP Required');
                 return;
             }
 
@@ -1530,7 +1708,7 @@
 
                 // User will be set via onAuthStateChange listener
             } catch (error) {
-                alert('Error: ' + error.message);
+                window.superdeskModal.error('Error: ' + error.message, 'Verification Failed');
                 btn.disabled = false;
                 btn.textContent = 'Verify OTP';
             }
@@ -1670,17 +1848,18 @@
             }
         }
 
-        function clearSessionData() {
-            if (confirm('This will clear all session data. Are you sure?')) {
+        async function clearSessionData() {
+            const confirmed = await window.superdeskModal.confirm('This will clear all session data. Are you sure?', 'Clear Data');
+            if (confirmed) {
                 localStorage.removeItem('superdeskSettings');
                 loadSettings();
-                alert('Session data cleared!');
+                window.superdeskModal.success('Session data cleared!', 'Data Cleared');
             }
         }
 
         function checkForUpdates() {
             // Placeholder for update check functionality
-            alert('You are running the latest version of SuperDesk!');
+            window.superdeskModal.success('You are running the latest version of SuperDesk!', 'Up to Date');
         }
 
         function switchView(view) {
@@ -1727,7 +1906,7 @@
 
                     window.socket.on('connect_error', (error) => {
                         console.error('❌ Connection error:', error);
-                        alert('Failed to connect to server. Please check your connection.');
+                        window.superdeskModal.error('Failed to connect to server. Please check your connection.', 'Connection Error');
                     });
                 }
 
@@ -1776,7 +1955,7 @@
                     if (hostView) hostView.style.display = 'none';
                     if (joinView) joinView.style.display = 'block';
                     
-                    alert(`Connected to session ${sessionId}. Waiting for screen sharing to start...`);
+                    window.superdeskModal.success(`Connected to session ${sessionId}. Waiting for screen sharing to start...`, 'Session Joined');
                     
                     // Set up WebRTC receiver using the proper function from superdesk-webrtc.js
                     console.log('🎥 Setting up WebRTC receiver...');
@@ -1787,19 +1966,19 @@
                         console.log('✅ Socket status:', window.superdeskState.socket?.connected ? 'connected' : 'disconnected');
                     } else {
                         console.error('❌ superdeskWebRTC.setupWebRTCReceiver not found!');
-                        alert('Error: WebRTC receiver setup failed. Please reload the page.');
+                        window.superdeskModal.error('WebRTC receiver setup failed. Please reload the page.', 'Setup Error');
                     }
                 });
 
                 // Handle session not found
                 window.socket.once('session-error', (error) => {
                     console.error('❌ Session error:', error);
-                    alert(`Error: ${error}. Please check the session ID and try again.`);
+                    window.superdeskModal.error(`${error}. Please check the session ID and try again.`, 'Session Error');
                 });
 
             } catch (error) {
                 console.error('Error joining session:', error);
-                alert('Failed to join session: ' + error.message);
+                window.superdeskModal.error('Failed to join session: ' + error.message, 'Join Failed');
             }
         };
 
@@ -1809,8 +1988,9 @@
 
 
 
-        function endRemoteSession() {
-            if (confirm('Are you sure you want to end this session?')) {
+        async function endRemoteSession() {
+            const confirmed = await window.superdeskModal.confirm('Are you sure you want to end this session?', 'End Session');
+            if (confirmed) {
                 const viewer = document.getElementById('remote-desktop-viewer');
                 const video = document.getElementById('remote-video');
                 
@@ -1996,7 +2176,7 @@
                     })
                     .catch(err => {
                         console.error('Failed to copy debug log:', err);
-                        alert('Failed to copy debug log');
+                        window.superdeskModal.error('Failed to copy debug log', 'Copy Failed');
                     });
             }
         }
@@ -2299,5 +2479,160 @@
             gap: 12px;
         }
     </style>
+
+    <!-- SuperDesk Custom Modal Popup -->
+    <div id="superdesk-modal-overlay" class="superdesk-modal-overlay">
+        <div class="superdesk-modal">
+            <div class="superdesk-modal-header">
+                <div class="superdesk-modal-icon info" id="modal-icon">ℹ️</div>
+                <div class="superdesk-modal-title" id="modal-title">Message</div>
+            </div>
+            <div class="superdesk-modal-body" id="modal-body">
+                This is a message.
+            </div>
+            <div class="superdesk-modal-footer" id="modal-footer">
+                <button class="superdesk-modal-btn primary" id="modal-ok-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SuperDesk Custom Modal System - replaces generic alert/confirm
+        window.superdeskModal = {
+            overlay: null,
+            resolvePromise: null,
+            
+            init() {
+                this.overlay = document.getElementById('superdesk-modal-overlay');
+                if (!this.overlay) return;
+                
+                // Close on overlay click
+                this.overlay.addEventListener('click', (e) => {
+                    if (e.target === this.overlay) {
+                        this.close(false);
+                    }
+                });
+                
+                // Close on Escape key
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.overlay.classList.contains('active')) {
+                        this.close(false);
+                    }
+                });
+            },
+            
+            show(options) {
+                return new Promise((resolve) => {
+                    this.resolvePromise = resolve;
+                    
+                    const {
+                        title = 'Message',
+                        message = '',
+                        type = 'info', // info, success, warning, error
+                        showCancel = false,
+                        okText = 'OK',
+                        cancelText = 'Cancel',
+                        input = false,
+                        inputPlaceholder = ''
+                    } = options;
+                    
+                    // Set icon based on type
+                    const iconEl = document.getElementById('modal-icon');
+                    const icons = {
+                        info: 'ℹ️',
+                        success: '✅',
+                        warning: '⚠️',
+                        error: '❌'
+                    };
+                    iconEl.textContent = icons[type] || icons.info;
+                    iconEl.className = `superdesk-modal-icon ${type}`;
+                    
+                    // Set title and message
+                    document.getElementById('modal-title').textContent = title;
+                    
+                    let bodyContent = message;
+                    if (input) {
+                        bodyContent += `<input type="text" class="superdesk-modal-input" id="modal-input" placeholder="${inputPlaceholder}">`;
+                    }
+                    document.getElementById('modal-body').innerHTML = bodyContent;
+                    
+                    // Setup buttons
+                    const footer = document.getElementById('modal-footer');
+                    footer.innerHTML = '';
+                    
+                    if (showCancel) {
+                        const cancelBtn = document.createElement('button');
+                        cancelBtn.className = 'superdesk-modal-btn secondary';
+                        cancelBtn.textContent = cancelText;
+                        cancelBtn.onclick = () => this.close(false);
+                        footer.appendChild(cancelBtn);
+                    }
+                    
+                    const okBtn = document.createElement('button');
+                    okBtn.className = 'superdesk-modal-btn primary';
+                    okBtn.textContent = okText;
+                    okBtn.onclick = () => {
+                        if (input) {
+                            const inputVal = document.getElementById('modal-input')?.value || '';
+                            this.close(inputVal);
+                        } else {
+                            this.close(true);
+                        }
+                    };
+                    footer.appendChild(okBtn);
+                    
+                    // Show modal
+                    this.overlay.classList.add('active');
+                    
+                    // Focus input if present
+                    if (input) {
+                        setTimeout(() => {
+                            document.getElementById('modal-input')?.focus();
+                        }, 100);
+                    }
+                });
+            },
+            
+            close(result) {
+                this.overlay.classList.remove('active');
+                if (this.resolvePromise) {
+                    this.resolvePromise(result);
+                    this.resolvePromise = null;
+                }
+            },
+            
+            // Convenience methods
+            alert(message, title = 'SuperDesk', type = 'info') {
+                return this.show({ title, message, type });
+            },
+            
+            success(message, title = 'Success') {
+                return this.show({ title, message, type: 'success' });
+            },
+            
+            error(message, title = 'Error') {
+                return this.show({ title, message, type: 'error' });
+            },
+            
+            warning(message, title = 'Warning') {
+                return this.show({ title, message, type: 'warning' });
+            },
+            
+            confirm(message, title = 'Confirm') {
+                return this.show({ title, message, type: 'warning', showCancel: true, okText: 'Yes', cancelText: 'No' });
+            },
+            
+            prompt(message, title = 'Input', placeholder = '') {
+                return this.show({ title, message, type: 'info', showCancel: true, input: true, inputPlaceholder: placeholder });
+            }
+        };
+        
+        // Initialize modal when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => window.superdeskModal.init());
+        } else {
+            window.superdeskModal.init();
+        }
+    </script>
 </body>
 </html>
