@@ -274,22 +274,29 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
       case 'wheel':
         // Handle scroll/wheel events
         const { deltaX, deltaY } = data;
+        console.log('[robot] 🖱️ Scroll event received:', { deltaX, deltaY, x: coords.x, y: coords.y });
+        
         // Move mouse to position first, then scroll
-        // nut-js scroll: positive = scroll down, negative = scroll up
         // Browser wheel deltaY: positive = scroll down, negative = scroll up
-        // So we can use deltaY directly (divided to get reasonable scroll amount)
-        const scrollAmount = Math.round(deltaY / 30); // Normalize to reasonable scroll steps
-        if (scrollAmount !== 0) {
-          mouse.setPosition({ x: coords.x, y: coords.y }).then(() => 
-            mouse.scrollDown(scrollAmount)
-          ).catch(err => console.error('[robot] scroll error:', err));
-        }
-        // Handle horizontal scroll if needed
-        if (deltaX && Math.abs(deltaX) > 10) {
-          const hScrollAmount = Math.round(deltaX / 30);
-          // Note: nut-js doesn't have native horizontal scroll, 
-          // but we can try using scrollRight/scrollLeft if available
-          console.log('[robot] Horizontal scroll requested:', hScrollAmount);
+        // nut-js: scrollDown(positive) scrolls DOWN, scrollUp(positive) scrolls UP
+        const scrollAmount = Math.abs(Math.round(deltaY / 40)); // Normalize to reasonable scroll steps
+        
+        if (scrollAmount > 0) {
+          mouse.setPosition({ x: coords.x, y: coords.y }).then(async () => {
+            try {
+              if (deltaY > 0) {
+                // Scroll down
+                console.log('[robot] Scrolling DOWN by:', scrollAmount);
+                await mouse.scrollDown(scrollAmount);
+              } else {
+                // Scroll up
+                console.log('[robot] Scrolling UP by:', scrollAmount);
+                await mouse.scrollUp(scrollAmount);
+              }
+            } catch (scrollErr) {
+              console.error('[robot] scroll action error:', scrollErr);
+            }
+          }).catch(err => console.error('[robot] scroll position error:', err));
         }
         break;
       default:

@@ -11,17 +11,65 @@
     <!-- WebRTC Implementation -->
     <script src="superdesk-webrtc.js"></script>
     <style>
+        /* Theme Variables */
+        :root {
+            /* Light Mode (Default - Purple Theme) */
+            --primary-bg: #613da9;
+            --primary-bg-rgb: 97, 61, 169;
+            --secondary-bg: #ffffff;
+            --sidebar-bg: #ffffff;
+            --sidebar-text: #613da9;
+            --sidebar-border: rgba(97, 61, 169, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.8);
+            --text-muted: rgba(255, 255, 255, 0.6);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --btn-primary-bg: #ffffff;
+            --btn-primary-text: #613da9;
+            --settings-bg: #613da9;
+            --settings-item-bg: rgba(255, 255, 255, 0.1);
+            --modal-bg: linear-gradient(145deg, #7c4dbd 0%, #5a3498 100%);
+            --logo-image: url('assets/superdesk.png');
+        }
+
+        /* Dark Mode */
+        [data-theme="dark"] {
+            --primary-bg: #1a1a2e;
+            --primary-bg-rgb: 26, 26, 46;
+            --secondary-bg: #16213e;
+            --sidebar-bg: #0f0f1a;
+            --sidebar-text: #e0e0e0;
+            --sidebar-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.85);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --btn-primary-bg: #613da9;
+            --btn-primary-text: #ffffff;
+            --settings-bg: #1a1a2e;
+            --settings-item-bg: rgba(255, 255, 255, 0.05);
+            --modal-bg: linear-gradient(145deg, #2d2d4a 0%, #1a1a2e 100%);
+            --logo-image: url('assets/superdeskw.png');
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', 'Segoe UI', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #613da9 !important;
-            color: white;
+            background: var(--primary-bg) !important;
+            color: var(--text-primary);
             min-height: 100vh;
             overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         /* Prevent wallpaper flicker on startup */
         html, body {
-            background-color: #613da9 !important;
+            background-color: var(--primary-bg) !important;
         }
         .titlebar {
             -webkit-app-region: drag;
@@ -65,14 +113,15 @@
         .auth-container {
             display: flex;
             height: calc(100vh - 36px);
-            background: #613da9;
-            color: white;
+            background: var(--primary-bg);
+            color: var(--text-primary);
             margin-top: 36px;
+            transition: background-color 0.3s ease;
         }
         .auth-left {
             width: 44%;
             min-width: 340px;
-            background: white;
+            background: var(--secondary-bg);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -80,24 +129,26 @@
             padding: 48px 32px;
             position: relative;
             overflow: hidden;
+            transition: background-color 0.3s ease;
         }
         .auth-left::before {
             content: '';
             position: absolute;
             width: 420px;
             height: 420px;
-            background: radial-gradient(circle, rgba(97,61,169,0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(var(--primary-bg-rgb),0.08) 0%, transparent 70%);
             top: -210px;
             right: -210px;
             pointer-events: none;
         }
         .auth-right {
             flex: 1;
-            background: #613da9;
+            background: var(--primary-bg);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 48px 32px;
+            transition: background-color 0.3s ease;
         }
         .auth-form {
             width: 100%;
@@ -161,17 +212,27 @@
             width: 100%;
             max-width: 220px;
             margin-bottom: 32px;
-            filter: drop-shadow(0 8px 32px rgba(97,61,169,0.15));
+            filter: drop-shadow(0 8px 32px rgba(var(--primary-bg-rgb),0.15));
             animation: fadeInUp 0.7s ease-out;
         }
         .brand-text {
             font-size: 20px;
             font-weight: 300;
-            color: #613da9;
+            color: var(--sidebar-text);
             opacity: 0.88;
             line-height: 1.5;
             animation: fadeInUp 0.7s ease-out 0.15s both;
         }
+        
+        /* Dark mode specific adjustments for auth-left */
+        [data-theme="dark"] .auth-left {
+            background: #16213e;
+        }
+        
+        [data-theme="dark"] .brand-text {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(18px); }
             to { opacity: 1; transform: translateY(0); }
@@ -208,19 +269,22 @@
 
         .dashboard-sidebar {
             width: 30%;
-            background: #FFFFFF;
-            color: #613da9;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
             padding: 24px;
-            border-right: 1px solid rgba(97, 61, 169, 0.2);
+            border-right: 1px solid var(--sidebar-border);
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .dashboard-content {
             flex: 1;
             padding: 40px;
             overflow-y: auto;
+            background: var(--primary-bg);
+            transition: background-color 0.3s ease;
         }
 
         .sidebar-header {
@@ -267,22 +331,23 @@
 
         .user-info {
             padding: 16px;
-            background: rgba(97, 61, 169, 0.1);
+            background: rgba(var(--primary-bg-rgb), 0.1);
             border-radius: 8px;
             margin-bottom: 24px;
+            transition: background-color 0.3s ease;
         }
 
         .user-info-label {
             font-size: 14px;
             opacity: 0.7;
             margin-bottom: 4px;
-            color: #613da9;
+            color: var(--sidebar-text);
         }
 
         .user-info-value {
             font-size: 16px;
             font-weight: 600;
-            color: #613da9;
+            color: var(--sidebar-text);
         }
 
         .nav-menu {
@@ -295,7 +360,7 @@
             padding: 16px;
             margin-bottom: 8px;
             background: transparent;
-            color: #613da9;
+            color: var(--sidebar-text);
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -308,11 +373,11 @@
         }
 
         .nav-item:hover {
-            background: rgba(97, 61, 169, 0.1);
+            background: rgba(var(--primary-bg-rgb), 0.1);
         }
 
         .nav-item.active {
-            background: rgba(97, 61, 169, 0.15);
+            background: rgba(var(--primary-bg-rgb), 0.15);
             font-weight: 600;
         }
 
@@ -324,22 +389,22 @@
         .input-field {
             width: 100%;
             padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
             border-radius: 8px;
-            color: white;
+            color: var(--text-primary);
             font-size: 14px;
             margin-bottom: 12px;
             transition: all 0.2s;
         }
 
         .input-field::placeholder {
-            color: rgba(255, 255, 255, 0.4);
+            color: var(--text-muted);
         }
 
         .input-field:focus {
             outline: none;
-            border-color: white;
+            border-color: var(--text-primary);
             background: rgba(255, 255, 255, 0.08);
         }
 
@@ -357,12 +422,13 @@
         }
 
         .btn-primary {
-            background: white;
-            color: #09090b;
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-text);
         }
 
         .btn-primary:hover:not(:disabled) {
             background: rgba(255, 255, 255, 0.9);
+            filter: brightness(0.95);
         }
 
         .btn-warning {
@@ -402,10 +468,11 @@
 
         /* Content Cards */
         .content-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--card-bg);
             padding: 32px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--card-border);
+            transition: background-color 0.3s ease;
         }
 
         .content-title {
@@ -632,8 +699,8 @@
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
-            background: rgba(97, 61, 169, 0.15);
-            color: #613da9;
+            background: rgba(var(--primary-bg-rgb), 0.15);
+            color: var(--sidebar-text);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -641,7 +708,7 @@
         }
 
         .settings-button:hover {
-            background: rgba(97, 61, 169, 0.25);
+            background: rgba(var(--primary-bg-rgb), 0.25);
         }
 
         /* Settings Panel */
@@ -651,8 +718,8 @@
             right: -100%;
             width: 100%;
             height: 100%;
-            background: #613da9;
-            transition: right 0.3s ease-in-out;
+            background: var(--settings-bg);
+            transition: right 0.3s ease-in-out, background-color 0.3s ease;
             z-index: 1000;
             display: flex;
             flex-direction: column;
@@ -709,14 +776,14 @@
         .settings-section-title {
             font-size: 12px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.5);
+            color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 12px;
         }
 
         .settings-item {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--settings-item-bg);
             border-radius: 10px;
             padding: 16px;
             margin-bottom: 8px;
@@ -756,7 +823,7 @@
         .settings-item-label {
             font-size: 14px;
             font-weight: 600;
-            color: white;
+            color: var(--text-primary);
         }
 
         .settings-item-desc {
@@ -923,7 +990,7 @@
         }
 
         .superdesk-modal {
-            background: linear-gradient(145deg, #7c4dbd 0%, #5a3498 100%);
+            background: var(--modal-bg);
             border-radius: 16px;
             padding: 0;
             min-width: 320px;
@@ -1170,6 +1237,22 @@
                                 <div class="settings-item-desc">Signed in</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Preferences Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Appearance</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🌙</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Dark Mode</div>
+                                <div class="settings-item-desc">Switch to dark theme</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch" id="toggle-darkmode" onclick="toggleDarkMode()"></div>
                     </div>
                 </div>
 
@@ -1455,6 +1538,9 @@
         }
 
         async function init() {
+            // Load saved theme first
+            loadSavedTheme();
+            
             // Check for existing session
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
@@ -1845,6 +1931,56 @@
             if (window.superdeskState && window.superdeskState.sharingActive) {
                 console.log('Video quality changed to:', quality);
                 // Quality change would be applied on next share
+            }
+        }
+
+        // Dark Mode Toggle Function
+        function toggleDarkMode() {
+            const toggle = document.getElementById('toggle-darkmode');
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            
+            if (isDark) {
+                // Switch to light mode
+                html.removeAttribute('data-theme');
+                if (toggle) toggle.classList.remove('active');
+                updateLogoForTheme('light');
+            } else {
+                // Switch to dark mode
+                html.setAttribute('data-theme', 'dark');
+                if (toggle) toggle.classList.add('active');
+                updateLogoForTheme('dark');
+            }
+            
+            // Save theme preference
+            localStorage.setItem('superdeskTheme', isDark ? 'light' : 'dark');
+        }
+        
+        // Update logo based on theme
+        function updateLogoForTheme(theme) {
+            const logos = document.querySelectorAll('.sidebar-logo, .logo-large');
+            logos.forEach(logo => {
+                if (theme === 'dark') {
+                    logo.src = 'assets/superdeskw.png';
+                } else {
+                    logo.src = 'assets/superdesk.png';
+                }
+            });
+        }
+        
+        // Load saved theme on startup
+        function loadSavedTheme() {
+            const savedTheme = localStorage.getItem('superdeskTheme');
+            const toggle = document.getElementById('toggle-darkmode');
+            
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                if (toggle) toggle.classList.add('active');
+                updateLogoForTheme('dark');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                if (toggle) toggle.classList.remove('active');
+                updateLogoForTheme('light');
             }
         }
 
