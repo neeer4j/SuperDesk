@@ -270,6 +270,35 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
           mouse.click(mapNutButton(button))
         ).catch(err => console.error('[robot] click error:', err));
         break;
+      case 'scroll':
+      case 'wheel':
+        // Handle scroll/wheel events
+        const { deltaX, deltaY } = data;
+        console.log('[robot] 🖱️ Scroll event received:', { deltaX, deltaY, x: coords.x, y: coords.y });
+        
+        // Move mouse to position first, then scroll
+        // Browser wheel deltaY: positive = scroll down, negative = scroll up
+        // nut-js: scrollDown(positive) scrolls DOWN, scrollUp(positive) scrolls UP
+        const scrollAmount = Math.abs(Math.round(deltaY / 40)); // Normalize to reasonable scroll steps
+        
+        if (scrollAmount > 0) {
+          mouse.setPosition({ x: coords.x, y: coords.y }).then(async () => {
+            try {
+              if (deltaY > 0) {
+                // Scroll down
+                console.log('[robot] Scrolling DOWN by:', scrollAmount);
+                await mouse.scrollDown(scrollAmount);
+              } else {
+                // Scroll up
+                console.log('[robot] Scrolling UP by:', scrollAmount);
+                await mouse.scrollUp(scrollAmount);
+              }
+            } catch (scrollErr) {
+              console.error('[robot] scroll action error:', scrollErr);
+            }
+          }).catch(err => console.error('[robot] scroll position error:', err));
+        }
+        break;
       default:
         console.log('[robot] Unknown mouse event type:', type);
         break;

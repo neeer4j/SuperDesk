@@ -11,17 +11,65 @@
     <!-- WebRTC Implementation -->
     <script src="superdesk-webrtc.js"></script>
     <style>
+        /* Theme Variables */
+        :root {
+            /* Light Mode (Default - Purple Theme) */
+            --primary-bg: #613da9;
+            --primary-bg-rgb: 97, 61, 169;
+            --secondary-bg: #ffffff;
+            --sidebar-bg: #ffffff;
+            --sidebar-text: #613da9;
+            --sidebar-border: rgba(97, 61, 169, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.8);
+            --text-muted: rgba(255, 255, 255, 0.6);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --btn-primary-bg: #ffffff;
+            --btn-primary-text: #613da9;
+            --settings-bg: #613da9;
+            --settings-item-bg: rgba(255, 255, 255, 0.1);
+            --modal-bg: linear-gradient(145deg, #7c4dbd 0%, #5a3498 100%);
+            --logo-image: url('assets/superdesk.png');
+        }
+
+        /* Dark Mode */
+        [data-theme="dark"] {
+            --primary-bg: #1a1a2e;
+            --primary-bg-rgb: 26, 26, 46;
+            --secondary-bg: #16213e;
+            --sidebar-bg: #0f0f1a;
+            --sidebar-text: #e0e0e0;
+            --sidebar-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.85);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --btn-primary-bg: #613da9;
+            --btn-primary-text: #ffffff;
+            --settings-bg: #1a1a2e;
+            --settings-item-bg: rgba(255, 255, 255, 0.05);
+            --modal-bg: linear-gradient(145deg, #2d2d4a 0%, #1a1a2e 100%);
+            --logo-image: url('assets/superdeskw.png');
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', 'Segoe UI', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #613da9 !important;
-            color: white;
+            background: var(--primary-bg) !important;
+            color: var(--text-primary);
             min-height: 100vh;
             overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         /* Prevent wallpaper flicker on startup */
         html, body {
-            background-color: #613da9 !important;
+            background-color: var(--primary-bg) !important;
         }
         .titlebar {
             -webkit-app-region: drag;
@@ -65,14 +113,15 @@
         .auth-container {
             display: flex;
             height: calc(100vh - 36px);
-            background: #613da9;
-            color: white;
+            background: var(--primary-bg);
+            color: var(--text-primary);
             margin-top: 36px;
+            transition: background-color 0.3s ease;
         }
         .auth-left {
             width: 44%;
             min-width: 340px;
-            background: white;
+            background: var(--secondary-bg);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -80,24 +129,26 @@
             padding: 48px 32px;
             position: relative;
             overflow: hidden;
+            transition: background-color 0.3s ease;
         }
         .auth-left::before {
             content: '';
             position: absolute;
             width: 420px;
             height: 420px;
-            background: radial-gradient(circle, rgba(97,61,169,0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(var(--primary-bg-rgb),0.08) 0%, transparent 70%);
             top: -210px;
             right: -210px;
             pointer-events: none;
         }
         .auth-right {
             flex: 1;
-            background: #613da9;
+            background: var(--primary-bg);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 48px 32px;
+            transition: background-color 0.3s ease;
         }
         .auth-form {
             width: 100%;
@@ -161,17 +212,27 @@
             width: 100%;
             max-width: 220px;
             margin-bottom: 32px;
-            filter: drop-shadow(0 8px 32px rgba(97,61,169,0.15));
+            filter: drop-shadow(0 8px 32px rgba(var(--primary-bg-rgb),0.15));
             animation: fadeInUp 0.7s ease-out;
         }
         .brand-text {
             font-size: 20px;
             font-weight: 300;
-            color: #613da9;
+            color: var(--sidebar-text);
             opacity: 0.88;
             line-height: 1.5;
             animation: fadeInUp 0.7s ease-out 0.15s both;
         }
+        
+        /* Dark mode specific adjustments for auth-left */
+        [data-theme="dark"] .auth-left {
+            background: #16213e;
+        }
+        
+        [data-theme="dark"] .brand-text {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(18px); }
             to { opacity: 1; transform: translateY(0); }
@@ -208,19 +269,22 @@
 
         .dashboard-sidebar {
             width: 30%;
-            background: #FFFFFF;
-            color: #613da9;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
             padding: 24px;
-            border-right: 1px solid rgba(97, 61, 169, 0.2);
+            border-right: 1px solid var(--sidebar-border);
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .dashboard-content {
             flex: 1;
             padding: 40px;
             overflow-y: auto;
+            background: var(--primary-bg);
+            transition: background-color 0.3s ease;
         }
 
         .sidebar-header {
@@ -267,22 +331,23 @@
 
         .user-info {
             padding: 16px;
-            background: rgba(97, 61, 169, 0.1);
+            background: rgba(var(--primary-bg-rgb), 0.1);
             border-radius: 8px;
             margin-bottom: 24px;
+            transition: background-color 0.3s ease;
         }
 
         .user-info-label {
             font-size: 14px;
             opacity: 0.7;
             margin-bottom: 4px;
-            color: #613da9;
+            color: var(--sidebar-text);
         }
 
         .user-info-value {
             font-size: 16px;
             font-weight: 600;
-            color: #613da9;
+            color: var(--sidebar-text);
         }
 
         .nav-menu {
@@ -295,7 +360,7 @@
             padding: 16px;
             margin-bottom: 8px;
             background: transparent;
-            color: #613da9;
+            color: var(--sidebar-text);
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -308,11 +373,11 @@
         }
 
         .nav-item:hover {
-            background: rgba(97, 61, 169, 0.1);
+            background: rgba(var(--primary-bg-rgb), 0.1);
         }
 
         .nav-item.active {
-            background: rgba(97, 61, 169, 0.15);
+            background: rgba(var(--primary-bg-rgb), 0.15);
             font-weight: 600;
         }
 
@@ -324,22 +389,22 @@
         .input-field {
             width: 100%;
             padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
             border-radius: 8px;
-            color: white;
+            color: var(--text-primary);
             font-size: 14px;
             margin-bottom: 12px;
             transition: all 0.2s;
         }
 
         .input-field::placeholder {
-            color: rgba(255, 255, 255, 0.4);
+            color: var(--text-muted);
         }
 
         .input-field:focus {
             outline: none;
-            border-color: white;
+            border-color: var(--text-primary);
             background: rgba(255, 255, 255, 0.08);
         }
 
@@ -357,12 +422,13 @@
         }
 
         .btn-primary {
-            background: white;
-            color: #09090b;
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-text);
         }
 
         .btn-primary:hover:not(:disabled) {
             background: rgba(255, 255, 255, 0.9);
+            filter: brightness(0.95);
         }
 
         .btn-warning {
@@ -402,10 +468,11 @@
 
         /* Content Cards */
         .content-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--card-bg);
             padding: 32px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--card-border);
+            transition: background-color 0.3s ease;
         }
 
         .content-title {
@@ -454,6 +521,617 @@
         .placeholder-text {
             font-size: 18px;
             opacity: 0.6;
+        }
+
+        /* ==================== FRIENDS STYLES ==================== */
+        .friends-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .friends-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .friends-badge {
+            background: rgba(139, 92, 246, 0.3);
+            color: #a78bfa;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .add-friend-form {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .friends-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .friends-empty {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .friend-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.2s;
+        }
+
+        .friend-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .friend-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .friend-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .friend-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .friend-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .friend-email {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .friend-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .friend-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #6b7280;
+        }
+
+        .friend-status-dot.online {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+
+        .friend-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .friend-action-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .friend-action-btn.accept {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .friend-action-btn.accept:hover {
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .friend-action-btn.reject {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .friend-action-btn.reject:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .friend-action-btn.message {
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+        }
+
+        .friend-action-btn.message:hover {
+            background: rgba(139, 92, 246, 0.3);
+        }
+
+        .friend-action-btn.remove {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+        }
+
+        .friend-action-btn.remove:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* ==================== MESSAGES STYLES ==================== */
+        .messages-container {
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 200px);
+            min-height: 500px;
+        }
+
+        .conversations-panel {
+            width: 280px;
+            flex-shrink: 0;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .conversations-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .conversations-empty {
+            text-align: center;
+            padding: 40px 16px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .conversation-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .conversation-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .conversation-item.active {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .conversation-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            position: relative;
+        }
+
+        .conversation-avatar .status-indicator {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6b7280;
+            border: 2px solid var(--card-bg);
+        }
+
+        .conversation-avatar .status-indicator.online {
+            background: #10b981;
+        }
+
+        .conversation-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .conversation-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .conversation-preview {
+            font-size: 12px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conversation-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .conversation-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .conversation-unread {
+            background: #8b5cf6;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        /* Chat Panel */
+        .chat-panel {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-placeholder {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+        }
+
+        .chat-placeholder-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .chat-placeholder-text {
+            font-size: 16px;
+        }
+
+        .chat-active {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .chat-back-btn {
+            display: none;
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .chat-user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .chat-user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .chat-user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-user-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chat-user-status {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .chat-invite-btn {
+            padding: 8px 16px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            color: #a78bfa;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-invite-btn:hover {
+            background: rgba(139, 92, 246, 0.3);
+        }
+
+        .chat-invite-btn.hidden {
+            display: none;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-message {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .chat-message.sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.received {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-message.session-invite {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            cursor: pointer;
+        }
+
+        .chat-message.session-invite:hover {
+            background: rgba(16, 185, 129, 0.25);
+        }
+
+        .chat-message-time {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        .session-invite-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .session-invite-icon {
+            font-size: 20px;
+        }
+
+        .session-invite-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .session-invite-label {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .session-invite-code {
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        /* Not Friends Warning */
+        .not-friends-warning {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 20px;
+            background: rgba(239, 68, 68, 0.1);
+            border-top: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            font-size: 14px;
+        }
+
+        .not-friends-warning.hidden {
+            display: none;
+        }
+
+        .not-friends-warning .warning-icon {
+            font-size: 18px;
+        }
+
+        /* Not Friend Badge in conversation list */
+        .not-friend-badge {
+            margin-left: 6px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .conversation-item.not-friend {
+            opacity: 0.7;
+        }
+
+        .conversation-item.not-friend .conversation-avatar {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 12px;
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .chat-input-container.hidden {
+            display: none;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .chat-send-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            border: none;
+            border-radius: 24px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-send-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .chat-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Responsive for smaller screens */
+        @media (max-width: 768px) {
+            .messages-container {
+                flex-direction: column;
+            }
+            
+            .conversations-panel {
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+            }
+            
+            .conversations-panel.hidden-mobile {
+                display: none;
+            }
+            
+            .chat-panel.hidden-mobile {
+                display: none;
+            }
+            
+            .chat-back-btn {
+                display: flex;
+            }
         }
 
         .hidden {
@@ -621,6 +1299,428 @@
         #join-remote-video.control-active {
             cursor: none !important;
         }
+
+        /* Settings Button */
+        .settings-button {
+            width: 100%;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(var(--primary-bg-rgb), 0.15);
+            color: var(--sidebar-text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .settings-button:hover {
+            background: rgba(var(--primary-bg-rgb), 0.25);
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: absolute;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--settings-bg);
+            transition: right 0.3s ease-in-out, background-color 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .settings-panel.active {
+            right: 0;
+        }
+
+        .settings-header {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .settings-back-btn {
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .settings-back-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .settings-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .settings-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .settings-section {
+            margin-bottom: 24px;
+        }
+
+        .settings-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .settings-item {
+            background: var(--settings-item-bg);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+        }
+
+        .settings-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .settings-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-item-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .settings-item-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .settings-item-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .settings-item-desc {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #10b981;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active::after {
+            left: 24px;
+        }
+
+        /* Settings Action Buttons */
+        .settings-action-btn {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .settings-action-btn.danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ff6b6b;
+        }
+
+        .settings-action-btn.danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .settings-action-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .settings-action-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Settings Footer */
+        .settings-footer {
+            padding: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .settings-version {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 4px;
+        }
+
+        .settings-copyright {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Dropdown Select */
+        .settings-select {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .settings-select option {
+            background: #613da9;
+            color: white;
+        }
+
+        /* Custom Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        .settings-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .settings-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .settings-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Custom Themed Modal Popup */
+        .superdesk-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease-out;
+        }
+
+        .superdesk-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .superdesk-modal {
+            background: var(--modal-bg);
+            border-radius: 16px;
+            padding: 0;
+            min-width: 320px;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.2s ease-out;
+            overflow: hidden;
+        }
+
+        .superdesk-modal-overlay.active .superdesk-modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .superdesk-modal-header {
+            padding: 20px 24px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .superdesk-modal-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .superdesk-modal-icon.info {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .superdesk-modal-icon.success {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .superdesk-modal-icon.warning {
+            background: rgba(245, 158, 11, 0.2);
+        }
+
+        .superdesk-modal-icon.error {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .superdesk-modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .superdesk-modal-body {
+            padding: 20px 24px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.6;
+        }
+
+        .superdesk-modal-footer {
+            padding: 16px 24px 20px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .superdesk-modal-btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .superdesk-modal-btn.primary {
+            background: white;
+            color: #613da9;
+        }
+
+        .superdesk-modal-btn.primary:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+        }
+
+        .superdesk-modal-btn.secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .superdesk-modal-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Modal Input Field */
+        .superdesk-modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            margin-top: 12px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .superdesk-modal-input:focus {
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .superdesk-modal-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -723,7 +1823,166 @@
                 </button>
             </div>
 
-            <button class="btn btn-danger" id="signout-btn">Sign Out</button>
+            <button class="settings-button" id="settings-btn">
+                <span>⚙️</span>
+                <span>Settings</span>
+            </button>
+        </div>
+
+        <!-- Settings Panel (slides in from right) -->
+        <div class="settings-panel" id="settings-panel">
+            <div class="settings-header">
+                <button class="settings-back-btn" id="settings-back-btn">←</button>
+                <h2 class="settings-title">Settings</h2>
+            </div>
+            
+            <div class="settings-content">
+                <!-- Account Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Account</div>
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">👤</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label" id="settings-user-email">user@example.com</div>
+                                <div class="settings-item-desc">Signed in</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preferences Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Appearance</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🌙</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Dark Mode</div>
+                                <div class="settings-item-desc">Switch to dark theme</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch" id="toggle-darkmode" onclick="toggleDarkMode()"></div>
+                    </div>
+                </div>
+
+                <!-- Preferences Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Preferences</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🔔</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Notifications</div>
+                                <div class="settings-item-desc">Get notified when someone joins</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch active" id="toggle-notifications" onclick="toggleSetting('notifications')"></div>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🔊</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Sound Effects</div>
+                                <div class="settings-item-desc">Play sounds for events</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch active" id="toggle-sounds" onclick="toggleSetting('sounds')"></div>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🚀</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Start on System Boot</div>
+                                <div class="settings-item-desc">Launch SuperDesk automatically</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch" id="toggle-autostart" onclick="toggleSetting('autostart')"></div>
+                    </div>
+                </div>
+
+                <!-- Connection Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Connection</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">📺</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Video Quality</div>
+                                <div class="settings-item-desc">Adjust stream quality</div>
+                            </div>
+                        </div>
+                        <select class="settings-select" id="video-quality" onchange="updateVideoQuality(this.value)">
+                            <option value="auto">Auto</option>
+                            <option value="high">High (1080p)</option>
+                            <option value="medium">Medium (720p)</option>
+                            <option value="low">Low (480p)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🎵</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Share Audio</div>
+                                <div class="settings-item-desc">Include system audio in share</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch active" id="toggle-audio" onclick="toggleSetting('audio')"></div>
+                    </div>
+                </div>
+
+                <!-- Privacy Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Privacy & Security</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">🔒</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Require Approval</div>
+                                <div class="settings-item-desc">Approve before remote control</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch active" id="toggle-approval" onclick="toggleSetting('approval')"></div>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">📜</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Session History</div>
+                                <div class="settings-item-desc">Keep connection logs</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch" id="toggle-history" onclick="toggleSetting('history')"></div>
+                    </div>
+                </div>
+
+                <!-- Actions Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Actions</div>
+                    <button class="settings-action-btn secondary" onclick="clearSessionData()">
+                        🗑️ Clear Session Data
+                    </button>
+                    <button class="settings-action-btn secondary" onclick="checkForUpdates()">
+                        🔄 Check for Updates
+                    </button>
+                    <button class="settings-action-btn danger" id="settings-signout-btn">
+                        🚪 Sign Out
+                    </button>
+                </div>
+            </div>
+            
+            <div class="settings-footer">
+                <div class="settings-version">SuperDesk v1.0.0</div>
+                <div class="settings-copyright">© 2025 SuperDesk. All rights reserved.</div>
+            </div>
         </div>
 
         <!-- Right Content (70%) -->
@@ -837,18 +2096,101 @@
             <!-- Friends View -->
             <div class="content-view hidden" id="friends-view">
                 <h1 class="content-title">Friends</h1>
-                <div class="content-card placeholder-content">
-                    <div class="placeholder-icon">👥</div>
-                    <div class="placeholder-text">Friend system coming soon!</div>
+                
+                <!-- Add Friend Section -->
+                <div class="content-card" style="margin-bottom: 20px;">
+                    <div class="friends-section-header">
+                        <span class="friends-section-title">➕ Add Friend</span>
+                    </div>
+                    <div class="add-friend-form">
+                        <input type="email" id="add-friend-email" class="input-field" placeholder="Enter friend's email address" style="flex: 1; margin-bottom: 0;">
+                        <button id="send-friend-request-btn" class="btn btn-primary" style="width: auto; margin-bottom: 0; padding: 12px 24px;">
+                            Send Request
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Friend Requests Section -->
+                <div class="content-card" style="margin-bottom: 20px;" id="friend-requests-section">
+                    <div class="friends-section-header">
+                        <span class="friends-section-title">📩 Friend Requests</span>
+                        <span class="friends-badge" id="requests-count">0</span>
+                    </div>
+                    <div id="friend-requests-list" class="friends-list">
+                        <div class="friends-empty">No pending requests</div>
+                    </div>
+                </div>
+
+                <!-- Friends List Section -->
+                <div class="content-card">
+                    <div class="friends-section-header">
+                        <span class="friends-section-title">👥 My Friends</span>
+                        <span class="friends-badge" id="friends-count">0</span>
+                    </div>
+                    <div id="friends-list" class="friends-list">
+                        <div class="friends-empty">No friends yet. Add someone to get started!</div>
+                    </div>
                 </div>
             </div>
 
             <!-- Messages View -->
             <div class="content-view hidden" id="messages-view">
                 <h1 class="content-title">Messages</h1>
-                <div class="content-card placeholder-content">
-                    <div class="placeholder-icon">💬</div>
-                    <div class="placeholder-text">Messaging system coming soon!</div>
+                
+                <div class="messages-container">
+                    <!-- Conversations List -->
+                    <div class="conversations-panel" id="conversations-panel">
+                        <div class="conversations-header">
+                            <span>Conversations</span>
+                        </div>
+                        <div id="conversations-list" class="conversations-list">
+                            <div class="conversations-empty">No conversations yet. Message a friend to start!</div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Panel -->
+                    <div class="chat-panel" id="chat-panel">
+                        <div class="chat-placeholder" id="chat-placeholder">
+                            <div class="chat-placeholder-icon">💬</div>
+                            <div class="chat-placeholder-text">Select a conversation to start chatting</div>
+                        </div>
+                        
+                        <div class="chat-active hidden" id="chat-active">
+                            <!-- Chat Header -->
+                            <div class="chat-header" id="chat-header">
+                                <button class="chat-back-btn" id="chat-back-btn">←</button>
+                                <div class="chat-user-info">
+                                    <div class="chat-user-avatar" id="chat-user-avatar">?</div>
+                                    <div class="chat-user-details">
+                                        <div class="chat-user-name" id="chat-user-name">Select a friend</div>
+                                        <div class="chat-user-status" id="chat-user-status">offline</div>
+                                    </div>
+                                </div>
+                                <button class="chat-invite-btn" id="chat-invite-btn" title="Send Session Invite">
+                                    🖥️ Invite
+                                </button>
+                            </div>
+
+                            <!-- Chat Messages -->
+                            <div class="chat-messages" id="chat-messages">
+                                <!-- Messages will be populated here -->
+                            </div>
+
+                            <!-- Not Friends Warning -->
+                            <div class="not-friends-warning hidden" id="not-friends-warning">
+                                <span class="warning-icon">⚠️</span>
+                                <span>You need to be friends to send messages</span>
+                            </div>
+
+                            <!-- Chat Input -->
+                            <div class="chat-input-container" id="chat-input-container">
+                                <input type="text" id="chat-input" class="chat-input" placeholder="Type a message...">
+                                <button id="chat-send-btn" class="chat-send-btn">
+                                    <span>Send</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -890,6 +2232,9 @@
         }
 
         async function init() {
+            // Load saved theme first
+            loadSavedTheme();
+            
             // Check for existing session
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
@@ -922,13 +2267,17 @@
             const verifyOtpBtn = document.getElementById('verify-otp-btn');
             const continueBypassBtn = document.getElementById('continue-bypass-btn');
             const backToEmailBtn = document.getElementById('back-to-email-btn');
-            const signoutBtn = document.getElementById('signout-btn');
+            const settingsBtn = document.getElementById('settings-btn');
+            const settingsBackBtn = document.getElementById('settings-back-btn');
+            const settingsSignoutBtn = document.getElementById('settings-signout-btn');
             
             if (sendOtpBtn) sendOtpBtn.addEventListener('click', sendOTP);
             if (verifyOtpBtn) verifyOtpBtn.addEventListener('click', verifyOTP);
             if (continueBypassBtn) continueBypassBtn.addEventListener('click', continueBypass);
             if (backToEmailBtn) backToEmailBtn.addEventListener('click', backToEmail);
-            if (signoutBtn) signoutBtn.addEventListener('click', signOut);
+            if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+            if (settingsBackBtn) settingsBackBtn.addEventListener('click', closeSettings);
+            if (settingsSignoutBtn) settingsSignoutBtn.addEventListener('click', signOut);
 
             // Enter key handlers - add null checks
             if (emailInput) {
@@ -976,7 +2325,7 @@
                 connectSessionBtn.addEventListener('click', async () => {
                 const sessionId = document.getElementById('join-session-input').value.trim().toUpperCase();
                 if (!sessionId) {
-                    alert('Please enter a session ID');
+                    window.superdeskModal.warning('Please enter a session ID', 'Missing Session ID');
                     return;
                 }
                 
@@ -994,7 +2343,7 @@
                     console.error('❌ Join failed:', error);
                     btn.textContent = originalText;
                     btn.disabled = false;
-                    alert('Failed to join session. Please check the session ID and try again.');
+                    window.superdeskModal.error('Failed to join session. Please check the session ID and try again.', 'Connection Failed');
                 }
                 });
             }
@@ -1040,7 +2389,7 @@
                         btn.textContent = 'Copied!';
                         setTimeout(() => btn.textContent = 'Copy', 2000);
                     } catch (fallbackErr) {
-                        alert('Failed to copy. Please copy manually: ' + sessionId);
+                        window.superdeskModal.warning('Failed to copy. Please copy manually: ' + sessionId, 'Copy Failed');
                     }
                     document.body.removeChild(tempInput);
                 }
@@ -1070,12 +2419,12 @@
                             }, 10);
                         } else {
                             // If execCommand also fails, prompt user to paste manually
-                            alert('Please paste manually (Ctrl+V) into the input field');
+                            window.superdeskModal.alert('Please paste manually (Ctrl+V) into the input field', 'Paste Required');
                             inputField.focus();
                         }
                     } catch (fallbackErr) {
                         console.error('Fallback paste failed:', fallbackErr);
-                        alert('Please paste manually (Ctrl+V) into the input field');
+                        window.superdeskModal.alert('Please paste manually (Ctrl+V) into the input field', 'Paste Required');
                         inputField.focus();
                     }
                 }
@@ -1086,7 +2435,7 @@
         async function sendOTP() {
             const email = emailInput.value.trim();
             if (!email) {
-                alert('Please enter your email');
+                window.superdeskModal.warning('Please enter your email', 'Email Required');
                 return;
             }
 
@@ -1104,11 +2453,11 @@
 
                 if (error) throw error;
 
-                alert('Check your email for the OTP code!');
+                window.superdeskModal.success('Check your email for the OTP code!', 'OTP Sent');
                 emailStep.classList.add('hidden');
                 otpStep.classList.remove('hidden');
             } catch (error) {
-                alert('Error: ' + error.message);
+                window.superdeskModal.error('Error: ' + error.message, 'Failed to Send OTP');
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Send OTP';
@@ -1120,7 +2469,7 @@
             const email = emailInput.value.trim();
 
             if (!otp) {
-                alert('Please enter the OTP code');
+                window.superdeskModal.warning('Please enter the OTP code', 'OTP Required');
                 return;
             }
 
@@ -1139,7 +2488,7 @@
 
                 // User will be set via onAuthStateChange listener
             } catch (error) {
-                alert('Error: ' + error.message);
+                window.superdeskModal.error('Error: ' + error.message, 'Verification Failed');
                 btn.disabled = false;
                 btn.textContent = 'Verify OTP';
             }
@@ -1175,6 +2524,174 @@
             authScreen.style.display = 'none';
             dashboardScreen.style.display = 'flex';
             userEmailDisplay.textContent = currentUser?.email || 'user@example.com';
+            // Update settings panel email display
+            const settingsEmail = document.getElementById('settings-user-email');
+            if (settingsEmail) {
+                settingsEmail.textContent = currentUser?.email || 'user@example.com';
+            }
+            // Load saved settings
+            loadSettings();
+            // Initialize friends and messages system
+            initFriendsSystem();
+        }
+
+        // Settings Panel Functions
+        function openSettings() {
+            const panel = document.getElementById('settings-panel');
+            if (panel) {
+                panel.classList.add('active');
+            }
+        }
+
+        function closeSettings() {
+            const panel = document.getElementById('settings-panel');
+            if (panel) {
+                panel.classList.remove('active');
+            }
+        }
+
+        // Settings storage
+        const defaultSettings = {
+            notifications: true,
+            sounds: true,
+            autostart: false,
+            audio: true,
+            approval: true,
+            history: false,
+            videoQuality: 'auto'
+        };
+
+        function loadSettings() {
+            try {
+                const saved = localStorage.getItem('superdeskSettings');
+                const settings = saved ? JSON.parse(saved) : defaultSettings;
+                
+                // Apply toggle states
+                Object.keys(settings).forEach(key => {
+                    const toggle = document.getElementById(`toggle-${key}`);
+                    if (toggle) {
+                        if (settings[key]) {
+                            toggle.classList.add('active');
+                        } else {
+                            toggle.classList.remove('active');
+                        }
+                    }
+                });
+                
+                // Apply video quality
+                const qualitySelect = document.getElementById('video-quality');
+                if (qualitySelect && settings.videoQuality) {
+                    qualitySelect.value = settings.videoQuality;
+                }
+            } catch (e) {
+                console.error('Failed to load settings:', e);
+            }
+        }
+
+        function saveSettings() {
+            try {
+                const settings = {};
+                ['notifications', 'sounds', 'autostart', 'audio', 'approval', 'history'].forEach(key => {
+                    const toggle = document.getElementById(`toggle-${key}`);
+                    settings[key] = toggle ? toggle.classList.contains('active') : defaultSettings[key];
+                });
+                
+                const qualitySelect = document.getElementById('video-quality');
+                settings.videoQuality = qualitySelect ? qualitySelect.value : 'auto';
+                
+                localStorage.setItem('superdeskSettings', JSON.stringify(settings));
+            } catch (e) {
+                console.error('Failed to save settings:', e);
+            }
+        }
+
+        function toggleSetting(settingName) {
+            const toggle = document.getElementById(`toggle-${settingName}`);
+            if (toggle) {
+                toggle.classList.toggle('active');
+                saveSettings();
+                
+                // Handle special cases
+                if (settingName === 'autostart') {
+                    // Communicate with main process for autostart
+                    if (window.electronAPI && window.electronAPI.setAutoStart) {
+                        window.electronAPI.setAutoStart(toggle.classList.contains('active'));
+                    }
+                }
+            }
+        }
+
+        function updateVideoQuality(quality) {
+            saveSettings();
+            // Apply video quality change if sharing is active
+            if (window.superdeskState && window.superdeskState.sharingActive) {
+                console.log('Video quality changed to:', quality);
+                // Quality change would be applied on next share
+            }
+        }
+
+        // Dark Mode Toggle Function
+        function toggleDarkMode() {
+            const toggle = document.getElementById('toggle-darkmode');
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            
+            if (isDark) {
+                // Switch to light mode
+                html.removeAttribute('data-theme');
+                if (toggle) toggle.classList.remove('active');
+                updateLogoForTheme('light');
+            } else {
+                // Switch to dark mode
+                html.setAttribute('data-theme', 'dark');
+                if (toggle) toggle.classList.add('active');
+                updateLogoForTheme('dark');
+            }
+            
+            // Save theme preference
+            localStorage.setItem('superdeskTheme', isDark ? 'light' : 'dark');
+        }
+        
+        // Update logo based on theme
+        function updateLogoForTheme(theme) {
+            const logos = document.querySelectorAll('.sidebar-logo, .logo-large');
+            logos.forEach(logo => {
+                if (theme === 'dark') {
+                    logo.src = 'assets/superdeskw.png';
+                } else {
+                    logo.src = 'assets/superdesk.png';
+                }
+            });
+        }
+        
+        // Load saved theme on startup
+        function loadSavedTheme() {
+            const savedTheme = localStorage.getItem('superdeskTheme');
+            const toggle = document.getElementById('toggle-darkmode');
+            
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                if (toggle) toggle.classList.add('active');
+                updateLogoForTheme('dark');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                if (toggle) toggle.classList.remove('active');
+                updateLogoForTheme('light');
+            }
+        }
+
+        async function clearSessionData() {
+            const confirmed = await window.superdeskModal.confirm('This will clear all session data. Are you sure?', 'Clear Data');
+            if (confirmed) {
+                localStorage.removeItem('superdeskSettings');
+                loadSettings();
+                window.superdeskModal.success('Session data cleared!', 'Data Cleared');
+            }
+        }
+
+        function checkForUpdates() {
+            // Placeholder for update check functionality
+            window.superdeskModal.success('You are running the latest version of SuperDesk!', 'Up to Date');
         }
 
         function switchView(view) {
@@ -1221,7 +2738,7 @@
 
                     window.socket.on('connect_error', (error) => {
                         console.error('❌ Connection error:', error);
-                        alert('Failed to connect to server. Please check your connection.');
+                        window.superdeskModal.error('Failed to connect to server. Please check your connection.', 'Connection Error');
                     });
                 }
 
@@ -1270,7 +2787,7 @@
                     if (hostView) hostView.style.display = 'none';
                     if (joinView) joinView.style.display = 'block';
                     
-                    alert(`Connected to session ${sessionId}. Waiting for screen sharing to start...`);
+                    window.superdeskModal.success(`Connected to session ${sessionId}. Waiting for screen sharing to start...`, 'Session Joined');
                     
                     // Set up WebRTC receiver using the proper function from superdesk-webrtc.js
                     console.log('🎥 Setting up WebRTC receiver...');
@@ -1281,19 +2798,19 @@
                         console.log('✅ Socket status:', window.superdeskState.socket?.connected ? 'connected' : 'disconnected');
                     } else {
                         console.error('❌ superdeskWebRTC.setupWebRTCReceiver not found!');
-                        alert('Error: WebRTC receiver setup failed. Please reload the page.');
+                        window.superdeskModal.error('WebRTC receiver setup failed. Please reload the page.', 'Setup Error');
                     }
                 });
 
                 // Handle session not found
                 window.socket.once('session-error', (error) => {
                     console.error('❌ Session error:', error);
-                    alert(`Error: ${error}. Please check the session ID and try again.`);
+                    window.superdeskModal.error(`${error}. Please check the session ID and try again.`, 'Session Error');
                 });
 
             } catch (error) {
                 console.error('Error joining session:', error);
-                alert('Failed to join session: ' + error.message);
+                window.superdeskModal.error('Failed to join session: ' + error.message, 'Join Failed');
             }
         };
 
@@ -1303,8 +2820,9 @@
 
 
 
-        function endRemoteSession() {
-            if (confirm('Are you sure you want to end this session?')) {
+        async function endRemoteSession() {
+            const confirmed = await window.superdeskModal.confirm('Are you sure you want to end this session?', 'End Session');
+            if (confirmed) {
                 const viewer = document.getElementById('remote-desktop-viewer');
                 const video = document.getElementById('remote-video');
                 
@@ -1490,7 +3008,7 @@
                     })
                     .catch(err => {
                         console.error('Failed to copy debug log:', err);
-                        alert('Failed to copy debug log');
+                        window.superdeskModal.error('Failed to copy debug log', 'Copy Failed');
                     });
             }
         }
@@ -1793,5 +3311,1142 @@
             gap: 12px;
         }
     </style>
+
+    <!-- SuperDesk Custom Modal Popup -->
+    <div id="superdesk-modal-overlay" class="superdesk-modal-overlay">
+        <div class="superdesk-modal">
+            <div class="superdesk-modal-header">
+                <div class="superdesk-modal-icon info" id="modal-icon">ℹ️</div>
+                <div class="superdesk-modal-title" id="modal-title">Message</div>
+            </div>
+            <div class="superdesk-modal-body" id="modal-body">
+                This is a message.
+            </div>
+            <div class="superdesk-modal-footer" id="modal-footer">
+                <button class="superdesk-modal-btn primary" id="modal-ok-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SuperDesk Custom Modal System - replaces generic alert/confirm
+        window.superdeskModal = {
+            overlay: null,
+            resolvePromise: null,
+            
+            init() {
+                this.overlay = document.getElementById('superdesk-modal-overlay');
+                if (!this.overlay) return;
+                
+                // Close on overlay click
+                this.overlay.addEventListener('click', (e) => {
+                    if (e.target === this.overlay) {
+                        this.close(false);
+                    }
+                });
+                
+                // Close on Escape key
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.overlay.classList.contains('active')) {
+                        this.close(false);
+                    }
+                });
+            },
+            
+            show(options) {
+                return new Promise((resolve) => {
+                    this.resolvePromise = resolve;
+                    
+                    const {
+                        title = 'Message',
+                        message = '',
+                        type = 'info', // info, success, warning, error
+                        showCancel = false,
+                        okText = 'OK',
+                        cancelText = 'Cancel',
+                        input = false,
+                        inputPlaceholder = ''
+                    } = options;
+                    
+                    // Set icon based on type
+                    const iconEl = document.getElementById('modal-icon');
+                    const icons = {
+                        info: 'ℹ️',
+                        success: '✅',
+                        warning: '⚠️',
+                        error: '❌'
+                    };
+                    iconEl.textContent = icons[type] || icons.info;
+                    iconEl.className = `superdesk-modal-icon ${type}`;
+                    
+                    // Set title and message
+                    document.getElementById('modal-title').textContent = title;
+                    
+                    let bodyContent = message;
+                    if (input) {
+                        bodyContent += `<input type="text" class="superdesk-modal-input" id="modal-input" placeholder="${inputPlaceholder}">`;
+                    }
+                    document.getElementById('modal-body').innerHTML = bodyContent;
+                    
+                    // Setup buttons
+                    const footer = document.getElementById('modal-footer');
+                    footer.innerHTML = '';
+                    
+                    if (showCancel) {
+                        const cancelBtn = document.createElement('button');
+                        cancelBtn.className = 'superdesk-modal-btn secondary';
+                        cancelBtn.textContent = cancelText;
+                        cancelBtn.onclick = () => this.close(false);
+                        footer.appendChild(cancelBtn);
+                    }
+                    
+                    const okBtn = document.createElement('button');
+                    okBtn.className = 'superdesk-modal-btn primary';
+                    okBtn.textContent = okText;
+                    okBtn.onclick = () => {
+                        if (input) {
+                            const inputVal = document.getElementById('modal-input')?.value || '';
+                            this.close(inputVal);
+                        } else {
+                            this.close(true);
+                        }
+                    };
+                    footer.appendChild(okBtn);
+                    
+                    // Show modal
+                    this.overlay.classList.add('active');
+                    
+                    // Focus input if present
+                    if (input) {
+                        setTimeout(() => {
+                            document.getElementById('modal-input')?.focus();
+                        }, 100);
+                    }
+                });
+            },
+            
+            close(result) {
+                this.overlay.classList.remove('active');
+                if (this.resolvePromise) {
+                    this.resolvePromise(result);
+                    this.resolvePromise = null;
+                }
+            },
+            
+            // Convenience methods
+            alert(message, title = 'SuperDesk', type = 'info') {
+                return this.show({ title, message, type });
+            },
+            
+            success(message, title = 'Success') {
+                return this.show({ title, message, type: 'success' });
+            },
+            
+            error(message, title = 'Error') {
+                return this.show({ title, message, type: 'error' });
+            },
+            
+            warning(message, title = 'Warning') {
+                return this.show({ title, message, type: 'warning' });
+            },
+            
+            confirm(message, title = 'Confirm') {
+                return this.show({ title, message, type: 'warning', showCancel: true, okText: 'Yes', cancelText: 'No' });
+            },
+            
+            prompt(message, title = 'Input', placeholder = '') {
+                return this.show({ title, message, type: 'info', showCancel: true, input: true, inputPlaceholder: placeholder });
+            }
+        };
+        
+        // Initialize modal when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => window.superdeskModal.init());
+        } else {
+            window.superdeskModal.init();
+        }
+
+        // ==================== FRIENDS & MESSAGES SYSTEM ====================
+        
+        // State for friends and messages
+        let friendsList = [];
+        let friendRequests = [];
+        let conversations = [];
+        let currentChatFriend = null;
+        let messagesSubscription = null;
+        let friendsSubscription = null;
+        let friendsSystemInitialized = false;
+        let friendsEventListenersAttached = false;
+
+        // Initialize friends system when user logs in
+        async function initFriendsSystem() {
+            if (!currentUser) return;
+            
+            console.log('🤝 Initializing friends system for:', currentUser.email);
+            
+            // Ensure user profile exists
+            await ensureUserProfile();
+            
+            // Load initial data
+            await loadFriendRequests();
+            await loadFriends();
+            await loadConversations();
+            
+            // Set up realtime subscriptions (only once)
+            if (!friendsSystemInitialized) {
+                setupRealtimeSubscriptions();
+                friendsSystemInitialized = true;
+            }
+            
+            // Set up event listeners for friends/messages UI (only once)
+            if (!friendsEventListenersAttached) {
+                setupFriendsEventListeners();
+                friendsEventListenersAttached = true;
+            }
+        }
+
+        // Ensure user has a profile
+        async function ensureUserProfile() {
+            // Skip for test/bypass user
+            if (!currentUser || currentUser.id === 'test-user') {
+                console.log('Skipping profile check for test user');
+                return;
+            }
+            
+            try {
+                // Use maybeSingle() to avoid 406 error when no row exists
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .maybeSingle();
+                
+                if (error) {
+                    console.error('Error checking profile:', error);
+                    return;
+                }
+                
+                if (!profile) {
+                    // Profile doesn't exist, create it
+                    const { error: insertError } = await supabase
+                        .from('profiles')
+                        .insert({
+                            id: currentUser.id,
+                            email: currentUser.email,
+                            display_name: currentUser.email.split('@')[0],
+                            status: 'online'
+                        });
+                    
+                    if (insertError) {
+                        console.error('Error creating profile:', insertError);
+                    } else {
+                        console.log('✅ Profile created for:', currentUser.email);
+                    }
+                } else {
+                    // Update status to online
+                    await supabase
+                        .from('profiles')
+                        .update({ status: 'online', updated_at: new Date().toISOString() })
+                        .eq('id', currentUser.id);
+                    console.log('✅ Profile status updated to online');
+                }
+            } catch (err) {
+                console.error('Error ensuring profile:', err);
+            }
+        }
+
+        // Handle friend relationship changes (add, remove, accept, etc.)
+        async function handleFriendChange(payload) {
+            console.log('👥 Handling friend change:', payload.eventType, payload);
+            
+            // Reload friends list
+            await loadFriendRequests();
+            await loadFriends();
+            await loadConversations();
+            
+            // If currently chatting, check if still friends
+            if (currentChatFriend) {
+                updateChatFriendStatus();
+            }
+        }
+
+        // Check if a user is in friends list
+        function isFriend(userId) {
+            return friendsList.some(f => f.id === userId);
+        }
+
+        // Update chat UI based on friend status
+        function updateChatFriendStatus() {
+            if (!currentChatFriend) return;
+            
+            const isStillFriend = isFriend(currentChatFriend.id);
+            const warningEl = document.getElementById('not-friends-warning');
+            const inputContainer = document.getElementById('chat-input-container');
+            const inviteBtn = document.getElementById('chat-invite-btn');
+            
+            if (isStillFriend) {
+                // They are friends - show input, hide warning
+                if (warningEl) warningEl.classList.add('hidden');
+                if (inputContainer) inputContainer.classList.remove('hidden');
+                if (inviteBtn) inviteBtn.classList.remove('hidden');
+            } else {
+                // Not friends - hide input, show warning
+                if (warningEl) warningEl.classList.remove('hidden');
+                if (inputContainer) inputContainer.classList.add('hidden');
+                if (inviteBtn) inviteBtn.classList.add('hidden');
+            }
+        }
+
+        // Set up realtime subscriptions
+        function setupRealtimeSubscriptions() {
+            // Clean up any existing subscriptions first
+            if (messagesSubscription) {
+                supabase.removeChannel(messagesSubscription);
+                messagesSubscription = null;
+            }
+            if (friendsSubscription) {
+                supabase.removeChannel(friendsSubscription);
+                friendsSubscription = null;
+            }
+            
+            console.log('📡 Setting up realtime subscriptions for user:', currentUser.id);
+            
+            // Subscribe to new messages
+            messagesSubscription = supabase
+                .channel('messages-channel-' + currentUser.id)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `receiver_id=eq.${currentUser.id}`
+                }, (payload) => {
+                    console.log('📩 New message received:', payload);
+                    handleNewMessage(payload.new);
+                })
+                .subscribe((status) => {
+                    console.log('📩 Messages subscription status:', status);
+                });
+
+            // Subscribe to friend requests and removals
+            friendsSubscription = supabase
+                .channel('friends-channel-' + currentUser.id)
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'friends',
+                    filter: `friend_id=eq.${currentUser.id}`
+                }, (payload) => {
+                    console.log('👥 Friend update (as friend_id):', payload);
+                    handleFriendChange(payload);
+                })
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'friends',
+                    filter: `user_id=eq.${currentUser.id}`
+                }, (payload) => {
+                    console.log('👥 Friend update (as user_id):', payload);
+                    handleFriendChange(payload);
+                })
+                .subscribe((status) => {
+                    console.log('👥 Friends subscription status:', status);
+                });
+        }
+
+        // Load friend requests (where I am the friend_id and status is pending)
+        async function loadFriendRequests() {
+            if (!currentUser || currentUser.id === 'test-user') {
+                friendRequests = [];
+                renderFriendRequests();
+                return;
+            }
+            
+            try {
+                // First get the friend requests
+                const { data: requests, error } = await supabase
+                    .from('friends')
+                    .select('id, user_id, status, created_at')
+                    .eq('friend_id', currentUser.id)
+                    .eq('status', 'pending');
+                
+                if (error) throw error;
+                
+                if (!requests || requests.length === 0) {
+                    friendRequests = [];
+                    renderFriendRequests();
+                    return;
+                }
+                
+                // Get the user IDs who sent requests
+                const senderIds = requests.map(r => r.user_id);
+                
+                // Fetch their profiles
+                const { data: profiles, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, email, display_name, status, avatar_url')
+                    .in('id', senderIds);
+                
+                if (profileError) throw profileError;
+                
+                // Map profiles to requests
+                const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                
+                friendRequests = requests.map(req => ({
+                    ...req,
+                    profile: profileMap.get(req.user_id) || { email: 'Unknown user', display_name: 'Unknown' }
+                }));
+                
+                renderFriendRequests();
+            } catch (err) {
+                console.error('Error loading friend requests:', err);
+                friendRequests = [];
+                renderFriendRequests();
+            }
+        }
+
+        // Load accepted friends
+        async function loadFriends() {
+            if (!currentUser || currentUser.id === 'test-user') {
+                friendsList = [];
+                renderFriends();
+                return;
+            }
+            
+            try {
+                // Get friends where I sent the request
+                const { data: sentRequests, error: err1 } = await supabase
+                    .from('friends')
+                    .select('id, friend_id, status')
+                    .eq('user_id', currentUser.id)
+                    .eq('status', 'accepted');
+                
+                // Get friends where I received the request
+                const { data: receivedRequests, error: err2 } = await supabase
+                    .from('friends')
+                    .select('id, user_id, status')
+                    .eq('friend_id', currentUser.id)
+                    .eq('status', 'accepted');
+                
+                if (err1) throw err1;
+                if (err2) throw err2;
+                
+                // Collect all friend user IDs
+                const friendUserIds = [
+                    ...(sentRequests || []).map(f => f.friend_id),
+                    ...(receivedRequests || []).map(f => f.user_id)
+                ];
+                
+                if (friendUserIds.length === 0) {
+                    friendsList = [];
+                    renderFriends();
+                    return;
+                }
+                
+                // Fetch profiles for all friends
+                const { data: profiles, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, email, display_name, status, avatar_url')
+                    .in('id', friendUserIds);
+                
+                if (profileError) throw profileError;
+                
+                const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                
+                // Combine and normalize
+                const sent = (sentRequests || []).map(f => {
+                    const profile = profileMap.get(f.friend_id) || { id: f.friend_id, email: 'Unknown', display_name: 'Unknown' };
+                    return {
+                        friendshipId: f.id,
+                        ...profile
+                    };
+                });
+                
+                const received = (receivedRequests || []).map(f => {
+                    const profile = profileMap.get(f.user_id) || { id: f.user_id, email: 'Unknown', display_name: 'Unknown' };
+                    return {
+                        friendshipId: f.id,
+                        ...profile
+                    };
+                });
+                
+                friendsList = [...sent, ...received];
+                renderFriends();
+            } catch (err) {
+                console.error('Error loading friends:', err);
+                friendsList = [];
+                renderFriends();
+            }
+        }
+
+        // Load conversations (includes all message partners, not just current friends)
+        async function loadConversations() {
+            if (!currentUser || currentUser.id === 'test-user') {
+                conversations = [];
+                renderConversations();
+                return;
+            }
+            
+            try {
+                // Get all messages involving this user
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                if (!messages || messages.length === 0) {
+                    conversations = [];
+                    renderConversations();
+                    return;
+                }
+                
+                // Group by conversation partner
+                const convMap = new Map();
+                
+                for (const msg of messages) {
+                    const partnerId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
+                    
+                    if (!convMap.has(partnerId)) {
+                        convMap.set(partnerId, {
+                            odId: partnerId,
+                            lastMessage: msg,
+                            unreadCount: 0
+                        });
+                    }
+                    
+                    // Count unread
+                    if (msg.receiver_id === currentUser.id && !msg.read) {
+                        const conv = convMap.get(partnerId);
+                        conv.unreadCount++;
+                    }
+                }
+                
+                // Get all partner IDs (may include non-friends)
+                const partnerIds = Array.from(convMap.keys());
+                
+                // Fetch profiles for all partners
+                const { data: profiles, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, email, display_name, status, avatar_url')
+                    .in('id', partnerIds);
+                
+                if (profileError) throw profileError;
+                
+                const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                
+                // Build conversations list
+                conversations = [];
+                for (const [partnerId, conv] of convMap) {
+                    const profile = profileMap.get(partnerId);
+                    if (profile) {
+                        conversations.push({
+                            friend: profile,
+                            isFriend: isFriend(partnerId),
+                            lastMessage: conv.lastMessage,
+                            unreadCount: conv.unreadCount
+                        });
+                    }
+                }
+                
+                // Sort by last message time
+                conversations.sort((a, b) => {
+                    if (!a.lastMessage) return 1;
+                    if (!b.lastMessage) return -1;
+                    return new Date(b.lastMessage.created_at) - new Date(a.lastMessage.created_at);
+                });
+                
+                renderConversations();
+            } catch (err) {
+                console.error('Error loading conversations:', err);
+            }
+        }
+
+        // Render friend requests
+        function renderFriendRequests() {
+            const container = document.getElementById('friend-requests-list');
+            const countBadge = document.getElementById('requests-count');
+            
+            if (!container) return;
+            
+            countBadge.textContent = friendRequests.length;
+            
+            if (friendRequests.length === 0) {
+                container.innerHTML = '<div class="friends-empty">No pending requests</div>';
+                return;
+            }
+            
+            container.innerHTML = friendRequests.map(req => `
+                <div class="friend-item" data-request-id="${req.id}">
+                    <div class="friend-info">
+                        <div class="friend-avatar">${getInitials(req.profile?.display_name || req.profile?.email)}</div>
+                        <div class="friend-details">
+                            <div class="friend-name">${req.profile?.display_name || 'Unknown'}</div>
+                            <div class="friend-email">${req.profile?.email || ''}</div>
+                        </div>
+                    </div>
+                    <div class="friend-actions">
+                        <button class="friend-action-btn accept" onclick="acceptFriendRequest('${req.id}')">Accept</button>
+                        <button class="friend-action-btn reject" onclick="rejectFriendRequest('${req.id}')">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render friends list
+        function renderFriends() {
+            const container = document.getElementById('friends-list');
+            const countBadge = document.getElementById('friends-count');
+            
+            if (!container) return;
+            
+            countBadge.textContent = friendsList.length;
+            
+            if (friendsList.length === 0) {
+                container.innerHTML = '<div class="friends-empty">No friends yet. Add someone to get started!</div>';
+                return;
+            }
+            
+            container.innerHTML = friendsList.map(friend => `
+                <div class="friend-item" data-friend-id="${friend.id}">
+                    <div class="friend-info">
+                        <div class="friend-avatar">${getInitials(friend.display_name || friend.email)}</div>
+                        <div class="friend-details">
+                            <div class="friend-name">${friend.display_name || 'Unknown'}</div>
+                            <div class="friend-status">
+                                <span class="friend-status-dot ${friend.status === 'online' ? 'online' : ''}"></span>
+                                ${friend.status || 'offline'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="friend-actions">
+                        <button class="friend-action-btn message" onclick="openChat('${friend.id}')">Message</button>
+                        <button class="friend-action-btn remove" onclick="removeFriend('${friend.friendshipId}', '${friend.display_name}')">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render conversations
+        function renderConversations() {
+            const container = document.getElementById('conversations-list');
+            
+            if (!container) return;
+            
+            if (conversations.length === 0) {
+                container.innerHTML = '<div class="conversations-empty">No conversations yet. Message a friend to start!</div>';
+                return;
+            }
+            
+            container.innerHTML = conversations.map(conv => {
+                const isCurrentFriend = isFriend(conv.friend.id);
+                return `
+                <div class="conversation-item ${currentChatFriend?.id === conv.friend.id ? 'active' : ''} ${!isCurrentFriend ? 'not-friend' : ''}" 
+                     data-friend-id="${conv.friend.id}" 
+                     onclick="openChat('${conv.friend.id}')">
+                    <div class="conversation-avatar">
+                        ${getInitials(conv.friend.display_name || conv.friend.email)}
+                        <span class="status-indicator ${conv.friend.status === 'online' ? 'online' : ''}"></span>
+                    </div>
+                    <div class="conversation-details">
+                        <div class="conversation-name">
+                            ${conv.friend.display_name || conv.friend.email}
+                            ${!isCurrentFriend ? '<span class="not-friend-badge" title="Not friends">\u26d4</span>' : ''}
+                        </div>
+                        <div class="conversation-preview">${getMessagePreview(conv.lastMessage)}</div>
+                    </div>
+                    <div class="conversation-meta">
+                        ${conv.lastMessage ? `<div class="conversation-time">${formatTime(conv.lastMessage.created_at)}</div>` : ''}
+                        ${conv.unreadCount > 0 ? `<div class="conversation-unread">${conv.unreadCount}</div>` : ''}
+                    </div>
+                </div>
+            `;
+            }).join('');
+        }
+
+        // Get message preview text
+        function getMessagePreview(msg) {
+            if (!msg) return 'No messages yet';
+            if (msg.message_type === 'session_invite') return '🖥️ Session invite';
+            return msg.content.length > 30 ? msg.content.substring(0, 30) + '...' : msg.content;
+        }
+
+        // Format time for display
+        function formatTime(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'now';
+            if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + 'h';
+            if (diff < 604800000) return Math.floor(diff / 86400000) + 'd';
+            return date.toLocaleDateString();
+        }
+
+        // Get initials from name/email
+        function getInitials(str) {
+            if (!str) return '?';
+            const parts = str.split(/[@\s]/);
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return str.substring(0, 2).toUpperCase();
+        }
+
+        // Send friend request
+        async function sendFriendRequest() {
+            const emailInput = document.getElementById('add-friend-email');
+            const email = emailInput?.value?.trim()?.toLowerCase();
+            
+            if (!email) {
+                window.superdeskModal.warning('Please enter an email address', 'Email Required');
+                return;
+            }
+            
+            if (!currentUser || currentUser.id === 'test-user') {
+                window.superdeskModal.warning('Please sign in with a real account to add friends', 'Sign In Required');
+                return;
+            }
+            
+            if (email === currentUser.email?.toLowerCase()) {
+                window.superdeskModal.warning('You cannot add yourself as a friend', 'Invalid Request');
+                return;
+            }
+            
+            try {
+                // Find user by email using maybeSingle() to avoid 406 error
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, email, display_name')
+                    .eq('email', email)
+                    .maybeSingle();
+                
+                if (profileError) {
+                    console.error('Profile search error:', profileError);
+                    window.superdeskModal.error('Error searching for user. Please try again.', 'Error');
+                    return;
+                }
+                
+                if (!profile) {
+                    window.superdeskModal.error('User not found. They need to sign in to SuperDesk first before you can add them.', 'User Not Found');
+                    return;
+                }
+                
+                // Check if already friends or request exists
+                const { data: existing } = await supabase
+                    .from('friends')
+                    .select('id, status')
+                    .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${profile.id}),and(user_id.eq.${profile.id},friend_id.eq.${currentUser.id})`);
+                
+                if (existing && existing.length > 0) {
+                    const status = existing[0].status;
+                    if (status === 'accepted') {
+                        window.superdeskModal.info('You are already friends with this user', 'Already Friends');
+                    } else if (status === 'pending') {
+                        window.superdeskModal.info('A friend request is already pending', 'Request Pending');
+                    }
+                    return;
+                }
+                
+                // Send request
+                const { error: insertError } = await supabase
+                    .from('friends')
+                    .insert({
+                        user_id: currentUser.id,
+                        friend_id: profile.id,
+                        status: 'pending'
+                    });
+                
+                if (insertError) throw insertError;
+                
+                emailInput.value = '';
+                window.superdeskModal.success(`Friend request sent to ${profile.display_name || email}!`, 'Request Sent');
+                
+            } catch (err) {
+                console.error('Error sending friend request:', err);
+                window.superdeskModal.error('Failed to send friend request. Please try again.', 'Error');
+            }
+        }
+
+        // Accept friend request
+        async function acceptFriendRequest(requestId) {
+            try {
+                const { error } = await supabase
+                    .from('friends')
+                    .update({ status: 'accepted', updated_at: new Date().toISOString() })
+                    .eq('id', requestId);
+                
+                if (error) throw error;
+                
+                window.superdeskModal.success('Friend request accepted!', 'Success');
+                await loadFriendRequests();
+                await loadFriends();
+                await loadConversations();
+                
+            } catch (err) {
+                console.error('Error accepting friend request:', err);
+                window.superdeskModal.error('Failed to accept request', 'Error');
+            }
+        }
+
+        // Reject friend request
+        async function rejectFriendRequest(requestId) {
+            try {
+                const { error } = await supabase
+                    .from('friends')
+                    .delete()
+                    .eq('id', requestId);
+                
+                if (error) throw error;
+                
+                await loadFriendRequests();
+                
+            } catch (err) {
+                console.error('Error rejecting friend request:', err);
+                window.superdeskModal.error('Failed to reject request', 'Error');
+            }
+        }
+
+        // Remove friend
+        async function removeFriend(friendshipId, friendName) {
+            const confirmed = await window.superdeskModal.confirm(
+                `Are you sure you want to remove ${friendName} from your friends?`,
+                'Remove Friend'
+            );
+            
+            if (!confirmed) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('friends')
+                    .delete()
+                    .eq('id', friendshipId);
+                
+                if (error) throw error;
+                
+                await loadFriends();
+                await loadConversations();
+                
+                // Close chat if it was with this friend
+                if (currentChatFriend?.friendshipId === friendshipId) {
+                    closeChat();
+                }
+                
+            } catch (err) {
+                console.error('Error removing friend:', err);
+                window.superdeskModal.error('Failed to remove friend', 'Error');
+            }
+        }
+
+        // Open chat with a user (friend or ex-friend with chat history)
+        async function openChat(friendId) {
+            // First try to find in friends list
+            let friend = friendsList.find(f => f.id === friendId);
+            
+            // If not in friends list, check conversations (for ex-friends)
+            if (!friend) {
+                const conv = conversations.find(c => c.friend.id === friendId);
+                if (conv) {
+                    friend = conv.friend;
+                }
+            }
+            
+            if (!friend) {
+                console.error('User not found:', friendId);
+                return;
+            }
+            
+            currentChatFriend = friend;
+            
+            // Update UI
+            const placeholder = document.getElementById('chat-placeholder');
+            const chatActive = document.getElementById('chat-active');
+            
+            if (placeholder) placeholder.classList.add('hidden');
+            if (chatActive) chatActive.classList.remove('hidden');
+            
+            // Update header
+            document.getElementById('chat-user-avatar').textContent = getInitials(friend.display_name || friend.email);
+            document.getElementById('chat-user-name').textContent = friend.display_name || friend.email;
+            document.getElementById('chat-user-status').textContent = friend.status || 'offline';
+            
+            // Update conversation list to show active
+            renderConversations();
+            
+            // Load messages
+            await loadChatMessages(friendId);
+            
+            // Mark messages as read
+            await markMessagesAsRead(friendId);
+            
+            // Update chat UI based on friend status (show/hide input)
+            updateChatFriendStatus();
+        }
+
+        // Load chat messages
+        async function loadChatMessages(friendId) {
+            try {
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`)
+                    .order('created_at', { ascending: true });
+                
+                if (error) throw error;
+                
+                renderChatMessages(messages || []);
+                
+            } catch (err) {
+                console.error('Error loading messages:', err);
+            }
+        }
+
+        // Render chat messages
+        function renderChatMessages(messages) {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">No messages yet. Say hello! 👋</div>';
+                return;
+            }
+            
+            container.innerHTML = messages.map(msg => {
+                const isSent = msg.sender_id === currentUser.id;
+                const isInvite = msg.message_type === 'session_invite';
+                
+                if (isInvite) {
+                    return `
+                        <div class="chat-message ${isSent ? 'sent' : 'received'} session-invite" onclick="joinSessionFromInvite('${msg.session_code}')">
+                            <div class="session-invite-content">
+                                <span class="session-invite-icon">🖥️</span>
+                                <div class="session-invite-text">
+                                    <span class="session-invite-label">${isSent ? 'You sent a session invite' : 'Session Invite - Click to join'}</span>
+                                    <span class="session-invite-code">${msg.session_code}</span>
+                                </div>
+                            </div>
+                            <div class="chat-message-time">${formatMessageTime(msg.created_at)}</div>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="chat-message ${isSent ? 'sent' : 'received'}">
+                        ${msg.content}
+                        <div class="chat-message-time">${formatMessageTime(msg.created_at)}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Format message time
+        function formatMessageTime(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Send message
+        async function sendMessage() {
+            if (!currentChatFriend) return;
+            
+            const input = document.getElementById('chat-input');
+            const content = input?.value?.trim();
+            
+            if (!content) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('messages')
+                    .insert({
+                        sender_id: currentUser.id,
+                        receiver_id: currentChatFriend.id,
+                        content: content,
+                        message_type: 'text'
+                    });
+                
+                if (error) throw error;
+                
+                input.value = '';
+                
+                // Reload messages
+                await loadChatMessages(currentChatFriend.id);
+                await loadConversations();
+                
+            } catch (err) {
+                console.error('Error sending message:', err);
+                window.superdeskModal.error('Failed to send message', 'Error');
+            }
+        }
+
+        // Send session invite
+        async function sendSessionInvite() {
+            if (!currentChatFriend) return;
+            
+            const sessionCode = document.getElementById('session-id')?.textContent;
+            
+            if (!sessionCode || sessionCode === 'XXXXXX') {
+                window.superdeskModal.warning('Please generate a session ID first by starting screen share', 'No Session');
+                return;
+            }
+            
+            try {
+                const { error } = await supabase
+                    .from('messages')
+                    .insert({
+                        sender_id: currentUser.id,
+                        receiver_id: currentChatFriend.id,
+                        content: `Join my session: ${sessionCode}`,
+                        message_type: 'session_invite',
+                        session_code: sessionCode
+                    });
+                
+                if (error) throw error;
+                
+                window.superdeskModal.success('Session invite sent!', 'Invite Sent');
+                
+                // Reload messages
+                await loadChatMessages(currentChatFriend.id);
+                await loadConversations();
+                
+            } catch (err) {
+                console.error('Error sending session invite:', err);
+                window.superdeskModal.error('Failed to send invite', 'Error');
+            }
+        }
+
+        // Join session from invite
+        function joinSessionFromInvite(sessionCode) {
+            if (!sessionCode) return;
+            
+            // Switch to share view and fill in the session code
+            switchView('share');
+            
+            const joinInput = document.getElementById('join-session-input');
+            if (joinInput) {
+                joinInput.value = sessionCode;
+            }
+            
+            window.superdeskModal.info(`Session code ${sessionCode} copied to join field. Click "Join Session" to connect.`, 'Ready to Join');
+        }
+
+        // Mark messages as read
+        async function markMessagesAsRead(friendId) {
+            try {
+                await supabase
+                    .from('messages')
+                    .update({ read: true })
+                    .eq('sender_id', friendId)
+                    .eq('receiver_id', currentUser.id)
+                    .eq('read', false);
+                
+                await loadConversations();
+            } catch (err) {
+                console.error('Error marking messages as read:', err);
+            }
+        }
+
+        // Close chat
+        function closeChat() {
+            currentChatFriend = null;
+            
+            const placeholder = document.getElementById('chat-placeholder');
+            const chatActive = document.getElementById('chat-active');
+            
+            if (placeholder) placeholder.classList.remove('hidden');
+            if (chatActive) chatActive.classList.add('hidden');
+            
+            renderConversations();
+        }
+
+        // Handle new message (realtime)
+        function handleNewMessage(message) {
+            // If this message is from the current chat friend, reload messages
+            if (currentChatFriend && message.sender_id === currentChatFriend.id) {
+                loadChatMessages(currentChatFriend.id);
+                markMessagesAsRead(currentChatFriend.id);
+            }
+            
+            // Update conversations list
+            loadConversations();
+            
+            // Show notification if not viewing this chat
+            if (!currentChatFriend || message.sender_id !== currentChatFriend.id) {
+                const sender = friendsList.find(f => f.id === message.sender_id);
+                if (sender) {
+                    // Could add desktop notification here
+                    console.log('📬 New message from:', sender.display_name || sender.email);
+                }
+            }
+        }
+
+        // Set up event listeners for friends/messages UI
+        function setupFriendsEventListeners() {
+            // Send friend request button
+            const sendRequestBtn = document.getElementById('send-friend-request-btn');
+            if (sendRequestBtn) {
+                sendRequestBtn.addEventListener('click', sendFriendRequest);
+            }
+            
+            // Enter key on email input
+            const emailInput = document.getElementById('add-friend-email');
+            if (emailInput) {
+                emailInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendFriendRequest();
+                });
+            }
+            
+            // Send message button
+            const sendMsgBtn = document.getElementById('chat-send-btn');
+            if (sendMsgBtn) {
+                sendMsgBtn.addEventListener('click', sendMessage);
+            }
+            
+            // Enter key on chat input
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendMessage();
+                });
+            }
+            
+            // Session invite button
+            const inviteBtn = document.getElementById('chat-invite-btn');
+            if (inviteBtn) {
+                inviteBtn.addEventListener('click', sendSessionInvite);
+            }
+            
+            // Back button (mobile)
+            const backBtn = document.getElementById('chat-back-btn');
+            if (backBtn) {
+                backBtn.addEventListener('click', closeChat);
+            }
+        }
+
+        // Update user status on window close/hide
+        window.addEventListener('beforeunload', async () => {
+            if (currentUser) {
+                await supabase
+                    .from('profiles')
+                    .update({ status: 'offline' })
+                    .eq('id', currentUser.id);
+            }
+        });
+
+        // Make functions globally available
+        window.sendFriendRequest = sendFriendRequest;
+        window.acceptFriendRequest = acceptFriendRequest;
+        window.rejectFriendRequest = rejectFriendRequest;
+        window.removeFriend = removeFriend;
+        window.openChat = openChat;
+        window.sendMessage = sendMessage;
+        window.sendSessionInvite = sendSessionInvite;
+        window.joinSessionFromInvite = joinSessionFromInvite;
+        window.closeChat = closeChat;
+    </script>
 </body>
 </html>
