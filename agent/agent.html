@@ -1474,6 +1474,255 @@
             left: 24px;
         }
 
+        /* Account Settings Button */
+        .settings-item.clickable {
+            cursor: pointer;
+        }
+
+        .settings-item.clickable:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .settings-item-arrow {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 18px;
+        }
+
+        /* Account Edit Modal */
+        .account-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100001;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease-out;
+        }
+
+        .account-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .account-modal {
+            background: var(--modal-bg);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.2s ease-out;
+            overflow: hidden;
+        }
+
+        .account-modal-overlay.active .account-modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .account-modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .account-modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .account-modal-close {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .account-modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .account-modal-body {
+            padding: 24px;
+        }
+
+        .account-avatar-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .account-avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .account-avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .account-avatar-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .account-avatar-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .account-field {
+            margin-bottom: 20px;
+        }
+
+        .account-field-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .account-field-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+
+        .account-field-input:focus {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .account-field-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .account-field-input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .account-field-hint {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 6px;
+        }
+
+        .account-field-error {
+            font-size: 12px;
+            color: #f87171;
+            margin-top: 6px;
+        }
+
+        .account-field-success {
+            font-size: 12px;
+            color: #34d399;
+            margin-top: 6px;
+        }
+
+        .username-prefix {
+            position: absolute;
+            left: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .account-field-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .account-field-input-wrapper .account-field-input {
+            padding-left: 24px;
+        }
+
+        .account-modal-footer {
+            padding: 16px 24px 24px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .account-modal-btn {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .account-modal-btn.primary {
+            background: white;
+            color: #613da9;
+        }
+
+        .account-modal-btn.primary:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .account-modal-btn.primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .account-modal-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .account-modal-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
         /* Settings Action Buttons */
         .settings-action-btn {
             width: 100%;
@@ -1840,14 +2089,15 @@
                 <!-- Account Section -->
                 <div class="settings-section">
                     <div class="settings-section-title">Account</div>
-                    <div class="settings-item">
+                    <div class="settings-item clickable" id="account-settings-btn" onclick="openAccountModal()">
                         <div class="settings-item-left">
-                            <div class="settings-item-icon">👤</div>
+                            <div class="settings-item-icon" id="settings-user-avatar">👤</div>
                             <div class="settings-item-text">
                                 <div class="settings-item-label" id="settings-user-email">user@example.com</div>
-                                <div class="settings-item-desc">Signed in</div>
+                                <div class="settings-item-desc" id="settings-user-username">Tap to set username</div>
                             </div>
                         </div>
+                        <div class="settings-item-arrow">›</div>
                     </div>
                 </div>
 
@@ -2103,7 +2353,7 @@
                         <span class="friends-section-title">➕ Add Friend</span>
                     </div>
                     <div class="add-friend-form">
-                        <input type="email" id="add-friend-email" class="input-field" placeholder="Enter friend's email address" style="flex: 1; margin-bottom: 0;">
+                        <input type="text" id="add-friend-email" class="input-field" placeholder="Email or @username" style="flex: 1; margin-bottom: 0;">
                         <button id="send-friend-request-btn" class="btn btn-primary" style="width: auto; margin-bottom: 0; padding: 12px 24px;">
                             Send Request
                         </button>
@@ -3098,6 +3348,53 @@
         }, 1000);
     </script>
 
+    <!-- Account Edit Modal -->
+    <div id="account-modal-overlay" class="account-modal-overlay">
+        <div class="account-modal">
+            <div class="account-modal-header">
+                <div class="account-modal-title">Edit Profile</div>
+                <button class="account-modal-close" onclick="closeAccountModal()">×</button>
+            </div>
+            <div class="account-modal-body">
+                <!-- Avatar Section -->
+                <div class="account-avatar-section">
+                    <div class="account-avatar-preview" id="account-avatar-preview">
+                        <span id="account-avatar-initials">?</span>
+                    </div>
+                    <input type="file" id="avatar-file-input" accept="image/*" style="display: none;" onchange="handleAvatarUpload(event)">
+                    <button class="account-avatar-btn" onclick="document.getElementById('avatar-file-input').click()">
+                        📷 Change Photo
+                    </button>
+                </div>
+                
+                <!-- Email Field (Read-only) -->
+                <div class="account-field">
+                    <div class="account-field-label">Email</div>
+                    <input type="text" class="account-field-input" id="account-email-input" disabled>
+                    <div class="account-field-hint">Your email cannot be changed</div>
+                </div>
+                
+                <!-- Username Field -->
+                <div class="account-field">
+                    <div class="account-field-label">Username</div>
+                    <div class="account-field-input-wrapper">
+                        <span class="username-prefix">@</span>
+                        <input type="text" class="account-field-input" id="account-username-input" 
+                               placeholder="username" maxlength="30" 
+                               oninput="validateUsername(this.value)">
+                    </div>
+                    <div class="account-field-hint">Letters, numbers, underscores and periods. 3-30 characters.</div>
+                    <div class="account-field-error hidden" id="username-error"></div>
+                    <div class="account-field-success hidden" id="username-success"></div>
+                </div>
+            </div>
+            <div class="account-modal-footer">
+                <button class="account-modal-btn secondary" onclick="closeAccountModal()">Cancel</button>
+                <button class="account-modal-btn primary" id="save-account-btn" onclick="saveAccountSettings()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Remote Desktop Popup Viewer (for guests joining sessions) -->
     <div id="remote-desktop-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; flex-direction: column;">
         <!-- Centered control bar at top (auto-hide after 3s) -->
@@ -3466,6 +3763,321 @@
             window.superdeskModal.init();
         }
 
+        // ==================== USER PROFILE & ACCOUNT SYSTEM ====================
+        
+        let currentUserProfile = null; // Stores the full profile with username/avatar
+        
+        // Open account modal
+        function openAccountModal() {
+            const overlay = document.getElementById('account-modal-overlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                loadAccountModalData();
+            }
+        }
+        
+        // Close account modal
+        function closeAccountModal() {
+            const overlay = document.getElementById('account-modal-overlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+            // Reset any error/success messages
+            const errorEl = document.getElementById('username-error');
+            const successEl = document.getElementById('username-success');
+            if (errorEl) errorEl.classList.add('hidden');
+            if (successEl) successEl.classList.add('hidden');
+        }
+        
+        // Load data into account modal
+        function loadAccountModalData() {
+            const emailInput = document.getElementById('account-email-input');
+            const usernameInput = document.getElementById('account-username-input');
+            const avatarPreview = document.getElementById('account-avatar-preview');
+            
+            if (emailInput) {
+                emailInput.value = currentUser?.email || '';
+            }
+            
+            if (usernameInput && currentUserProfile) {
+                usernameInput.value = currentUserProfile.username || '';
+            }
+            
+            // Update avatar preview
+            if (avatarPreview) {
+                if (currentUserProfile?.avatar_url) {
+                    avatarPreview.innerHTML = `<img src="${currentUserProfile.avatar_url}" alt="Avatar">`;
+                } else {
+                    const initials = getInitials(currentUserProfile?.username || currentUserProfile?.display_name || currentUser?.email || '?');
+                    avatarPreview.innerHTML = `<span id="account-avatar-initials">${initials}</span>`;
+                }
+            }
+        }
+        
+        // Validate username format (Instagram-style)
+        let usernameCheckTimeout = null;
+        async function validateUsername(value) {
+            const errorEl = document.getElementById('username-error');
+            const successEl = document.getElementById('username-success');
+            const saveBtn = document.getElementById('save-account-btn');
+            
+            // Clear previous timeout
+            if (usernameCheckTimeout) {
+                clearTimeout(usernameCheckTimeout);
+            }
+            
+            // Reset states
+            errorEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+            
+            // Empty is allowed (user can have no username)
+            if (!value || value.trim() === '') {
+                saveBtn.disabled = false;
+                return;
+            }
+            
+            const username = value.trim().toLowerCase();
+            
+            // Check format: letters, numbers, underscores, periods (3-30 chars)
+            const usernameRegex = /^[a-z0-9._]{3,30}$/;
+            if (!usernameRegex.test(username)) {
+                errorEl.textContent = 'Username must be 3-30 characters, only letters, numbers, underscores and periods';
+                errorEl.classList.remove('hidden');
+                saveBtn.disabled = true;
+                return;
+            }
+            
+            // Cannot start or end with period, no consecutive periods
+            if (username.startsWith('.') || username.endsWith('.') || username.includes('..')) {
+                errorEl.textContent = 'Username cannot start/end with a period or have consecutive periods';
+                errorEl.classList.remove('hidden');
+                saveBtn.disabled = true;
+                return;
+            }
+            
+            // Check availability after a short delay (debounce)
+            saveBtn.disabled = true;
+            usernameCheckTimeout = setTimeout(async () => {
+                try {
+                    const { data: existing, error } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .ilike('username', username)
+                        .neq('id', currentUser.id)
+                        .maybeSingle();
+                    
+                    if (error) throw error;
+                    
+                    if (existing) {
+                        errorEl.textContent = 'This username is already taken';
+                        errorEl.classList.remove('hidden');
+                        saveBtn.disabled = true;
+                    } else {
+                        successEl.textContent = '✓ Username is available';
+                        successEl.classList.remove('hidden');
+                        saveBtn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error('Error checking username:', err);
+                    saveBtn.disabled = false;
+                }
+            }, 500);
+        }
+        
+        // Handle avatar upload
+        async function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                window.superdeskModal.error('Image must be less than 2MB', 'File Too Large');
+                return;
+            }
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                window.superdeskModal.error('Please select an image file', 'Invalid File');
+                return;
+            }
+            
+            try {
+                // Show loading state
+                const avatarPreview = document.getElementById('account-avatar-preview');
+                avatarPreview.innerHTML = '<span>⏳</span>';
+                
+                // Upload to Supabase Storage
+                // Path: {user_id}/{filename} - user ID as folder for RLS policies
+                const fileExt = file.name.split('.').pop();
+                const fileName = `avatar.${fileExt}`;
+                const filePath = `${currentUser.id}/${fileName}`;
+                
+                const { error: uploadError } = await supabase.storage
+                    .from('avatars')
+                    .upload(filePath, file, { upsert: true });
+                
+                if (uploadError) throw uploadError;
+                
+                // Get public URL
+                const { data: { publicUrl } } = supabase.storage
+                    .from('avatars')
+                    .getPublicUrl(filePath);
+                
+                // Add cache-busting parameter
+                const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+                
+                // Update preview
+                avatarPreview.innerHTML = `<img src="${avatarUrl}" alt="Avatar">`;
+                
+                // Store temporarily (will be saved when user clicks Save)
+                avatarPreview.dataset.pendingUrl = avatarUrl;
+                
+                window.superdeskModal.success('Photo uploaded! Click Save to apply.', 'Photo Ready');
+                
+            } catch (err) {
+                console.error('Error uploading avatar:', err);
+                window.superdeskModal.error('Failed to upload image. Make sure storage is set up in Supabase.', 'Upload Failed');
+                loadAccountModalData(); // Reset preview
+            }
+        }
+        
+        // Save account settings
+        async function saveAccountSettings() {
+            if (!currentUser || currentUser.id === 'test-user') {
+                window.superdeskModal.warning('Please sign in with a real account', 'Sign In Required');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('save-account-btn');
+            const usernameInput = document.getElementById('account-username-input');
+            const avatarPreview = document.getElementById('account-avatar-preview');
+            
+            const username = usernameInput?.value?.trim().toLowerCase() || null;
+            const pendingAvatarUrl = avatarPreview?.dataset?.pendingUrl || null;
+            
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            
+            try {
+                const updates = {
+                    updated_at: new Date().toISOString()
+                };
+                
+                // Only update username if provided
+                if (username !== null) {
+                    updates.username = username || null; // Allow clearing username
+                }
+                
+                // Update avatar URL if there's a pending one
+                if (pendingAvatarUrl) {
+                    updates.avatar_url = pendingAvatarUrl;
+                }
+                
+                const { error } = await supabase
+                    .from('profiles')
+                    .update(updates)
+                    .eq('id', currentUser.id);
+                
+                if (error) throw error;
+                
+                // Clear pending URL
+                if (avatarPreview) {
+                    delete avatarPreview.dataset.pendingUrl;
+                }
+                
+                // Reload profile
+                await loadUserProfile();
+                
+                // Update UI displays
+                updateAllUserDisplays();
+                
+                window.superdeskModal.success('Profile updated successfully!', 'Saved');
+                closeAccountModal();
+                
+            } catch (err) {
+                console.error('Error saving account settings:', err);
+                if (err.message?.includes('duplicate') || err.code === '23505') {
+                    window.superdeskModal.error('This username is already taken', 'Username Unavailable');
+                } else {
+                    window.superdeskModal.error('Failed to save changes. Please try again.', 'Save Failed');
+                }
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save';
+            }
+        }
+        
+        // Load user profile from database
+        async function loadUserProfile() {
+            if (!currentUser || currentUser.id === 'test-user') {
+                currentUserProfile = null;
+                return;
+            }
+            
+            try {
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .maybeSingle();
+                
+                if (error) throw error;
+                
+                currentUserProfile = profile;
+                console.log('✅ User profile loaded:', currentUserProfile);
+                
+            } catch (err) {
+                console.error('Error loading user profile:', err);
+                currentUserProfile = null;
+            }
+        }
+        
+        // Get display name (username preferred, then email)
+        function getDisplayName(profile) {
+            if (!profile) return 'Unknown';
+            if (profile.username) return `@${profile.username}`;
+            if (profile.display_name) return profile.display_name;
+            if (profile.email) return profile.email;
+            return 'Unknown';
+        }
+        
+        // Update all places where user info is displayed
+        function updateAllUserDisplays() {
+            const displayName = getDisplayName(currentUserProfile);
+            
+            // Sidebar user display (show username if available, else email)
+            const userEmailDisplay = document.getElementById('user-email');
+            if (userEmailDisplay) {
+                userEmailDisplay.textContent = currentUserProfile?.username 
+                    ? `@${currentUserProfile.username}` 
+                    : (currentUser?.email || 'user@example.com');
+            }
+            
+            // Settings account section (always show email)
+            const settingsEmail = document.getElementById('settings-user-email');
+            if (settingsEmail) {
+                settingsEmail.textContent = currentUser?.email || 'user@example.com';
+            }
+            
+            // Settings username subtitle
+            const settingsUsername = document.getElementById('settings-user-username');
+            if (settingsUsername) {
+                settingsUsername.textContent = currentUserProfile?.username 
+                    ? `@${currentUserProfile.username}` 
+                    : 'Tap to set username';
+            }
+            
+            // Settings avatar
+            const settingsAvatar = document.getElementById('settings-user-avatar');
+            if (settingsAvatar) {
+                if (currentUserProfile?.avatar_url) {
+                    settingsAvatar.innerHTML = `<img src="${currentUserProfile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
+                } else {
+                    settingsAvatar.textContent = '👤';
+                }
+            }
+        }
+
         // ==================== FRIENDS & MESSAGES SYSTEM ====================
         
         // State for friends and messages
@@ -3550,6 +4162,12 @@
                         .eq('id', currentUser.id);
                     console.log('✅ Profile status updated to online');
                 }
+                
+                // Load the profile into currentUserProfile
+                await loadUserProfile();
+                // Update UI displays with username/avatar
+                updateAllUserDisplays();
+                
             } catch (err) {
                 console.error('Error ensuring profile:', err);
             }
@@ -3877,12 +4495,20 @@
                 return;
             }
             
-            container.innerHTML = friendRequests.map(req => `
+            container.innerHTML = friendRequests.map(req => {
+                const displayName = req.profile?.username 
+                    ? `@${req.profile.username}` 
+                    : (req.profile?.display_name || 'Unknown');
+                const avatarContent = req.profile?.avatar_url 
+                    ? `<img src="${req.profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` 
+                    : getInitials(req.profile?.username || req.profile?.display_name || req.profile?.email);
+                
+                return `
                 <div class="friend-item" data-request-id="${req.id}">
                     <div class="friend-info">
-                        <div class="friend-avatar">${getInitials(req.profile?.display_name || req.profile?.email)}</div>
+                        <div class="friend-avatar">${avatarContent}</div>
                         <div class="friend-details">
-                            <div class="friend-name">${req.profile?.display_name || 'Unknown'}</div>
+                            <div class="friend-name">${displayName}</div>
                             <div class="friend-email">${req.profile?.email || ''}</div>
                         </div>
                     </div>
@@ -3891,7 +4517,7 @@
                         <button class="friend-action-btn reject" onclick="rejectFriendRequest('${req.id}')">Reject</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         // Render friends list
@@ -3908,12 +4534,21 @@
                 return;
             }
             
-            container.innerHTML = friendsList.map(friend => `
+            container.innerHTML = friendsList.map(friend => {
+                const displayName = friend.username 
+                    ? `@${friend.username}` 
+                    : (friend.display_name || 'Unknown');
+                const avatarContent = friend.avatar_url 
+                    ? `<img src="${friend.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` 
+                    : getInitials(friend.username || friend.display_name || friend.email);
+                const escapedDisplayName = (displayName || '').replace(/'/g, "\\'");
+                
+                return `
                 <div class="friend-item" data-friend-id="${friend.id}">
                     <div class="friend-info">
-                        <div class="friend-avatar">${getInitials(friend.display_name || friend.email)}</div>
+                        <div class="friend-avatar">${avatarContent}</div>
                         <div class="friend-details">
-                            <div class="friend-name">${friend.display_name || 'Unknown'}</div>
+                            <div class="friend-name">${displayName}</div>
                             <div class="friend-status">
                                 <span class="friend-status-dot ${friend.status === 'online' ? 'online' : ''}"></span>
                                 ${friend.status || 'offline'}
@@ -3922,10 +4557,10 @@
                     </div>
                     <div class="friend-actions">
                         <button class="friend-action-btn message" onclick="openChat('${friend.id}')">Message</button>
-                        <button class="friend-action-btn remove" onclick="removeFriend('${friend.friendshipId}', '${friend.display_name}')">Remove</button>
+                        <button class="friend-action-btn remove" onclick="removeFriend('${friend.friendshipId}', '${escapedDisplayName}')">Remove</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         // Render conversations
@@ -3941,17 +4576,24 @@
             
             container.innerHTML = conversations.map(conv => {
                 const isCurrentFriend = isFriend(conv.friend.id);
+                const displayName = conv.friend.username 
+                    ? `@${conv.friend.username}` 
+                    : (conv.friend.display_name || conv.friend.email);
+                const avatarContent = conv.friend.avatar_url 
+                    ? `<img src="${conv.friend.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` 
+                    : getInitials(conv.friend.username || conv.friend.display_name || conv.friend.email);
+                
                 return `
                 <div class="conversation-item ${currentChatFriend?.id === conv.friend.id ? 'active' : ''} ${!isCurrentFriend ? 'not-friend' : ''}" 
                      data-friend-id="${conv.friend.id}" 
                      onclick="openChat('${conv.friend.id}')">
                     <div class="conversation-avatar">
-                        ${getInitials(conv.friend.display_name || conv.friend.email)}
+                        ${avatarContent}
                         <span class="status-indicator ${conv.friend.status === 'online' ? 'online' : ''}"></span>
                     </div>
                     <div class="conversation-details">
                         <div class="conversation-name">
-                            ${conv.friend.display_name || conv.friend.email}
+                            ${displayName}
                             ${!isCurrentFriend ? '<span class="not-friend-badge" title="Not friends">\u26d4</span>' : ''}
                         </div>
                         <div class="conversation-preview">${getMessagePreview(conv.lastMessage)}</div>
@@ -3997,11 +4639,11 @@
 
         // Send friend request
         async function sendFriendRequest() {
-            const emailInput = document.getElementById('add-friend-email');
-            const email = emailInput?.value?.trim()?.toLowerCase();
+            const searchInput = document.getElementById('add-friend-email');
+            const searchValue = searchInput?.value?.trim()?.toLowerCase();
             
-            if (!email) {
-                window.superdeskModal.warning('Please enter an email address', 'Email Required');
+            if (!searchValue) {
+                window.superdeskModal.warning('Please enter an email or username', 'Input Required');
                 return;
             }
             
@@ -4010,27 +4652,52 @@
                 return;
             }
             
-            if (email === currentUser.email?.toLowerCase()) {
+            // Check if searching by own email/username
+            if (searchValue === currentUser.email?.toLowerCase() || 
+                (currentUserProfile?.username && searchValue === currentUserProfile.username.toLowerCase()) ||
+                (currentUserProfile?.username && searchValue === `@${currentUserProfile.username.toLowerCase()}`)) {
                 window.superdeskModal.warning('You cannot add yourself as a friend', 'Invalid Request');
                 return;
             }
             
             try {
-                // Find user by email using maybeSingle() to avoid 406 error
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('id, email, display_name')
-                    .eq('email', email)
-                    .maybeSingle();
+                let profile = null;
                 
-                if (profileError) {
-                    console.error('Profile search error:', profileError);
-                    window.superdeskModal.error('Error searching for user. Please try again.', 'Error');
-                    return;
+                // Remove @ prefix if present (for username search)
+                const cleanValue = searchValue.startsWith('@') ? searchValue.slice(1) : searchValue;
+                
+                // Check if it looks like an email or username
+                const isEmail = cleanValue.includes('@');
+                
+                if (isEmail) {
+                    // Search by email
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('id, email, username, display_name, avatar_url')
+                        .eq('email', cleanValue)
+                        .maybeSingle();
+                    
+                    if (error) throw error;
+                    profile = data;
+                } else {
+                    // Search by username (case-insensitive)
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('id, email, username, display_name, avatar_url')
+                        .ilike('username', cleanValue)
+                        .maybeSingle();
+                    
+                    if (error) throw error;
+                    profile = data;
                 }
                 
                 if (!profile) {
-                    window.superdeskModal.error('User not found. They need to sign in to SuperDesk first before you can add them.', 'User Not Found');
+                    window.superdeskModal.error(
+                        isEmail 
+                            ? 'User not found. They need to sign in to SuperDesk first before you can add them.' 
+                            : 'Username not found. Check the spelling or try searching by email.',
+                        'User Not Found'
+                    );
                     return;
                 }
                 
@@ -4061,8 +4728,9 @@
                 
                 if (insertError) throw insertError;
                 
-                emailInput.value = '';
-                window.superdeskModal.success(`Friend request sent to ${profile.display_name || email}!`, 'Request Sent');
+                searchInput.value = '';
+                const displayName = profile.username ? `@${profile.username}` : (profile.display_name || profile.email);
+                window.superdeskModal.success(`Friend request sent to ${displayName}!`, 'Request Sent');
                 
             } catch (err) {
                 console.error('Error sending friend request:', err);
@@ -4167,9 +4835,18 @@
             if (placeholder) placeholder.classList.add('hidden');
             if (chatActive) chatActive.classList.remove('hidden');
             
-            // Update header
-            document.getElementById('chat-user-avatar').textContent = getInitials(friend.display_name || friend.email);
-            document.getElementById('chat-user-name').textContent = friend.display_name || friend.email;
+            // Update header with avatar and username
+            const chatAvatarEl = document.getElementById('chat-user-avatar');
+            const displayName = getDisplayName(friend);
+            const initials = getInitials(displayName);
+            
+            if (friend.avatar_url) {
+                chatAvatarEl.innerHTML = `<img src="${friend.avatar_url}" alt="${displayName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            } else {
+                chatAvatarEl.innerHTML = initials;
+            }
+            
+            document.getElementById('chat-user-name').textContent = displayName;
             document.getElementById('chat-user-status').textContent = friend.status || 'offline';
             
             // Update conversation list to show active
