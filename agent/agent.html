@@ -3449,14 +3449,26 @@
 
         // Ensure user has a profile
         async function ensureUserProfile() {
+            // Skip for test/bypass user
+            if (!currentUser || currentUser.id === 'test-user') {
+                console.log('Skipping profile check for test user');
+                return;
+            }
+            
             try {
+                // Use maybeSingle() to avoid 406 error when no row exists
                 const { data: profile, error } = await supabase
                     .from('profiles')
                     .select('*')
                     .eq('id', currentUser.id)
-                    .single();
+                    .maybeSingle();
                 
-                if (error && error.code === 'PGRST116') {
+                if (error) {
+                    console.error('Error checking profile:', error);
+                    return;
+                }
+                
+                if (!profile) {
                     // Profile doesn't exist, create it
                     const { error: insertError } = await supabase
                         .from('profiles')
@@ -3469,6 +3481,8 @@
                     
                     if (insertError) {
                         console.error('Error creating profile:', insertError);
+                    } else {
+                        console.log('✅ Profile created for:', currentUser.email);
                     }
                 } else {
                     // Update status to online
@@ -3476,6 +3490,7 @@
                         .from('profiles')
                         .update({ status: 'online', updated_at: new Date().toISOString() })
                         .eq('id', currentUser.id);
+                    console.log('✅ Profile status updated to online');
                 }
             } catch (err) {
                 console.error('Error ensuring profile:', err);
@@ -3525,79 +3540,133 @@
 
         // Load friend requests (where I am the friend_id and status is pending)
         async function loadFriendRequests() {
+            if (!currentUser || currentUser.id === 'test-user') {
+                friendRequests = [];
+                renderFriendRequests();
+                return;
+            }
+            
             try {
-                const { data, error } = await supabase
+                // First get the friend requests
+                const { data: requests, error } = await supabase
                     .from('friends')
-                    .select(`
-                        id,
-                        user_id,
-                        status,
-                        created_at,
-                        profiles:user_id (id, email, display_name, status, avatar_url)
-                    `)
+                    .select('id, user_id, status, created_at')
                     .eq('friend_id', currentUser.id)
                     .eq('status', 'pending');
                 
                 if (error) throw error;
                 
-                friendRequests = data || [];
+                if (!requests || requests.length === 0) {
+                    friendRequests = [];
+                    renderFriendRequests();
+                    return;
+                }
+                
+                // Get the user IDs who sent requests
+                const senderIds = requests.map(r => r.user_id);
+                
+                // Fetch their profiles
+                const { data: profiles, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, email, display_name, status, avatar_url')
+                    .in('id', senderIds);
+                
+                if (profileError) throw profileError;
+                
+                // Map profiles to requests
+                const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                
+                friendRequests = requests.map(req => ({
+                    ...req,
+                    profile: profileMap.get(req.user_id) || { email: 'Unknown user', display_name: 'Unknown' }
+                }));
+                
                 renderFriendRequests();
             } catch (err) {
                 console.error('Error loading friend requests:', err);
+                friendRequests = [];
+                renderFriendRequests();
             }
         }
 
         // Load accepted friends
         async function loadFriends() {
+            if (!currentUser || currentUser.id === 'test-user') {
+                friendsList = [];
+                renderFriends();
+                return;
+            }
+            
             try {
                 // Get friends where I sent the request
                 const { data: sentRequests, error: err1 } = await supabase
                     .from('friends')
-                    .select(`
-                        id,
-                        friend_id,
-                        status,
-                        profiles:friend_id (id, email, display_name, status, avatar_url)
-                    `)
+                    .select('id, friend_id, status')
                     .eq('user_id', currentUser.id)
                     .eq('status', 'accepted');
                 
                 // Get friends where I received the request
                 const { data: receivedRequests, error: err2 } = await supabase
                     .from('friends')
-                    .select(`
-                        id,
-                        user_id,
-                        status,
-                        profiles:user_id (id, email, display_name, status, avatar_url)
-                    `)
+                    .select('id, user_id, status')
                     .eq('friend_id', currentUser.id)
                     .eq('status', 'accepted');
                 
                 if (err1) throw err1;
                 if (err2) throw err2;
                 
-                // Combine and normalize
-                const sent = (sentRequests || []).map(f => ({
-                    friendshipId: f.id,
-                    ...f.profiles
-                }));
+                // Collect all friend user IDs
+                const friendUserIds = [
+                    ...(sentRequests || []).map(f => f.friend_id),
+                    ...(receivedRequests || []).map(f => f.user_id)
+                ];
                 
-                const received = (receivedRequests || []).map(f => ({
-                    friendshipId: f.id,
-                    ...f.profiles
-                }));
+                if (friendUserIds.length === 0) {
+                    friendsList = [];
+                    renderFriends();
+                    return;
+                }
+                
+                // Fetch profiles for all friends
+                const { data: profiles, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, email, display_name, status, avatar_url')
+                    .in('id', friendUserIds);
+                
+                if (profileError) throw profileError;
+                
+                const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                
+                // Combine and normalize
+                const sent = (sentRequests || []).map(f => {
+                    const profile = profileMap.get(f.friend_id) || { id: f.friend_id, email: 'Unknown', display_name: 'Unknown' };
+                    return {
+                        friendshipId: f.id,
+                        ...profile
+                    };
+                });
+                
+                const received = (receivedRequests || []).map(f => {
+                    const profile = profileMap.get(f.user_id) || { id: f.user_id, email: 'Unknown', display_name: 'Unknown' };
+                    return {
+                        friendshipId: f.id,
+                        ...profile
+                    };
+                });
                 
                 friendsList = [...sent, ...received];
                 renderFriends();
             } catch (err) {
                 console.error('Error loading friends:', err);
+                friendsList = [];
+                renderFriends();
             }
         }
 
         // Load conversations
         async function loadConversations() {
-            if (!currentUser || friendsList.length === 0) {
+            if (!currentUser || currentUser.id === 'test-user' || friendsList.length === 0) {
+                conversations = [];
                 renderConversations();
                 return;
             }
@@ -3676,10 +3745,10 @@
             container.innerHTML = friendRequests.map(req => `
                 <div class="friend-item" data-request-id="${req.id}">
                     <div class="friend-info">
-                        <div class="friend-avatar">${getInitials(req.profiles?.display_name || req.profiles?.email)}</div>
+                        <div class="friend-avatar">${getInitials(req.profile?.display_name || req.profile?.email)}</div>
                         <div class="friend-details">
-                            <div class="friend-name">${req.profiles?.display_name || 'Unknown'}</div>
-                            <div class="friend-email">${req.profiles?.email || ''}</div>
+                            <div class="friend-name">${req.profile?.display_name || 'Unknown'}</div>
+                            <div class="friend-email">${req.profile?.email || ''}</div>
                         </div>
                     </div>
                     <div class="friend-actions">
@@ -3788,28 +3857,39 @@
         // Send friend request
         async function sendFriendRequest() {
             const emailInput = document.getElementById('add-friend-email');
-            const email = emailInput?.value?.trim();
+            const email = emailInput?.value?.trim()?.toLowerCase();
             
             if (!email) {
                 window.superdeskModal.warning('Please enter an email address', 'Email Required');
                 return;
             }
             
-            if (email === currentUser.email) {
+            if (!currentUser || currentUser.id === 'test-user') {
+                window.superdeskModal.warning('Please sign in with a real account to add friends', 'Sign In Required');
+                return;
+            }
+            
+            if (email === currentUser.email?.toLowerCase()) {
                 window.superdeskModal.warning('You cannot add yourself as a friend', 'Invalid Request');
                 return;
             }
             
             try {
-                // Find user by email
+                // Find user by email using maybeSingle() to avoid 406 error
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('id, email, display_name')
                     .eq('email', email)
-                    .single();
+                    .maybeSingle();
                 
-                if (profileError || !profile) {
-                    window.superdeskModal.error('User not found. They need to sign up first.', 'User Not Found');
+                if (profileError) {
+                    console.error('Profile search error:', profileError);
+                    window.superdeskModal.error('Error searching for user. Please try again.', 'Error');
+                    return;
+                }
+                
+                if (!profile) {
+                    window.superdeskModal.error('User not found. They need to sign in to SuperDesk first before you can add them.', 'User Not Found');
                     return;
                 }
                 
