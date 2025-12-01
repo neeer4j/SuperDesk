@@ -938,6 +938,10 @@
             background: rgba(139, 92, 246, 0.3);
         }
 
+        .chat-invite-btn.hidden {
+            display: none;
+        }
+
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -1012,12 +1016,52 @@
             font-size: 14px;
         }
 
+        /* Not Friends Warning */
+        .not-friends-warning {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 20px;
+            background: rgba(239, 68, 68, 0.1);
+            border-top: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            font-size: 14px;
+        }
+
+        .not-friends-warning.hidden {
+            display: none;
+        }
+
+        .not-friends-warning .warning-icon {
+            font-size: 18px;
+        }
+
+        /* Not Friend Badge in conversation list */
+        .not-friend-badge {
+            margin-left: 6px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .conversation-item.not-friend {
+            opacity: 0.7;
+        }
+
+        .conversation-item.not-friend .conversation-avatar {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
         .chat-input-container {
             display: flex;
             gap: 12px;
             padding: 16px 20px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(255, 255, 255, 0.02);
+        }
+
+        .chat-input-container.hidden {
+            display: none;
         }
 
         .chat-input {
@@ -2132,8 +2176,14 @@
                                 <!-- Messages will be populated here -->
                             </div>
 
+                            <!-- Not Friends Warning -->
+                            <div class="not-friends-warning hidden" id="not-friends-warning">
+                                <span class="warning-icon">⚠️</span>
+                                <span>You need to be friends to send messages</span>
+                            </div>
+
                             <!-- Chat Input -->
-                            <div class="chat-input-container">
+                            <div class="chat-input-container" id="chat-input-container">
                                 <input type="text" id="chat-input" class="chat-input" placeholder="Type a message...">
                                 <button id="chat-send-btn" class="chat-send-btn">
                                     <span>Send</span>
@@ -3425,6 +3475,8 @@
         let currentChatFriend = null;
         let messagesSubscription = null;
         let friendsSubscription = null;
+        let friendsSystemInitialized = false;
+        let friendsEventListenersAttached = false;
 
         // Initialize friends system when user logs in
         async function initFriendsSystem() {
@@ -3440,11 +3492,17 @@
             await loadFriends();
             await loadConversations();
             
-            // Set up realtime subscriptions
-            setupRealtimeSubscriptions();
+            // Set up realtime subscriptions (only once)
+            if (!friendsSystemInitialized) {
+                setupRealtimeSubscriptions();
+                friendsSystemInitialized = true;
+            }
             
-            // Set up event listeners for friends/messages UI
-            setupFriendsEventListeners();
+            // Set up event listeners for friends/messages UI (only once)
+            if (!friendsEventListenersAttached) {
+                setupFriendsEventListeners();
+                friendsEventListenersAttached = true;
+            }
         }
 
         // Ensure user has a profile
@@ -3497,11 +3555,65 @@
             }
         }
 
+        // Handle friend relationship changes (add, remove, accept, etc.)
+        async function handleFriendChange(payload) {
+            console.log('👥 Handling friend change:', payload.eventType, payload);
+            
+            // Reload friends list
+            await loadFriendRequests();
+            await loadFriends();
+            await loadConversations();
+            
+            // If currently chatting, check if still friends
+            if (currentChatFriend) {
+                updateChatFriendStatus();
+            }
+        }
+
+        // Check if a user is in friends list
+        function isFriend(userId) {
+            return friendsList.some(f => f.id === userId);
+        }
+
+        // Update chat UI based on friend status
+        function updateChatFriendStatus() {
+            if (!currentChatFriend) return;
+            
+            const isStillFriend = isFriend(currentChatFriend.id);
+            const warningEl = document.getElementById('not-friends-warning');
+            const inputContainer = document.getElementById('chat-input-container');
+            const inviteBtn = document.getElementById('chat-invite-btn');
+            
+            if (isStillFriend) {
+                // They are friends - show input, hide warning
+                if (warningEl) warningEl.classList.add('hidden');
+                if (inputContainer) inputContainer.classList.remove('hidden');
+                if (inviteBtn) inviteBtn.classList.remove('hidden');
+            } else {
+                // Not friends - hide input, show warning
+                if (warningEl) warningEl.classList.remove('hidden');
+                if (inputContainer) inputContainer.classList.add('hidden');
+                if (inviteBtn) inviteBtn.classList.add('hidden');
+            }
+        }
+
         // Set up realtime subscriptions
         function setupRealtimeSubscriptions() {
+            // Clean up any existing subscriptions first
+            if (messagesSubscription) {
+                supabase.removeChannel(messagesSubscription);
+                messagesSubscription = null;
+            }
+            if (friendsSubscription) {
+                supabase.removeChannel(friendsSubscription);
+                friendsSubscription = null;
+            }
+            
+            console.log('📡 Setting up realtime subscriptions for user:', currentUser.id);
+            
             // Subscribe to new messages
             messagesSubscription = supabase
-                .channel('messages-channel')
+                .channel('messages-channel-' + currentUser.id)
                 .on('postgres_changes', {
                     event: 'INSERT',
                     schema: 'public',
@@ -3511,31 +3623,34 @@
                     console.log('📩 New message received:', payload);
                     handleNewMessage(payload.new);
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('📩 Messages subscription status:', status);
+                });
 
-            // Subscribe to friend requests
+            // Subscribe to friend requests and removals
             friendsSubscription = supabase
-                .channel('friends-channel')
+                .channel('friends-channel-' + currentUser.id)
                 .on('postgres_changes', {
                     event: '*',
                     schema: 'public',
                     table: 'friends',
                     filter: `friend_id=eq.${currentUser.id}`
                 }, (payload) => {
-                    console.log('👥 Friend update:', payload);
-                    loadFriendRequests();
-                    loadFriends();
+                    console.log('👥 Friend update (as friend_id):', payload);
+                    handleFriendChange(payload);
                 })
                 .on('postgres_changes', {
-                    event: 'UPDATE',
+                    event: '*',
                     schema: 'public',
                     table: 'friends',
                     filter: `user_id=eq.${currentUser.id}`
                 }, (payload) => {
-                    console.log('👥 Friend status update:', payload);
-                    loadFriends();
+                    console.log('👥 Friend update (as user_id):', payload);
+                    handleFriendChange(payload);
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('👥 Friends subscription status:', status);
+                });
         }
 
         // Load friend requests (where I am the friend_id and status is pending)
@@ -3663,18 +3778,16 @@
             }
         }
 
-        // Load conversations
+        // Load conversations (includes all message partners, not just current friends)
         async function loadConversations() {
-            if (!currentUser || currentUser.id === 'test-user' || friendsList.length === 0) {
+            if (!currentUser || currentUser.id === 'test-user') {
                 conversations = [];
                 renderConversations();
                 return;
             }
             
             try {
-                // Get latest message for each friend
-                const friendIds = friendsList.map(f => f.id);
-                
+                // Get all messages involving this user
                 const { data: messages, error } = await supabase
                     .from('messages')
                     .select('*')
@@ -3683,15 +3796,21 @@
                 
                 if (error) throw error;
                 
+                if (!messages || messages.length === 0) {
+                    conversations = [];
+                    renderConversations();
+                    return;
+                }
+                
                 // Group by conversation partner
                 const convMap = new Map();
                 
-                for (const msg of (messages || [])) {
+                for (const msg of messages) {
                     const partnerId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
                     
                     if (!convMap.has(partnerId)) {
                         convMap.set(partnerId, {
-                            friendId: partnerId,
+                            odId: partnerId,
                             lastMessage: msg,
                             unreadCount: 0
                         });
@@ -3704,15 +3823,31 @@
                     }
                 }
                 
-                // Match with friends list
+                // Get all partner IDs (may include non-friends)
+                const partnerIds = Array.from(convMap.keys());
+                
+                // Fetch profiles for all partners
+                const { data: profiles, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, email, display_name, status, avatar_url')
+                    .in('id', partnerIds);
+                
+                if (profileError) throw profileError;
+                
+                const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                
+                // Build conversations list
                 conversations = [];
-                for (const friend of friendsList) {
-                    const conv = convMap.get(friend.id);
-                    conversations.push({
-                        friend,
-                        lastMessage: conv?.lastMessage || null,
-                        unreadCount: conv?.unreadCount || 0
-                    });
+                for (const [partnerId, conv] of convMap) {
+                    const profile = profileMap.get(partnerId);
+                    if (profile) {
+                        conversations.push({
+                            friend: profile,
+                            isFriend: isFriend(partnerId),
+                            lastMessage: conv.lastMessage,
+                            unreadCount: conv.unreadCount
+                        });
+                    }
                 }
                 
                 // Sort by last message time
@@ -3804,8 +3939,10 @@
                 return;
             }
             
-            container.innerHTML = conversations.map(conv => `
-                <div class="conversation-item ${currentChatFriend?.id === conv.friend.id ? 'active' : ''}" 
+            container.innerHTML = conversations.map(conv => {
+                const isCurrentFriend = isFriend(conv.friend.id);
+                return `
+                <div class="conversation-item ${currentChatFriend?.id === conv.friend.id ? 'active' : ''} ${!isCurrentFriend ? 'not-friend' : ''}" 
                      data-friend-id="${conv.friend.id}" 
                      onclick="openChat('${conv.friend.id}')">
                     <div class="conversation-avatar">
@@ -3813,7 +3950,10 @@
                         <span class="status-indicator ${conv.friend.status === 'online' ? 'online' : ''}"></span>
                     </div>
                     <div class="conversation-details">
-                        <div class="conversation-name">${conv.friend.display_name || conv.friend.email}</div>
+                        <div class="conversation-name">
+                            ${conv.friend.display_name || conv.friend.email}
+                            ${!isCurrentFriend ? '<span class="not-friend-badge" title="Not friends">\u26d4</span>' : ''}
+                        </div>
                         <div class="conversation-preview">${getMessagePreview(conv.lastMessage)}</div>
                     </div>
                     <div class="conversation-meta">
@@ -3821,7 +3961,8 @@
                         ${conv.unreadCount > 0 ? `<div class="conversation-unread">${conv.unreadCount}</div>` : ''}
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         // Get message preview text
@@ -3999,11 +4140,21 @@
             }
         }
 
-        // Open chat with a friend
+        // Open chat with a user (friend or ex-friend with chat history)
         async function openChat(friendId) {
-            const friend = friendsList.find(f => f.id === friendId);
+            // First try to find in friends list
+            let friend = friendsList.find(f => f.id === friendId);
+            
+            // If not in friends list, check conversations (for ex-friends)
             if (!friend) {
-                console.error('Friend not found:', friendId);
+                const conv = conversations.find(c => c.friend.id === friendId);
+                if (conv) {
+                    friend = conv.friend;
+                }
+            }
+            
+            if (!friend) {
+                console.error('User not found:', friendId);
                 return;
             }
             
@@ -4029,6 +4180,9 @@
             
             // Mark messages as read
             await markMessagesAsRead(friendId);
+            
+            // Update chat UI based on friend status (show/hide input)
+            updateChatFriendStatus();
         }
 
         // Load chat messages
