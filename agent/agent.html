@@ -523,6 +523,573 @@
             opacity: 0.6;
         }
 
+        /* ==================== FRIENDS STYLES ==================== */
+        .friends-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .friends-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .friends-badge {
+            background: rgba(139, 92, 246, 0.3);
+            color: #a78bfa;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .add-friend-form {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .friends-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .friends-empty {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .friend-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.2s;
+        }
+
+        .friend-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .friend-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .friend-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .friend-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .friend-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .friend-email {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .friend-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .friend-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #6b7280;
+        }
+
+        .friend-status-dot.online {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+
+        .friend-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .friend-action-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .friend-action-btn.accept {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .friend-action-btn.accept:hover {
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .friend-action-btn.reject {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .friend-action-btn.reject:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .friend-action-btn.message {
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+        }
+
+        .friend-action-btn.message:hover {
+            background: rgba(139, 92, 246, 0.3);
+        }
+
+        .friend-action-btn.remove {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+        }
+
+        .friend-action-btn.remove:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* ==================== MESSAGES STYLES ==================== */
+        .messages-container {
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 200px);
+            min-height: 500px;
+        }
+
+        .conversations-panel {
+            width: 280px;
+            flex-shrink: 0;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .conversations-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .conversations-empty {
+            text-align: center;
+            padding: 40px 16px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .conversation-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .conversation-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .conversation-item.active {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .conversation-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            position: relative;
+        }
+
+        .conversation-avatar .status-indicator {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6b7280;
+            border: 2px solid var(--card-bg);
+        }
+
+        .conversation-avatar .status-indicator.online {
+            background: #10b981;
+        }
+
+        .conversation-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .conversation-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .conversation-preview {
+            font-size: 12px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conversation-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .conversation-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .conversation-unread {
+            background: #8b5cf6;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        /* Chat Panel */
+        .chat-panel {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-placeholder {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+        }
+
+        .chat-placeholder-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .chat-placeholder-text {
+            font-size: 16px;
+        }
+
+        .chat-active {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .chat-back-btn {
+            display: none;
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .chat-user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .chat-user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .chat-user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-user-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chat-user-status {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .chat-invite-btn {
+            padding: 8px 16px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            color: #a78bfa;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-invite-btn:hover {
+            background: rgba(139, 92, 246, 0.3);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-message {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .chat-message.sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.received {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-message.session-invite {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            cursor: pointer;
+        }
+
+        .chat-message.session-invite:hover {
+            background: rgba(16, 185, 129, 0.25);
+        }
+
+        .chat-message-time {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        .session-invite-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .session-invite-icon {
+            font-size: 20px;
+        }
+
+        .session-invite-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .session-invite-label {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .session-invite-code {
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 12px;
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .chat-send-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            border: none;
+            border-radius: 24px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-send-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .chat-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Responsive for smaller screens */
+        @media (max-width: 768px) {
+            .messages-container {
+                flex-direction: column;
+            }
+            
+            .conversations-panel {
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+            }
+            
+            .conversations-panel.hidden-mobile {
+                display: none;
+            }
+            
+            .chat-panel.hidden-mobile {
+                display: none;
+            }
+            
+            .chat-back-btn {
+                display: flex;
+            }
+        }
+
         .hidden {
             display: none !important;
         }
@@ -1485,18 +2052,95 @@
             <!-- Friends View -->
             <div class="content-view hidden" id="friends-view">
                 <h1 class="content-title">Friends</h1>
-                <div class="content-card placeholder-content">
-                    <div class="placeholder-icon">👥</div>
-                    <div class="placeholder-text">Friend system coming soon!</div>
+                
+                <!-- Add Friend Section -->
+                <div class="content-card" style="margin-bottom: 20px;">
+                    <div class="friends-section-header">
+                        <span class="friends-section-title">➕ Add Friend</span>
+                    </div>
+                    <div class="add-friend-form">
+                        <input type="email" id="add-friend-email" class="input-field" placeholder="Enter friend's email address" style="flex: 1; margin-bottom: 0;">
+                        <button id="send-friend-request-btn" class="btn btn-primary" style="width: auto; margin-bottom: 0; padding: 12px 24px;">
+                            Send Request
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Friend Requests Section -->
+                <div class="content-card" style="margin-bottom: 20px;" id="friend-requests-section">
+                    <div class="friends-section-header">
+                        <span class="friends-section-title">📩 Friend Requests</span>
+                        <span class="friends-badge" id="requests-count">0</span>
+                    </div>
+                    <div id="friend-requests-list" class="friends-list">
+                        <div class="friends-empty">No pending requests</div>
+                    </div>
+                </div>
+
+                <!-- Friends List Section -->
+                <div class="content-card">
+                    <div class="friends-section-header">
+                        <span class="friends-section-title">👥 My Friends</span>
+                        <span class="friends-badge" id="friends-count">0</span>
+                    </div>
+                    <div id="friends-list" class="friends-list">
+                        <div class="friends-empty">No friends yet. Add someone to get started!</div>
+                    </div>
                 </div>
             </div>
 
             <!-- Messages View -->
             <div class="content-view hidden" id="messages-view">
                 <h1 class="content-title">Messages</h1>
-                <div class="content-card placeholder-content">
-                    <div class="placeholder-icon">💬</div>
-                    <div class="placeholder-text">Messaging system coming soon!</div>
+                
+                <div class="messages-container">
+                    <!-- Conversations List -->
+                    <div class="conversations-panel" id="conversations-panel">
+                        <div class="conversations-header">
+                            <span>Conversations</span>
+                        </div>
+                        <div id="conversations-list" class="conversations-list">
+                            <div class="conversations-empty">No conversations yet. Message a friend to start!</div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Panel -->
+                    <div class="chat-panel" id="chat-panel">
+                        <div class="chat-placeholder" id="chat-placeholder">
+                            <div class="chat-placeholder-icon">💬</div>
+                            <div class="chat-placeholder-text">Select a conversation to start chatting</div>
+                        </div>
+                        
+                        <div class="chat-active hidden" id="chat-active">
+                            <!-- Chat Header -->
+                            <div class="chat-header" id="chat-header">
+                                <button class="chat-back-btn" id="chat-back-btn">←</button>
+                                <div class="chat-user-info">
+                                    <div class="chat-user-avatar" id="chat-user-avatar">?</div>
+                                    <div class="chat-user-details">
+                                        <div class="chat-user-name" id="chat-user-name">Select a friend</div>
+                                        <div class="chat-user-status" id="chat-user-status">offline</div>
+                                    </div>
+                                </div>
+                                <button class="chat-invite-btn" id="chat-invite-btn" title="Send Session Invite">
+                                    🖥️ Invite
+                                </button>
+                            </div>
+
+                            <!-- Chat Messages -->
+                            <div class="chat-messages" id="chat-messages">
+                                <!-- Messages will be populated here -->
+                            </div>
+
+                            <!-- Chat Input -->
+                            <div class="chat-input-container">
+                                <input type="text" id="chat-input" class="chat-input" placeholder="Type a message...">
+                                <button id="chat-send-btn" class="chat-send-btn">
+                                    <span>Send</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1837,6 +2481,8 @@
             }
             // Load saved settings
             loadSettings();
+            // Initialize friends and messages system
+            initFriendsSystem();
         }
 
         // Settings Panel Functions
@@ -2769,6 +3415,804 @@
         } else {
             window.superdeskModal.init();
         }
+
+        // ==================== FRIENDS & MESSAGES SYSTEM ====================
+        
+        // State for friends and messages
+        let friendsList = [];
+        let friendRequests = [];
+        let conversations = [];
+        let currentChatFriend = null;
+        let messagesSubscription = null;
+        let friendsSubscription = null;
+
+        // Initialize friends system when user logs in
+        async function initFriendsSystem() {
+            if (!currentUser) return;
+            
+            console.log('🤝 Initializing friends system for:', currentUser.email);
+            
+            // Ensure user profile exists
+            await ensureUserProfile();
+            
+            // Load initial data
+            await loadFriendRequests();
+            await loadFriends();
+            await loadConversations();
+            
+            // Set up realtime subscriptions
+            setupRealtimeSubscriptions();
+            
+            // Set up event listeners for friends/messages UI
+            setupFriendsEventListeners();
+        }
+
+        // Ensure user has a profile
+        async function ensureUserProfile() {
+            try {
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (error && error.code === 'PGRST116') {
+                    // Profile doesn't exist, create it
+                    const { error: insertError } = await supabase
+                        .from('profiles')
+                        .insert({
+                            id: currentUser.id,
+                            email: currentUser.email,
+                            display_name: currentUser.email.split('@')[0],
+                            status: 'online'
+                        });
+                    
+                    if (insertError) {
+                        console.error('Error creating profile:', insertError);
+                    }
+                } else {
+                    // Update status to online
+                    await supabase
+                        .from('profiles')
+                        .update({ status: 'online', updated_at: new Date().toISOString() })
+                        .eq('id', currentUser.id);
+                }
+            } catch (err) {
+                console.error('Error ensuring profile:', err);
+            }
+        }
+
+        // Set up realtime subscriptions
+        function setupRealtimeSubscriptions() {
+            // Subscribe to new messages
+            messagesSubscription = supabase
+                .channel('messages-channel')
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `receiver_id=eq.${currentUser.id}`
+                }, (payload) => {
+                    console.log('📩 New message received:', payload);
+                    handleNewMessage(payload.new);
+                })
+                .subscribe();
+
+            // Subscribe to friend requests
+            friendsSubscription = supabase
+                .channel('friends-channel')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'friends',
+                    filter: `friend_id=eq.${currentUser.id}`
+                }, (payload) => {
+                    console.log('👥 Friend update:', payload);
+                    loadFriendRequests();
+                    loadFriends();
+                })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'friends',
+                    filter: `user_id=eq.${currentUser.id}`
+                }, (payload) => {
+                    console.log('👥 Friend status update:', payload);
+                    loadFriends();
+                })
+                .subscribe();
+        }
+
+        // Load friend requests (where I am the friend_id and status is pending)
+        async function loadFriendRequests() {
+            try {
+                const { data, error } = await supabase
+                    .from('friends')
+                    .select(`
+                        id,
+                        user_id,
+                        status,
+                        created_at,
+                        profiles:user_id (id, email, display_name, status, avatar_url)
+                    `)
+                    .eq('friend_id', currentUser.id)
+                    .eq('status', 'pending');
+                
+                if (error) throw error;
+                
+                friendRequests = data || [];
+                renderFriendRequests();
+            } catch (err) {
+                console.error('Error loading friend requests:', err);
+            }
+        }
+
+        // Load accepted friends
+        async function loadFriends() {
+            try {
+                // Get friends where I sent the request
+                const { data: sentRequests, error: err1 } = await supabase
+                    .from('friends')
+                    .select(`
+                        id,
+                        friend_id,
+                        status,
+                        profiles:friend_id (id, email, display_name, status, avatar_url)
+                    `)
+                    .eq('user_id', currentUser.id)
+                    .eq('status', 'accepted');
+                
+                // Get friends where I received the request
+                const { data: receivedRequests, error: err2 } = await supabase
+                    .from('friends')
+                    .select(`
+                        id,
+                        user_id,
+                        status,
+                        profiles:user_id (id, email, display_name, status, avatar_url)
+                    `)
+                    .eq('friend_id', currentUser.id)
+                    .eq('status', 'accepted');
+                
+                if (err1) throw err1;
+                if (err2) throw err2;
+                
+                // Combine and normalize
+                const sent = (sentRequests || []).map(f => ({
+                    friendshipId: f.id,
+                    ...f.profiles
+                }));
+                
+                const received = (receivedRequests || []).map(f => ({
+                    friendshipId: f.id,
+                    ...f.profiles
+                }));
+                
+                friendsList = [...sent, ...received];
+                renderFriends();
+            } catch (err) {
+                console.error('Error loading friends:', err);
+            }
+        }
+
+        // Load conversations
+        async function loadConversations() {
+            if (!currentUser || friendsList.length === 0) {
+                renderConversations();
+                return;
+            }
+            
+            try {
+                // Get latest message for each friend
+                const friendIds = friendsList.map(f => f.id);
+                
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                // Group by conversation partner
+                const convMap = new Map();
+                
+                for (const msg of (messages || [])) {
+                    const partnerId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
+                    
+                    if (!convMap.has(partnerId)) {
+                        convMap.set(partnerId, {
+                            friendId: partnerId,
+                            lastMessage: msg,
+                            unreadCount: 0
+                        });
+                    }
+                    
+                    // Count unread
+                    if (msg.receiver_id === currentUser.id && !msg.read) {
+                        const conv = convMap.get(partnerId);
+                        conv.unreadCount++;
+                    }
+                }
+                
+                // Match with friends list
+                conversations = [];
+                for (const friend of friendsList) {
+                    const conv = convMap.get(friend.id);
+                    conversations.push({
+                        friend,
+                        lastMessage: conv?.lastMessage || null,
+                        unreadCount: conv?.unreadCount || 0
+                    });
+                }
+                
+                // Sort by last message time
+                conversations.sort((a, b) => {
+                    if (!a.lastMessage) return 1;
+                    if (!b.lastMessage) return -1;
+                    return new Date(b.lastMessage.created_at) - new Date(a.lastMessage.created_at);
+                });
+                
+                renderConversations();
+            } catch (err) {
+                console.error('Error loading conversations:', err);
+            }
+        }
+
+        // Render friend requests
+        function renderFriendRequests() {
+            const container = document.getElementById('friend-requests-list');
+            const countBadge = document.getElementById('requests-count');
+            
+            if (!container) return;
+            
+            countBadge.textContent = friendRequests.length;
+            
+            if (friendRequests.length === 0) {
+                container.innerHTML = '<div class="friends-empty">No pending requests</div>';
+                return;
+            }
+            
+            container.innerHTML = friendRequests.map(req => `
+                <div class="friend-item" data-request-id="${req.id}">
+                    <div class="friend-info">
+                        <div class="friend-avatar">${getInitials(req.profiles?.display_name || req.profiles?.email)}</div>
+                        <div class="friend-details">
+                            <div class="friend-name">${req.profiles?.display_name || 'Unknown'}</div>
+                            <div class="friend-email">${req.profiles?.email || ''}</div>
+                        </div>
+                    </div>
+                    <div class="friend-actions">
+                        <button class="friend-action-btn accept" onclick="acceptFriendRequest('${req.id}')">Accept</button>
+                        <button class="friend-action-btn reject" onclick="rejectFriendRequest('${req.id}')">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render friends list
+        function renderFriends() {
+            const container = document.getElementById('friends-list');
+            const countBadge = document.getElementById('friends-count');
+            
+            if (!container) return;
+            
+            countBadge.textContent = friendsList.length;
+            
+            if (friendsList.length === 0) {
+                container.innerHTML = '<div class="friends-empty">No friends yet. Add someone to get started!</div>';
+                return;
+            }
+            
+            container.innerHTML = friendsList.map(friend => `
+                <div class="friend-item" data-friend-id="${friend.id}">
+                    <div class="friend-info">
+                        <div class="friend-avatar">${getInitials(friend.display_name || friend.email)}</div>
+                        <div class="friend-details">
+                            <div class="friend-name">${friend.display_name || 'Unknown'}</div>
+                            <div class="friend-status">
+                                <span class="friend-status-dot ${friend.status === 'online' ? 'online' : ''}"></span>
+                                ${friend.status || 'offline'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="friend-actions">
+                        <button class="friend-action-btn message" onclick="openChat('${friend.id}')">Message</button>
+                        <button class="friend-action-btn remove" onclick="removeFriend('${friend.friendshipId}', '${friend.display_name}')">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render conversations
+        function renderConversations() {
+            const container = document.getElementById('conversations-list');
+            
+            if (!container) return;
+            
+            if (conversations.length === 0) {
+                container.innerHTML = '<div class="conversations-empty">No conversations yet. Message a friend to start!</div>';
+                return;
+            }
+            
+            container.innerHTML = conversations.map(conv => `
+                <div class="conversation-item ${currentChatFriend?.id === conv.friend.id ? 'active' : ''}" 
+                     data-friend-id="${conv.friend.id}" 
+                     onclick="openChat('${conv.friend.id}')">
+                    <div class="conversation-avatar">
+                        ${getInitials(conv.friend.display_name || conv.friend.email)}
+                        <span class="status-indicator ${conv.friend.status === 'online' ? 'online' : ''}"></span>
+                    </div>
+                    <div class="conversation-details">
+                        <div class="conversation-name">${conv.friend.display_name || conv.friend.email}</div>
+                        <div class="conversation-preview">${getMessagePreview(conv.lastMessage)}</div>
+                    </div>
+                    <div class="conversation-meta">
+                        ${conv.lastMessage ? `<div class="conversation-time">${formatTime(conv.lastMessage.created_at)}</div>` : ''}
+                        ${conv.unreadCount > 0 ? `<div class="conversation-unread">${conv.unreadCount}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get message preview text
+        function getMessagePreview(msg) {
+            if (!msg) return 'No messages yet';
+            if (msg.message_type === 'session_invite') return '🖥️ Session invite';
+            return msg.content.length > 30 ? msg.content.substring(0, 30) + '...' : msg.content;
+        }
+
+        // Format time for display
+        function formatTime(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'now';
+            if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + 'h';
+            if (diff < 604800000) return Math.floor(diff / 86400000) + 'd';
+            return date.toLocaleDateString();
+        }
+
+        // Get initials from name/email
+        function getInitials(str) {
+            if (!str) return '?';
+            const parts = str.split(/[@\s]/);
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return str.substring(0, 2).toUpperCase();
+        }
+
+        // Send friend request
+        async function sendFriendRequest() {
+            const emailInput = document.getElementById('add-friend-email');
+            const email = emailInput?.value?.trim();
+            
+            if (!email) {
+                window.superdeskModal.warning('Please enter an email address', 'Email Required');
+                return;
+            }
+            
+            if (email === currentUser.email) {
+                window.superdeskModal.warning('You cannot add yourself as a friend', 'Invalid Request');
+                return;
+            }
+            
+            try {
+                // Find user by email
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, email, display_name')
+                    .eq('email', email)
+                    .single();
+                
+                if (profileError || !profile) {
+                    window.superdeskModal.error('User not found. They need to sign up first.', 'User Not Found');
+                    return;
+                }
+                
+                // Check if already friends or request exists
+                const { data: existing } = await supabase
+                    .from('friends')
+                    .select('id, status')
+                    .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${profile.id}),and(user_id.eq.${profile.id},friend_id.eq.${currentUser.id})`);
+                
+                if (existing && existing.length > 0) {
+                    const status = existing[0].status;
+                    if (status === 'accepted') {
+                        window.superdeskModal.info('You are already friends with this user', 'Already Friends');
+                    } else if (status === 'pending') {
+                        window.superdeskModal.info('A friend request is already pending', 'Request Pending');
+                    }
+                    return;
+                }
+                
+                // Send request
+                const { error: insertError } = await supabase
+                    .from('friends')
+                    .insert({
+                        user_id: currentUser.id,
+                        friend_id: profile.id,
+                        status: 'pending'
+                    });
+                
+                if (insertError) throw insertError;
+                
+                emailInput.value = '';
+                window.superdeskModal.success(`Friend request sent to ${profile.display_name || email}!`, 'Request Sent');
+                
+            } catch (err) {
+                console.error('Error sending friend request:', err);
+                window.superdeskModal.error('Failed to send friend request. Please try again.', 'Error');
+            }
+        }
+
+        // Accept friend request
+        async function acceptFriendRequest(requestId) {
+            try {
+                const { error } = await supabase
+                    .from('friends')
+                    .update({ status: 'accepted', updated_at: new Date().toISOString() })
+                    .eq('id', requestId);
+                
+                if (error) throw error;
+                
+                window.superdeskModal.success('Friend request accepted!', 'Success');
+                await loadFriendRequests();
+                await loadFriends();
+                await loadConversations();
+                
+            } catch (err) {
+                console.error('Error accepting friend request:', err);
+                window.superdeskModal.error('Failed to accept request', 'Error');
+            }
+        }
+
+        // Reject friend request
+        async function rejectFriendRequest(requestId) {
+            try {
+                const { error } = await supabase
+                    .from('friends')
+                    .delete()
+                    .eq('id', requestId);
+                
+                if (error) throw error;
+                
+                await loadFriendRequests();
+                
+            } catch (err) {
+                console.error('Error rejecting friend request:', err);
+                window.superdeskModal.error('Failed to reject request', 'Error');
+            }
+        }
+
+        // Remove friend
+        async function removeFriend(friendshipId, friendName) {
+            const confirmed = await window.superdeskModal.confirm(
+                `Are you sure you want to remove ${friendName} from your friends?`,
+                'Remove Friend'
+            );
+            
+            if (!confirmed) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('friends')
+                    .delete()
+                    .eq('id', friendshipId);
+                
+                if (error) throw error;
+                
+                await loadFriends();
+                await loadConversations();
+                
+                // Close chat if it was with this friend
+                if (currentChatFriend?.friendshipId === friendshipId) {
+                    closeChat();
+                }
+                
+            } catch (err) {
+                console.error('Error removing friend:', err);
+                window.superdeskModal.error('Failed to remove friend', 'Error');
+            }
+        }
+
+        // Open chat with a friend
+        async function openChat(friendId) {
+            const friend = friendsList.find(f => f.id === friendId);
+            if (!friend) {
+                console.error('Friend not found:', friendId);
+                return;
+            }
+            
+            currentChatFriend = friend;
+            
+            // Update UI
+            const placeholder = document.getElementById('chat-placeholder');
+            const chatActive = document.getElementById('chat-active');
+            
+            if (placeholder) placeholder.classList.add('hidden');
+            if (chatActive) chatActive.classList.remove('hidden');
+            
+            // Update header
+            document.getElementById('chat-user-avatar').textContent = getInitials(friend.display_name || friend.email);
+            document.getElementById('chat-user-name').textContent = friend.display_name || friend.email;
+            document.getElementById('chat-user-status').textContent = friend.status || 'offline';
+            
+            // Update conversation list to show active
+            renderConversations();
+            
+            // Load messages
+            await loadChatMessages(friendId);
+            
+            // Mark messages as read
+            await markMessagesAsRead(friendId);
+        }
+
+        // Load chat messages
+        async function loadChatMessages(friendId) {
+            try {
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`)
+                    .order('created_at', { ascending: true });
+                
+                if (error) throw error;
+                
+                renderChatMessages(messages || []);
+                
+            } catch (err) {
+                console.error('Error loading messages:', err);
+            }
+        }
+
+        // Render chat messages
+        function renderChatMessages(messages) {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">No messages yet. Say hello! 👋</div>';
+                return;
+            }
+            
+            container.innerHTML = messages.map(msg => {
+                const isSent = msg.sender_id === currentUser.id;
+                const isInvite = msg.message_type === 'session_invite';
+                
+                if (isInvite) {
+                    return `
+                        <div class="chat-message ${isSent ? 'sent' : 'received'} session-invite" onclick="joinSessionFromInvite('${msg.session_code}')">
+                            <div class="session-invite-content">
+                                <span class="session-invite-icon">🖥️</span>
+                                <div class="session-invite-text">
+                                    <span class="session-invite-label">${isSent ? 'You sent a session invite' : 'Session Invite - Click to join'}</span>
+                                    <span class="session-invite-code">${msg.session_code}</span>
+                                </div>
+                            </div>
+                            <div class="chat-message-time">${formatMessageTime(msg.created_at)}</div>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="chat-message ${isSent ? 'sent' : 'received'}">
+                        ${msg.content}
+                        <div class="chat-message-time">${formatMessageTime(msg.created_at)}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Format message time
+        function formatMessageTime(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Send message
+        async function sendMessage() {
+            if (!currentChatFriend) return;
+            
+            const input = document.getElementById('chat-input');
+            const content = input?.value?.trim();
+            
+            if (!content) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('messages')
+                    .insert({
+                        sender_id: currentUser.id,
+                        receiver_id: currentChatFriend.id,
+                        content: content,
+                        message_type: 'text'
+                    });
+                
+                if (error) throw error;
+                
+                input.value = '';
+                
+                // Reload messages
+                await loadChatMessages(currentChatFriend.id);
+                await loadConversations();
+                
+            } catch (err) {
+                console.error('Error sending message:', err);
+                window.superdeskModal.error('Failed to send message', 'Error');
+            }
+        }
+
+        // Send session invite
+        async function sendSessionInvite() {
+            if (!currentChatFriend) return;
+            
+            const sessionCode = document.getElementById('session-id')?.textContent;
+            
+            if (!sessionCode || sessionCode === 'XXXXXX') {
+                window.superdeskModal.warning('Please generate a session ID first by starting screen share', 'No Session');
+                return;
+            }
+            
+            try {
+                const { error } = await supabase
+                    .from('messages')
+                    .insert({
+                        sender_id: currentUser.id,
+                        receiver_id: currentChatFriend.id,
+                        content: `Join my session: ${sessionCode}`,
+                        message_type: 'session_invite',
+                        session_code: sessionCode
+                    });
+                
+                if (error) throw error;
+                
+                window.superdeskModal.success('Session invite sent!', 'Invite Sent');
+                
+                // Reload messages
+                await loadChatMessages(currentChatFriend.id);
+                await loadConversations();
+                
+            } catch (err) {
+                console.error('Error sending session invite:', err);
+                window.superdeskModal.error('Failed to send invite', 'Error');
+            }
+        }
+
+        // Join session from invite
+        function joinSessionFromInvite(sessionCode) {
+            if (!sessionCode) return;
+            
+            // Switch to share view and fill in the session code
+            switchView('share');
+            
+            const joinInput = document.getElementById('join-session-input');
+            if (joinInput) {
+                joinInput.value = sessionCode;
+            }
+            
+            window.superdeskModal.info(`Session code ${sessionCode} copied to join field. Click "Join Session" to connect.`, 'Ready to Join');
+        }
+
+        // Mark messages as read
+        async function markMessagesAsRead(friendId) {
+            try {
+                await supabase
+                    .from('messages')
+                    .update({ read: true })
+                    .eq('sender_id', friendId)
+                    .eq('receiver_id', currentUser.id)
+                    .eq('read', false);
+                
+                await loadConversations();
+            } catch (err) {
+                console.error('Error marking messages as read:', err);
+            }
+        }
+
+        // Close chat
+        function closeChat() {
+            currentChatFriend = null;
+            
+            const placeholder = document.getElementById('chat-placeholder');
+            const chatActive = document.getElementById('chat-active');
+            
+            if (placeholder) placeholder.classList.remove('hidden');
+            if (chatActive) chatActive.classList.add('hidden');
+            
+            renderConversations();
+        }
+
+        // Handle new message (realtime)
+        function handleNewMessage(message) {
+            // If this message is from the current chat friend, reload messages
+            if (currentChatFriend && message.sender_id === currentChatFriend.id) {
+                loadChatMessages(currentChatFriend.id);
+                markMessagesAsRead(currentChatFriend.id);
+            }
+            
+            // Update conversations list
+            loadConversations();
+            
+            // Show notification if not viewing this chat
+            if (!currentChatFriend || message.sender_id !== currentChatFriend.id) {
+                const sender = friendsList.find(f => f.id === message.sender_id);
+                if (sender) {
+                    // Could add desktop notification here
+                    console.log('📬 New message from:', sender.display_name || sender.email);
+                }
+            }
+        }
+
+        // Set up event listeners for friends/messages UI
+        function setupFriendsEventListeners() {
+            // Send friend request button
+            const sendRequestBtn = document.getElementById('send-friend-request-btn');
+            if (sendRequestBtn) {
+                sendRequestBtn.addEventListener('click', sendFriendRequest);
+            }
+            
+            // Enter key on email input
+            const emailInput = document.getElementById('add-friend-email');
+            if (emailInput) {
+                emailInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendFriendRequest();
+                });
+            }
+            
+            // Send message button
+            const sendMsgBtn = document.getElementById('chat-send-btn');
+            if (sendMsgBtn) {
+                sendMsgBtn.addEventListener('click', sendMessage);
+            }
+            
+            // Enter key on chat input
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendMessage();
+                });
+            }
+            
+            // Session invite button
+            const inviteBtn = document.getElementById('chat-invite-btn');
+            if (inviteBtn) {
+                inviteBtn.addEventListener('click', sendSessionInvite);
+            }
+            
+            // Back button (mobile)
+            const backBtn = document.getElementById('chat-back-btn');
+            if (backBtn) {
+                backBtn.addEventListener('click', closeChat);
+            }
+        }
+
+        // Update user status on window close/hide
+        window.addEventListener('beforeunload', async () => {
+            if (currentUser) {
+                await supabase
+                    .from('profiles')
+                    .update({ status: 'offline' })
+                    .eq('id', currentUser.id);
+            }
+        });
+
+        // Make functions globally available
+        window.sendFriendRequest = sendFriendRequest;
+        window.acceptFriendRequest = acceptFriendRequest;
+        window.rejectFriendRequest = rejectFriendRequest;
+        window.removeFriend = removeFriend;
+        window.openChat = openChat;
+        window.sendMessage = sendMessage;
+        window.sendSessionInvite = sendSessionInvite;
+        window.joinSessionFromInvite = joinSessionFromInvite;
+        window.closeChat = closeChat;
     </script>
 </body>
 </html>
