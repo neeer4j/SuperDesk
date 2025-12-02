@@ -9,7 +9,7 @@
 SuperDesk is a modern remote desktop access platform for Windows, featuring:
 - Secure, real-time screen sharing (WebRTC with TURN/STUN support)
 - Bidirectional audio and camera streaming
-- File transfer (max 10MB per file)
+- P2P file transfer via WebRTC DataChannel (Electron-to-Electron; default max 10MB per file)
 - Windows desktop agent for full control
 - End-to-end encrypted peer-to-peer connections
 - Cloud signaling and TURN relay (Cloudflare or OpenRelay)
@@ -48,7 +48,7 @@ Run `start-dev.bat` to launch both server and client automatically! The server w
 - **Real-time Screen Sharing** – WebRTC with TURN/STUN relay
 - **Bidirectional Audio** – Two-way audio with echo cancellation
 - **Camera Video Access** – Optional camera sharing
-- **File Transfer** – Secure, 10MB per file limit
+- **File Transfer (P2P)** – Secure peer-to-peer file transfer via a WebRTC DataChannel (`fileTransfer`), default 10MB per file with 16KB chunking. Drag-and-drop and native save dialog available in the Electron agent.
 - **Secure Connections** – Encrypted peer-to-peer (DTLS-SRTP)
 - **Session Management** – Easy session creation/joining with unique IDs
 
@@ -191,12 +191,20 @@ For VS Code users, several tasks are pre-configured:
 3. Allow camera/microphone permissions when prompted
 4. You should see the remote screen and hear audio
 
-### File Transfer
+### File Transfer (Desktop Agent → Desktop Agent)
 
-1. In the web client, click "Send File (Max 10MB)"
-2. Select a file under 10MB
-3. File will be transferred via WebRTC data channels
-4. Progress indicator shows transfer status
+SuperDesk includes an Electron-focused peer-to-peer file transfer workflow that operates over a WebRTC DataChannel named `fileTransfer` with these core behaviors:
+
+1. **Host (Desktop Agent):** When the host starts screen sharing, a **File Transfer** section appears that includes a drag-and-drop area and a host-side send progress UI. Hosts can select or drag files into this area to begin a transfer.
+2. **Guest (Desktop Agent):** Guests have a floating file transfer icon they can toggle on/off in the remote control popup. When an incoming file arrives the guest sees an **Incoming File** modal and may Accept or Reject the offer.
+3. **Handshake & Protocol:** Hosts send a `file-offer` message with metadata (name, size, mimeType). The guest replies with `file-accept` or `file-reject`. Only after `file-accept` will the host start streaming file chunks.
+4. **Chunking, EOF & Progress:** Files are sent as ArrayBuffers in 16KB chunks. An EOF JSON message is sent at the end. Both sides show progress (percent and status). The host halts if the guest rejects.
+5. **Saving Received Files:** Guests are prompted with a native Electron **Save As** dialog (via IPC) to determine the save location; if the guest cancels the transfer will be aborted and sender notified.
+
+Notes:
+- Transfers are strictly P2P; the server does not store file contents.
+- Default transfer limit is 10MB, and the chunk size is 16KB. These values can be changed in `shared/index.js` for server-side checks and the agent config for client-side enforcement.
+- To troubleshoot transfers, check DevTools logs for `📁` prefixed messages and confirm that `modules/file-transfer.js` is included in the agent build.
 
 ## 🔧 Configuration
 
@@ -335,7 +343,7 @@ For issues and feature requests:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0). See the `LICENSE` file for full text and details. GPL-3.0 is a copyleft license — if you redistribute or modify this project you must keep it under GPL-3.0. For alternative commercial licensing options, contact the project maintainers.
 
 ---
 
