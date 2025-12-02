@@ -258,6 +258,40 @@
             font-size: 16px;
             color: rgba(255, 255, 255, 0.6);
         }
+        
+        /* Logged-in state on auth screen */
+        .logged-in-user {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 24px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .logged-in-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        
+        .logged-in-email {
+            font-size: 18px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            word-break: break-all;
+            text-align: center;
+        }
 
         /* Dashboard Layout (30/70) */
         .dashboard-container {
@@ -2031,6 +2065,19 @@
                     <button class="btn btn-primary" id="verify-otp-btn">Verify OTP</button>
                     <button class="btn btn-text" id="back-to-email-btn">Back to Email</button>
                 </div>
+                <!-- Logged In Step (shown when user is already logged in) -->
+                <div id="logged-in-step" class="hidden">
+                    <div class="auth-header">
+                        <h1 class="auth-title">Welcome Back!</h1>
+                        <p class="auth-subtitle">You're currently signed in as</p>
+                    </div>
+                    <div class="logged-in-user">
+                        <div class="logged-in-avatar" id="logged-in-avatar">👤</div>
+                        <div class="logged-in-email" id="logged-in-email">user@example.com</div>
+                    </div>
+                    <button class="btn btn-primary" id="continue-session-btn">Continue to Dashboard</button>
+                    <button class="btn btn-text" id="switch-account-btn">Sign in with different account</button>
+                </div>
             </div>
         </div>
     </div>
@@ -2598,10 +2645,26 @@
                 });
             }
 
-            // Logout button (back to login) - add null check
+            // Back button (go to landing page without logging out) - add null check
             const logoutButton = document.getElementById('logout-button');
             if (logoutButton) {
                 logoutButton.addEventListener('click', () => {
+                    goToLandingPage();
+                });
+            }
+            
+            // Continue session button (from logged-in state)
+            const continueSessionBtn = document.getElementById('continue-session-btn');
+            if (continueSessionBtn) {
+                continueSessionBtn.addEventListener('click', () => {
+                    showDashboard();
+                });
+            }
+            
+            // Switch account button (sign out and show login)
+            const switchAccountBtn = document.getElementById('switch-account-btn');
+            if (switchAccountBtn) {
+                switchAccountBtn.addEventListener('click', () => {
                     signOut();
                 });
             }
@@ -2766,8 +2829,40 @@
             dashboardScreen.style.display = 'none';
             emailStep.classList.remove('hidden');
             otpStep.classList.add('hidden');
+            const loggedInStep = document.getElementById('logged-in-step');
+            if (loggedInStep) loggedInStep.classList.add('hidden');
             emailInput.value = '';
             otpInput.value = '';
+        }
+        
+        // Go to landing page (without signing out)
+        function goToLandingPage() {
+            authScreen.style.display = 'flex';
+            dashboardScreen.style.display = 'none';
+            
+            // If user is logged in, show the logged-in step
+            if (currentUser) {
+                emailStep.classList.add('hidden');
+                otpStep.classList.add('hidden');
+                const loggedInStep = document.getElementById('logged-in-step');
+                if (loggedInStep) {
+                    loggedInStep.classList.remove('hidden');
+                    // Update displayed email
+                    const loggedInEmail = document.getElementById('logged-in-email');
+                    if (loggedInEmail) {
+                        loggedInEmail.textContent = currentUser.email;
+                    }
+                    // Update avatar if available
+                    const loggedInAvatar = document.getElementById('logged-in-avatar');
+                    if (loggedInAvatar && currentUserProfile?.avatar_url) {
+                        loggedInAvatar.innerHTML = `<img src="${currentUserProfile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                    } else if (loggedInAvatar && currentUserProfile?.username) {
+                        loggedInAvatar.textContent = getInitials(currentUserProfile.username);
+                    }
+                }
+            } else {
+                showAuth();
+            }
         }
 
         function showDashboard() {
