@@ -361,6 +361,12 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     });
     
     console.log('✅ HOST ICE configuration complete with Cloudflare TURN servers');
+    
+    // Create file transfer DataChannel (HOST creates, GUEST receives)
+    if (window.fileTransfer && typeof window.fileTransfer.createChannel === 'function') {
+        console.log('📁 HOST: Creating file transfer DataChannel...');
+        window.fileTransfer.createChannel(peerConnection);
+    }
 
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
@@ -598,6 +604,12 @@ async function setupWebRTCReceiver(socket, sessionId) {
     });
     
     console.log('✅ GUEST ICE configuration complete with Cloudflare TURN servers');
+    
+    // Setup file transfer DataChannel receiver (GUEST receives DataChannel created by HOST)
+    if (window.fileTransfer && typeof window.fileTransfer.setupReceiver === 'function') {
+        console.log('📁 GUEST: Setting up file transfer DataChannel receiver...');
+        window.fileTransfer.setupReceiver(peerConnection);
+    }
 
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
@@ -1114,6 +1126,11 @@ async function confirmSourceSelection() {
         showNotification('Sharing Started', 'Your screen is now being shared');
         document.getElementById('start-share-btn').textContent = 'Stop Sharing';
         document.getElementById('start-share-btn').style.background = '#dc2626';
+        
+        // Show file transfer section
+        if (typeof showHostFileTransferSection === 'function') {
+            showHostFileTransferSection();
+        }
 
     } catch (error) {
         console.error('Failed to start screen sharing:', error);
@@ -1442,6 +1459,11 @@ function stopScreenShare() {
     if (shareBtn) {
         shareBtn.textContent = 'Start Screen Share';
         shareBtn.style.background = 'rgba(255,255,255,0.15)';  // White/transparent default
+    }
+    
+    // Hide file transfer section
+    if (typeof hideHostFileTransferSection === 'function') {
+        hideHostFileTransferSection();
     }
     
     console.log('✅ Screen sharing stopped and remote control disabled');

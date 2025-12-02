@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
 
 // Configure nut-js for instant mouse movement (no animation)
@@ -400,6 +401,71 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+// ==================== FILE TRANSFER IPC HANDLERS ====================
+
+// Handle save file dialog for received files
+ipcMain.handle('save-file-dialog', async (event, { defaultPath, data }) => {
+  try {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: defaultPath,
+      title: 'Save Received File',
+      buttonLabel: 'Save',
+      filters: [
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (result.canceled) {
+      return { success: false, cancelled: true };
+    }
+    
+    // Convert array back to Buffer and write to file
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(result.filePath, buffer);
+    
+    console.log('[file-transfer] File saved:', result.filePath);
+    return { success: true, path: result.filePath };
+    
+  } catch (error) {
+    console.error('[file-transfer] Save error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle open file dialog for selecting files to send
+ipcMain.handle('open-file-dialog', async (event) => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select File to Send',
+      buttonLabel: 'Select',
+      properties: ['openFile']
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, cancelled: true };
+    }
+    
+    const filePath = result.filePaths[0];
+    const stats = fs.statSync(filePath);
+    const fileName = path.basename(filePath);
+    
+    // Read file data
+    const data = fs.readFileSync(filePath);
+    
+    console.log('[file-transfer] File selected:', fileName, 'Size:', stats.size);
+    return {
+      success: true,
+      fileName: fileName,
+      size: stats.size,
+      data: Array.from(data)  // Convert Buffer to array for IPC
+    };
+    
+  } catch (error) {
+    console.error('[file-transfer] Open error:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 app.on('window-all-closed', () => {

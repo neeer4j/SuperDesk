@@ -10,6 +10,8 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <!-- WebRTC Implementation -->
     <script src="superdesk-webrtc.js"></script>
+    <!-- File Transfer Module -->
+    <script src="modules/file-transfer.js"></script>
     <style>
         /* Theme Variables */
         :root {
@@ -2234,6 +2236,33 @@
                     </div>
                 </div>
 
+                <!-- File Transfer Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">File Transfer</div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">📁</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Enable File Transfer</div>
+                                <div class="settings-item-desc">Allow sending and receiving files</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch active" id="toggle-file-transfer" onclick="toggleFileTransferSetting()"></div>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon">📥</div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Auto-Accept Files</div>
+                                <div class="settings-item-desc">Skip confirmation for trusted peers</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch" id="toggle-auto-accept-files" onclick="toggleAutoAcceptFiles()"></div>
+                    </div>
+                </div>
+
                 <!-- Privacy Section -->
                 <div class="settings-section">
                     <div class="settings-section-title">Privacy & Security</div>
@@ -2319,6 +2348,44 @@
                         <button class="btn btn-primary" id="start-share-btn" style="flex: 1; opacity: 0.5; cursor: not-allowed;" disabled>
                             Start Sharing (Waiting for guest...)
                         </button>
+                    </div>
+                    
+                    <!-- Host File Transfer Section (shown when sharing) -->
+                    <div id="host-file-transfer-section" style="display: none; margin-top: 24px; padding: 20px; background: rgba(97, 61, 169, 0.1); border: 1px solid rgba(97, 61, 169, 0.3); border-radius: 12px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 20px;">📁</span>
+                                <span style="font-weight: 600;">File Transfer</span>
+                            </div>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <span style="font-size: 12px; opacity: 0.7;">Enabled</span>
+                                <div class="toggle-switch active" id="host-file-transfer-toggle" onclick="toggleHostFileTransfer()"></div>
+                            </label>
+                        </div>
+                        <div id="host-file-drop-area" style="padding: 24px; background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.2); border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.3s;" onclick="selectFileToSend()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)">
+                            <span style="font-size: 32px; display: block; margin-bottom: 8px;">📤</span>
+                            <span style="font-size: 14px; opacity: 0.7;">Drag & drop a file here or click to select</span>
+                        </div>
+                        <!-- Host Send Progress -->
+                        <div id="host-send-progress" style="display: none; margin-top: 12px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="font-size: 12px;" id="host-send-status">Sending...</span>
+                                <span style="font-size: 12px;" id="host-send-percent">0%</span>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
+                                <div id="host-send-progress-bar" style="background: #10b981; height: 100%; width: 0%; transition: width 0.2s;"></div>
+                            </div>
+                        </div>
+                        <!-- Host Receive Progress -->
+                        <div id="host-receive-progress" style="display: none; margin-top: 12px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="font-size: 12px;" id="host-receive-status">Receiving...</span>
+                                <span style="font-size: 12px;" id="host-receive-percent">0%</span>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;">
+                                <div id="host-receive-progress-bar" style="background: #3b82f6; height: 100%; width: 0%; transition: width 0.2s;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2903,7 +2970,9 @@
             audio: true,
             approval: true,
             history: false,
-            videoQuality: 'auto'
+            videoQuality: 'auto',
+            'file-transfer': true,
+            'auto-accept-files': false
         };
 
         function loadSettings() {
@@ -2928,6 +2997,16 @@
                 if (qualitySelect && settings.videoQuality) {
                     qualitySelect.value = settings.videoQuality;
                 }
+                
+                // Apply file transfer settings
+                const fileTransferEnabled = settings['file-transfer'] !== false;
+                hostFileTransferEnabled = fileTransferEnabled;
+                if (window.fileTransfer) {
+                    window.fileTransfer.setEnabled(fileTransferEnabled);
+                }
+                if (window.fileTransferState) {
+                    window.fileTransferState.autoAccept = settings['auto-accept-files'] === true;
+                }
             } catch (e) {
                 console.error('Failed to load settings:', e);
             }
@@ -2936,7 +3015,7 @@
         function saveSettings() {
             try {
                 const settings = {};
-                ['notifications', 'sounds', 'autostart', 'audio', 'approval', 'history'].forEach(key => {
+                ['notifications', 'sounds', 'autostart', 'audio', 'approval', 'history', 'file-transfer', 'auto-accept-files'].forEach(key => {
                     const toggle = document.getElementById(`toggle-${key}`);
                     settings[key] = toggle ? toggle.classList.contains('active') : defaultSettings[key];
                 });
@@ -2963,6 +3042,60 @@
                         window.electronAPI.setAutoStart(toggle.classList.contains('active'));
                     }
                 }
+            }
+        }
+
+        // Toggle file transfer enabled/disabled in settings
+        function toggleFileTransferSetting() {
+            const toggle = document.getElementById('toggle-file-transfer');
+            if (toggle) {
+                toggle.classList.toggle('active');
+                const isEnabled = toggle.classList.contains('active');
+                
+                // Update file transfer module state
+                if (window.fileTransfer) {
+                    window.fileTransfer.setEnabled(isEnabled);
+                }
+                
+                // Also update the host file transfer section if visible
+                const hostToggle = document.getElementById('host-file-transfer-toggle');
+                if (hostToggle) {
+                    if (isEnabled) {
+                        hostToggle.classList.add('active');
+                    } else {
+                        hostToggle.classList.remove('active');
+                    }
+                }
+                
+                // Update hostFileTransferEnabled state
+                hostFileTransferEnabled = isEnabled;
+                
+                // Update the drop area opacity
+                const dropArea = document.getElementById('host-file-drop-area');
+                if (dropArea) {
+                    dropArea.style.opacity = isEnabled ? '1' : '0.5';
+                    dropArea.style.pointerEvents = isEnabled ? 'auto' : 'none';
+                }
+                
+                saveSettings();
+                console.log('📁 File transfer setting:', isEnabled ? 'enabled' : 'disabled');
+            }
+        }
+        
+        // Toggle auto-accept files setting
+        function toggleAutoAcceptFiles() {
+            const toggle = document.getElementById('toggle-auto-accept-files');
+            if (toggle) {
+                toggle.classList.toggle('active');
+                const isEnabled = toggle.classList.contains('active');
+                
+                // Store the auto-accept preference
+                if (window.fileTransferState) {
+                    window.fileTransferState.autoAccept = isEnabled;
+                }
+                
+                saveSettings();
+                console.log('📁 Auto-accept files:', isEnabled ? 'enabled' : 'disabled');
             }
         }
 
@@ -3490,6 +3623,34 @@
         </div>
     </div>
 
+    <!-- File Offer Modal (Accept/Reject incoming file) -->
+    <div id="file-offer-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 1000010; align-items: center; justify-content: center;">
+        <div style="background: #1f2937; border-radius: 16px; padding: 24px; max-width: 400px; width: 90%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <span style="font-size: 48px; display: block; margin-bottom: 12px;">📥</span>
+                <h3 style="color: white; margin: 0 0 8px 0; font-size: 18px;">Incoming File</h3>
+                <p style="color: rgba(255,255,255,0.6); margin: 0; font-size: 14px;">Someone wants to send you a file</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 32px;" id="file-offer-icon">📄</span>
+                    <div>
+                        <div style="color: white; font-weight: 500; word-break: break-all;" id="file-offer-name">filename.txt</div>
+                        <div style="color: rgba(255,255,255,0.5); font-size: 12px;" id="file-offer-size">0 KB</div>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button onclick="window.fileTransfer.rejectOffer()" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; cursor: pointer; font-size: 14px; font-weight: 500;">
+                    Reject
+                </button>
+                <button onclick="window.fileTransfer.acceptOffer()" style="flex: 1; padding: 12px; background: #10b981; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 14px; font-weight: 500;">
+                    Accept & Save
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Remote Desktop Popup Viewer (for guests joining sessions) -->
     <div id="remote-desktop-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; flex-direction: column;">
         <!-- Centered control bar at top (auto-hide after 3s) -->
@@ -3504,6 +3665,32 @@
             <button id="end-session-btn" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;">
                 ✕ Close
             </button>
+            <!-- File Transfer Toggle Button (Guest) -->
+            <button id="file-transfer-toggle-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;" onclick="toggleFileTransferUI()">
+                📁 Files
+            </button>
+        </div>
+        
+        <!-- File Transfer Drop Zone (Guest) - Floating icon -->
+        <div id="guest-file-transfer-zone" style="display: none; position: absolute; bottom: 60px; right: 20px; z-index: 1000003;">
+            <div id="guest-file-drop-area" style="width: 80px; height: 80px; background: rgba(97, 61, 169, 0.9); border: 2px dashed rgba(255,255,255,0.5); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px);" onclick="selectFileToSend()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)">
+                <span style="font-size: 28px;">📤</span>
+                <span style="font-size: 10px; color: white; margin-top: 4px;">Send File</span>
+            </div>
+            <!-- Send Progress -->
+            <div id="guest-send-progress" style="display: none; margin-top: 8px; background: rgba(0,0,0,0.8); padding: 8px 12px; border-radius: 8px; width: 80px;">
+                <div style="font-size: 10px; color: white; margin-bottom: 4px;" id="guest-send-status">Sending...</div>
+                <div style="background: rgba(255,255,255,0.2); height: 4px; border-radius: 2px; overflow: hidden;">
+                    <div id="guest-send-progress-bar" style="background: #10b981; height: 100%; width: 0%; transition: width 0.2s;"></div>
+                </div>
+            </div>
+            <!-- Receive Progress -->
+            <div id="guest-receive-progress" style="display: none; margin-top: 8px; background: rgba(0,0,0,0.8); padding: 8px 12px; border-radius: 8px; width: 80px;">
+                <div style="font-size: 10px; color: white; margin-bottom: 4px;" id="guest-receive-status">Receiving...</div>
+                <div style="background: rgba(255,255,255,0.2); height: 4px; border-radius: 2px; overflow: hidden;">
+                    <div id="guest-receive-progress-bar" style="background: #3b82f6; height: 100%; width: 0%; transition: width 0.2s;"></div>
+                </div>
+            </div>
         </div>
         
            <!-- Video element - FULL screen, NO overlays blocking it -->
@@ -4171,6 +4358,266 @@
                     settingsAvatar.textContent = '👤';
                 }
             }
+        }
+
+        // ==================== FILE TRANSFER UI ====================
+        
+        // File transfer UI state
+        let fileTransferUIVisible = false;
+        let hostFileTransferEnabled = true;
+        
+        // Toggle file transfer UI visibility (Guest side)
+        function toggleFileTransferUI() {
+            fileTransferUIVisible = !fileTransferUIVisible;
+            const zone = document.getElementById('guest-file-transfer-zone');
+            const btn = document.getElementById('file-transfer-toggle-btn');
+            
+            if (zone) {
+                zone.style.display = fileTransferUIVisible ? 'block' : 'none';
+            }
+            if (btn) {
+                btn.style.background = fileTransferUIVisible ? '#613da9' : 'rgba(255,255,255,0.15)';
+            }
+        }
+        
+        // Toggle host file transfer enabled state
+        function toggleHostFileTransfer() {
+            hostFileTransferEnabled = !hostFileTransferEnabled;
+            const toggle = document.getElementById('host-file-transfer-toggle');
+            const dropArea = document.getElementById('host-file-drop-area');
+            
+            if (toggle) {
+                toggle.classList.toggle('active', hostFileTransferEnabled);
+            }
+            if (dropArea) {
+                dropArea.style.opacity = hostFileTransferEnabled ? '1' : '0.5';
+                dropArea.style.pointerEvents = hostFileTransferEnabled ? 'auto' : 'none';
+            }
+            
+            // Update file transfer module state
+            if (window.fileTransfer) {
+                window.fileTransfer.setEnabled(hostFileTransferEnabled);
+            }
+        }
+        
+        // Show host file transfer section when sharing starts
+        function showHostFileTransferSection() {
+            const section = document.getElementById('host-file-transfer-section');
+            if (section) section.style.display = 'block';
+        }
+        
+        // Hide host file transfer section when sharing stops
+        function hideHostFileTransferSection() {
+            const section = document.getElementById('host-file-transfer-section');
+            if (section) section.style.display = 'none';
+        }
+        
+        // Handle drag over event
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.style.borderColor = '#10b981';
+            event.currentTarget.style.background = 'rgba(16, 185, 129, 0.2)';
+        }
+        
+        // Handle drag leave event
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+            event.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+        }
+        
+        // Handle file drop event
+        async function handleFileDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Reset styles
+            event.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+            event.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                console.log('📁 File dropped:', file.name, 'Size:', file.size);
+                
+                if (window.fileTransfer) {
+                    window.fileTransfer.sendFile(file);
+                } else {
+                    console.error('File transfer module not loaded');
+                    if (window.superdeskModal) {
+                        window.superdeskModal.error('File transfer not available', 'Error');
+                    }
+                }
+            }
+        }
+        
+        // Select file to send via file picker
+        async function selectFileToSend() {
+            console.log('📁 Opening file picker...');
+            
+            try {
+                // Use Electron's file dialog via IPC
+                if (window.appControls && window.appControls.ipcInvoke) {
+                    const result = await window.appControls.ipcInvoke('open-file-dialog');
+                    
+                    if (result.success) {
+                        console.log('📁 File selected:', result.fileName, 'Size:', result.size);
+                        
+                        // Create a File-like object from the data
+                        const uint8Array = new Uint8Array(result.data);
+                        const blob = new Blob([uint8Array]);
+                        const file = new File([blob], result.fileName, { type: 'application/octet-stream' });
+                        
+                        if (window.fileTransfer) {
+                            window.fileTransfer.sendFile(file);
+                        }
+                    } else if (!result.cancelled) {
+                        throw new Error(result.error || 'Failed to open file');
+                    }
+                } else {
+                    // Fallback: Use input element
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (file && window.fileTransfer) {
+                            window.fileTransfer.sendFile(file);
+                        }
+                    };
+                    input.click();
+                }
+            } catch (error) {
+                console.error('📁 Error selecting file:', error);
+                if (window.superdeskModal) {
+                    window.superdeskModal.error('Failed to select file: ' + error.message, 'Error');
+                }
+            }
+        }
+        
+        // Show file offer modal (called by file-transfer.js)
+        window.showFileOfferModal = function(offer) {
+            const modal = document.getElementById('file-offer-modal');
+            const nameEl = document.getElementById('file-offer-name');
+            const sizeEl = document.getElementById('file-offer-size');
+            const iconEl = document.getElementById('file-offer-icon');
+            
+            if (nameEl) nameEl.textContent = offer.name;
+            if (sizeEl) sizeEl.textContent = formatFileSize(offer.size);
+            if (iconEl) iconEl.textContent = getFileIcon(offer.name);
+            
+            if (modal) modal.style.display = 'flex';
+        };
+        
+        // Hide file offer modal
+        window.hideFileOfferModal = function() {
+            const modal = document.getElementById('file-offer-modal');
+            if (modal) modal.style.display = 'none';
+        };
+        
+        // Update send progress (called by file-transfer.js)
+        window.updateFileSendProgress = function(percent, status) {
+            // Update host UI
+            const hostProgress = document.getElementById('host-send-progress');
+            const hostBar = document.getElementById('host-send-progress-bar');
+            const hostStatus = document.getElementById('host-send-status');
+            const hostPercent = document.getElementById('host-send-percent');
+            
+            if (hostProgress) hostProgress.style.display = 'block';
+            if (hostBar) hostBar.style.width = percent + '%';
+            if (hostStatus) hostStatus.textContent = status;
+            if (hostPercent) hostPercent.textContent = Math.round(percent) + '%';
+            
+            // Update guest UI
+            const guestProgress = document.getElementById('guest-send-progress');
+            const guestBar = document.getElementById('guest-send-progress-bar');
+            const guestStatus = document.getElementById('guest-send-status');
+            
+            if (guestProgress) guestProgress.style.display = 'block';
+            if (guestBar) guestBar.style.width = percent + '%';
+            if (guestStatus) guestStatus.textContent = status + ' ' + Math.round(percent) + '%';
+        };
+        
+        // Hide send progress
+        window.hideFileSendProgress = function() {
+            const hostProgress = document.getElementById('host-send-progress');
+            const guestProgress = document.getElementById('guest-send-progress');
+            
+            if (hostProgress) hostProgress.style.display = 'none';
+            if (guestProgress) guestProgress.style.display = 'none';
+        };
+        
+        // Update receive progress (called by file-transfer.js)
+        window.updateFileReceiveProgress = function(percent, status) {
+            // Update host UI
+            const hostProgress = document.getElementById('host-receive-progress');
+            const hostBar = document.getElementById('host-receive-progress-bar');
+            const hostStatus = document.getElementById('host-receive-status');
+            const hostPercent = document.getElementById('host-receive-percent');
+            
+            if (hostProgress) hostProgress.style.display = 'block';
+            if (hostBar) hostBar.style.width = percent + '%';
+            if (hostStatus) hostStatus.textContent = status;
+            if (hostPercent) hostPercent.textContent = Math.round(percent) + '%';
+            
+            // Update guest UI
+            const guestProgress = document.getElementById('guest-receive-progress');
+            const guestBar = document.getElementById('guest-receive-progress-bar');
+            const guestStatus = document.getElementById('guest-receive-status');
+            
+            if (guestProgress) guestProgress.style.display = 'block';
+            if (guestBar) guestBar.style.width = percent + '%';
+            if (guestStatus) guestStatus.textContent = status + ' ' + Math.round(percent) + '%';
+        };
+        
+        // Hide receive progress
+        window.hideFileReceiveProgress = function() {
+            const hostProgress = document.getElementById('host-receive-progress');
+            const guestProgress = document.getElementById('guest-receive-progress');
+            
+            if (hostProgress) hostProgress.style.display = 'none';
+            if (guestProgress) guestProgress.style.display = 'none';
+        };
+        
+        // Update file transfer toggle UI
+        window.updateFileTransferToggleUI = function(enabled) {
+            const toggle = document.getElementById('host-file-transfer-toggle');
+            if (toggle) {
+                toggle.classList.toggle('active', enabled);
+            }
+        };
+        
+        // Update peer file transfer state UI
+        window.updatePeerFileTransferUI = function(enabled) {
+            // Could show an indicator that peer has disabled file transfer
+            console.log('📁 Peer file transfer:', enabled ? 'enabled' : 'disabled');
+        };
+        
+        // Format file size for display
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Get file icon based on extension
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                pdf: '📕', doc: '📘', docx: '📘', txt: '📄',
+                jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', bmp: '🖼️',
+                mp3: '🎵', wav: '🎵', flac: '🎵',
+                mp4: '🎬', avi: '🎬', mkv: '🎬', mov: '🎬',
+                zip: '📦', rar: '📦', '7z': '📦', tar: '📦',
+                exe: '⚙️', msi: '⚙️',
+                js: '📜', html: '📜', css: '📜', py: '📜',
+                xls: '📊', xlsx: '📊', csv: '📊',
+                ppt: '📽️', pptx: '📽️'
+            };
+            return icons[ext] || '📄';
         }
 
         // ==================== FRIENDS & MESSAGES SYSTEM ====================
