@@ -2,7 +2,9 @@
 
 // File transfer constants
 const FILE_TRANSFER = {
-  MAX_SIZE: 10 * 1024 * 1024, // 10MB
+  // Default maximum file size allowed for transfers. This is configurable and may be
+  // adjusted per-deployment to values like 5-20GB depending on network connectivity.
+  MAX_SIZE: 20 * 1024 * 1024 * 1024, // 20GB default
   CHUNK_SIZE: 16 * 1024, // 16KB chunks
   SUPPORTED_TYPES: [
     'image/*',
@@ -90,9 +92,10 @@ const utils = {
     }
     
     if (file.size > FILE_TRANSFER.MAX_SIZE) {
+      const humanSize = (typeof this.formatFileSize === 'function') ? this.formatFileSize(FILE_TRANSFER.MAX_SIZE) : (FILE_TRANSFER.MAX_SIZE / (1024 * 1024)) + 'MB';
       return { 
         valid: false, 
-        error: `File size exceeds ${FILE_TRANSFER.MAX_SIZE / (1024 * 1024)}MB limit` 
+        error: `File size exceeds ${humanSize} limit` 
       };
     }
     

@@ -1850,8 +1850,9 @@ function App() {
     console.log('Data channel status:', dataChannel ? 'Available' : 'Not Available');
     console.log('Data channel state:', dataChannel?.readyState);
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      alert('File size must be less than 10MB');
+    const MAX_FILE_SIZE = 20 * 1024 * 1024 * 1024; // 20GB default; adjust or make config-driven if needed
+    if (file.size > MAX_FILE_SIZE) { // 20GB default
+      alert(`File size must be less than ${Math.round(MAX_FILE_SIZE / (1024*1024*1024))}GB`);
       return;
     }
 
@@ -2654,7 +2655,7 @@ function App() {
                     }
                   }}
                 >
-                  Send File (Max 10MB)
+                  Send File (Recommended up to 5–20GB)
                 </Button>
               </Box>
               {fileTransfer.active && (

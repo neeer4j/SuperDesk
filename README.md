@@ -9,7 +9,7 @@
 SuperDesk is a modern remote desktop access platform for Windows, featuring:
 - Secure, real-time screen sharing (WebRTC with TURN/STUN support)
 - Bidirectional audio and camera streaming
-- P2P file transfer via WebRTC DataChannel (Electron-to-Electron; default max 10MB per file)
+- P2P file transfer via WebRTC DataChannel (Electron-to-Electron; recommended 5–20GB depending on network; default max 20GB configurable)
 - Windows desktop agent for full control
 - End-to-end encrypted peer-to-peer connections
 - Cloud signaling and TURN relay (Cloudflare or OpenRelay)
@@ -23,7 +23,7 @@ TURN credentials are fetched securely by the backend and provided to both web an
 
 **Security:**
 - All signaling and media connections use HTTPS/WSS and DTLS-SRTP
-- File transfers are validated and limited to 10MB
+- File transfers are validated and limited to a configurable max (default 20GB)
 - WebRTC peer connections are secured and ephemeral
 - Authentication and access control are recommended for production
 
@@ -48,7 +48,7 @@ Run `start-dev.bat` to launch both server and client automatically! The server w
 - **Real-time Screen Sharing** – WebRTC with TURN/STUN relay
 - **Bidirectional Audio** – Two-way audio with echo cancellation
 - **Camera Video Access** – Optional camera sharing
-- **File Transfer (P2P)** – Secure peer-to-peer file transfer via a WebRTC DataChannel (`fileTransfer`), default 10MB per file with 16KB chunking. Drag-and-drop and native save dialog available in the Electron agent.
+- **File Transfer (P2P)** – Secure peer-to-peer file transfer via a WebRTC DataChannel (`fileTransfer`), default 20GB per file with 16KB chunking (configurable; recommended 5–20GB depending on network). Drag-and-drop and native save dialog available in the Electron agent.
 - **Secure Connections** – Encrypted peer-to-peer (DTLS-SRTP)
 - **Session Management** – Easy session creation/joining with unique IDs
 
@@ -203,7 +203,7 @@ SuperDesk includes an Electron-focused peer-to-peer file transfer workflow that 
 
 Notes:
 - Transfers are strictly P2P; the server does not store file contents.
-- Default transfer limit is 10MB, and the chunk size is 16KB. These values can be changed in `shared/index.js` for server-side checks and the agent config for client-side enforcement.
+- Default transfer limit is configurable; recommended ranges are 5–20GB, and the chunk size is 16KB. These values can be changed in `shared/index.js` for server-side checks and the agent config for client-side enforcement.
 - To troubleshoot transfers, check DevTools logs for `📁` prefixed messages and confirm that `modules/file-transfer.js` is included in the agent build.
 
 ## 🔧 Configuration
@@ -232,7 +232,7 @@ Modify file size limits in `shared/index.js`:
 
 ```javascript
 const FILE_TRANSFER = {
-  MAX_SIZE: 10 * 1024 * 1024, // 10MB
+  MAX_SIZE: 20 * 1024 * 1024 * 1024, // 20GB default (configurable; recommended 5–20GB depending on network)
   CHUNK_SIZE: 16 * 1024       // 16KB chunks
 };
 ```
@@ -289,7 +289,7 @@ npm run build:agent
 ## ⚠️ Known Limitations
 
 - **Windows Only** - Desktop agent currently Windows-specific
-- **10MB File Limit** - File transfers limited to 10MB
+- **File Transfer Limit** - Configurable (default 20GB; recommended 5–20GB depending on network)
 - **Local Network** - Optimized for LAN use (STUN servers for internet)
 - **Browser Compatibility** - Requires WebRTC-enabled browsers
 
@@ -330,7 +330,7 @@ npm run build:agent
 - Test browser audio capabilities
 
 **File Transfer Fails:**
-- Verify file size under 10MB
+- Verify file size is under the configured maximum (default 20GB; recommended 5–20GB depending on network)
 - Check network connectivity
 - Ensure WebRTC data channels are working
 

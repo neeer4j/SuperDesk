@@ -8,7 +8,7 @@ SuperDesk is a remote desktop access web application designed for personal use o
 - Windows desktop agent for screen capture and control
 - Bidirectional audio support
 - Camera video access option
-- File transfer with 10MB size limit
+- File transfer via WebRTC DataChannel (configurable; recommended 5–20GB depending on network) 
 - WebRTC for real-time communication
 - Secure peer-to-peer connections
 
@@ -22,7 +22,7 @@ SuperDesk is a remote desktop access web application designed for personal use o
 - Focus on Windows compatibility
 - Prioritize performance for real-time communication
 - Implement proper security measures for remote access
-- Keep file transfer limited to 10MB
+- Keep file transfer configurable, default 20GB; recommend 5–20GB depending on network
 - Ensure audio quality for bidirectional communication
 - Test camera integration thoroughly
 

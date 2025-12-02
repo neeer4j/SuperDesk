@@ -131,7 +131,7 @@ Already created in `client/vercel.json`
 ### **Server Optimization:**
 - **WebSocket connection pooling**
 - **Session cleanup** for memory management
-- **File upload limits** (10MB enforced)
+- **File upload limits** (configurable; default 20GB recommended range 5–20GB)
 
 ## 🔒 **Security Considerations**
 
