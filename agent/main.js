@@ -280,7 +280,8 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
         // Move mouse to position first, then scroll
         // Browser wheel deltaY: positive = scroll down, negative = scroll up
         // nut-js: scrollDown(positive) scrolls DOWN, scrollUp(positive) scrolls UP
-        const scrollAmount = Math.abs(Math.round(deltaY / 40)); // Normalize to reasonable scroll steps
+        // Lower divisor = more sensitive scrolling (was 40, now 15 for better responsiveness)
+        const scrollAmount = Math.max(1, Math.abs(Math.round(deltaY / 15)));
         
         if (scrollAmount > 0) {
           mouse.setPosition({ x: coords.x, y: coords.y }).then(async () => {
