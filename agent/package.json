@@ -30,6 +30,7 @@
       "agent.html",
       "preload.js",
       "superdesk-webrtc.js",
+      "modules/**/*",
       "assets/**/*",
       "package.json"
     ],

@@ -76,7 +76,7 @@ sessions.set(sessionId, {
 ```javascript
 // Validate file types and scan for malware
 const ALLOWED_TYPES = ['.jpg', '.png', '.pdf', '.txt', '.zip'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (already enforced)
+const MAX_FILE_SIZE = 20 * 1024 * 1024 * 1024; // 20GB default (configurable; recommended 5–20GB)
 ```
 
 #### 4. Remote Control Permissions
@@ -190,7 +190,7 @@ const RemoteDesktopPopup = React.lazy(() => import('./RemoteDesktopPopup'));
 - WebRTC peer-to-peer connection
 - Screen sharing (agent to browser)
 - Basic session management
-- File transfer (10MB limit)
+- File transfer (configurable; recommended 5–20GB)
 - HTTPS on all services
 - Auto-popup for guests
 

@@ -958,7 +958,7 @@ function LandingPage({ onGetStarted }) {
             }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>📁</div>
               <div style={{ fontSize: '18px', color: '#fff', fontWeight: 400, opacity: 0.6 }}>
-                File transfer (max 10MB) coming soon!
+                File transfer (configurable; recommended 5–20GB) coming soon!
               </div>
             </div>
           </div>

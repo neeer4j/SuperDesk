@@ -131,7 +131,7 @@ After authentication, you should see:
 
 4. **Implement File Transfer**
    - Use Supabase Storage
-   - 10MB file size limit (as per requirements)
+   - Configurable file size limit (recommended 5–20GB depending on network)
    - Progress indicators
 
 ## 📁 Files Modified

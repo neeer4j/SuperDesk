@@ -102,9 +102,9 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
     {
       icon: <CloudUpload sx={{ fontSize: '3rem' }} />,
       title: 'File Transfer',
-      description: 'Securely transfer files up to 10MB between sessions. Share documents, images, and more instantly through encrypted data channels.',
+      description: 'Securely transfer files between sessions using P2P DataChannels. Recommended transfer sizes are 5–20GB depending on network conditions (configurable).',
       details: [
-        'Up to 10MB file size',
+        'Recommended 5–20GB depending on network capacity',
         'Real-time progress tracking',
         'Secure data channel transfer',
         'Multiple file type support'

@@ -65,6 +65,9 @@ function createFileTransferChannel(peerConnection) {
         maxRetransmits: 10  // Allow retransmits for reliability
     });
     
+    // CRITICAL: Set binary type for ArrayBuffer transfer
+    dataChannel.binaryType = 'arraybuffer';
+    
     setupDataChannelHandlers(dataChannel);
     window.fileTransferState.dataChannel = dataChannel;
     
@@ -83,6 +86,9 @@ function setupDataChannelReceiver(peerConnection) {
         console.log('📁 Received DataChannel:', event.channel.label);
         
         if (event.channel.label === 'fileTransfer') {
+            // CRITICAL: Set binary type for ArrayBuffer transfer
+            event.channel.binaryType = 'arraybuffer';
+            
             setupDataChannelHandlers(event.channel);
             window.fileTransferState.dataChannel = event.channel;
             console.log('✅ fileTransfer DataChannel connected');
@@ -171,9 +177,18 @@ function handleDataChannelMessage(data) {
 async function sendFile(file) {
     const state = window.fileTransferState;
     
-    if (!state.dataChannel || state.dataChannel.readyState !== 'open') {
-        console.error('📁 Cannot send file: DataChannel not open');
+    console.log('📁 sendFile called with:', file ? file.name : 'null');
+    console.log('📁 DataChannel state:', state.dataChannel ? state.dataChannel.readyState : 'no channel');
+    
+    if (!state.dataChannel) {
+        console.error('📁 Cannot send file: No DataChannel');
         showFileTransferError('Connection not ready. Please wait for peer to connect.');
+        return;
+    }
+    
+    if (state.dataChannel.readyState !== 'open') {
+        console.error('📁 Cannot send file: DataChannel not open, state:', state.dataChannel.readyState);
+        showFileTransferError('Connection not ready. DataChannel state: ' + state.dataChannel.readyState);
         return;
     }
     
@@ -202,8 +217,14 @@ async function sendFile(file) {
         mimeType: file.type || 'application/octet-stream'
     };
     
-    state.dataChannel.send(JSON.stringify(offer));
-    console.log('📁 File offer sent, waiting for response...');
+    try {
+        state.dataChannel.send(JSON.stringify(offer));
+        console.log('📁 File offer sent successfully, waiting for response...');
+    } catch (e) {
+        console.error('📁 Failed to send file offer:', e);
+        showFileTransferError('Failed to send file offer: ' + e.message);
+        return;
+    }
     
     // Show pending state in UI
     updateSendProgress(0, 'Waiting for peer to accept...');
@@ -224,46 +245,38 @@ async function startSendingChunks() {
     state.sendingInProgress = true;
     state.bytesSent = 0;
     
-    console.log('📁 Starting chunk transfer...');
+    console.log('📁 Starting chunk transfer for file:', file.name, 'Size:', file.size);
     updateSendProgress(0, 'Sending...');
     
-    const reader = file.stream().getReader();
-    let buffer = new Uint8Array(0);
-    
     try {
-        while (true) {
-            const { done, value } = await reader.read();
-            
-            if (done) break;
-            
-            // Append to buffer
-            const newBuffer = new Uint8Array(buffer.length + value.length);
-            newBuffer.set(buffer);
-            newBuffer.set(value, buffer.length);
-            buffer = newBuffer;
-            
-            // Send complete chunks
-            while (buffer.length >= CHUNK_SIZE) {
-                const chunk = buffer.slice(0, CHUNK_SIZE);
-                buffer = buffer.slice(CHUNK_SIZE);
-                
-                // Wait for buffer to clear if needed
-                while (state.dataChannel.bufferedAmount > 1024 * 1024) {
-                    await new Promise(resolve => setTimeout(resolve, 10));
-                }
-                
-                state.dataChannel.send(chunk.buffer);
-                state.bytesSent += chunk.length;
-                
-                const progress = (state.bytesSent / state.totalBytesToSend) * 100;
-                updateSendProgress(progress, 'Sending...');
-            }
-        }
+        // Read the entire file as ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
         
-        // Send remaining data
-        if (buffer.length > 0) {
-            state.dataChannel.send(buffer.buffer);
-            state.bytesSent += buffer.length;
+        console.log('📁 File loaded into memory, starting chunked transfer...');
+        
+        // Send in chunks
+        let offset = 0;
+        while (offset < uint8Array.length) {
+            const chunk = uint8Array.slice(offset, offset + CHUNK_SIZE);
+            
+            // Wait for buffer to clear if needed (backpressure handling)
+            while (state.dataChannel.bufferedAmount > 1024 * 1024) {
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+            
+            // Send the chunk as ArrayBuffer
+            state.dataChannel.send(chunk.buffer);
+            offset += chunk.length;
+            state.bytesSent = offset;
+            
+            const progress = (state.bytesSent / state.totalBytesToSend) * 100;
+            updateSendProgress(progress, 'Sending...');
+            
+            // Small delay to prevent blocking
+            if (offset % (CHUNK_SIZE * 10) === 0) {
+                await new Promise(resolve => setTimeout(resolve, 1));
+            }
         }
         
         // Send EOF marker
@@ -563,13 +576,25 @@ async function saveReceivedFile(blob, fileName) {
 // ==================== UI FUNCTIONS (to be implemented in agent.html) ====================
 
 function showFileTransferUI() {
-    const container = document.getElementById('file-transfer-container');
-    if (container) container.style.display = 'block';
+    // Show host file transfer section if it exists
+    const hostSection = document.getElementById('host-file-transfer-section');
+    if (hostSection) hostSection.style.display = 'block';
+    
+    // Show guest file transfer zone if it exists (for guests viewing remote desktop)
+    const guestZone = document.getElementById('guest-file-transfer-zone');
+    if (guestZone) guestZone.style.display = 'block';
+    
+    console.log('📁 File transfer UI shown');
 }
 
 function hideFileTransferUI() {
-    const container = document.getElementById('file-transfer-container');
-    if (container) container.style.display = 'none';
+    const hostSection = document.getElementById('host-file-transfer-section');
+    if (hostSection) hostSection.style.display = 'none';
+    
+    const guestZone = document.getElementById('guest-file-transfer-zone');
+    if (guestZone) guestZone.style.display = 'none';
+    
+    console.log('📁 File transfer UI hidden');
 }
 
 function showFileOfferDialog(offer) {

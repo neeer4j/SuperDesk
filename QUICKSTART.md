@@ -69,7 +69,7 @@ vercel --prod
 
 ## **🎯 Feature Testing**
 
-### **📁 File Transfer (10MB limit):**
+### **📁 File Transfer (recommended 5–20GB; configurable):**
 1. Drag file to upload area
 2. File appears on both devices
 3. Click to download on receiving device

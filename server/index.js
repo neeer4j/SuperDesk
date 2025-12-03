@@ -5,6 +5,8 @@ const cors = require('cors');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+// Shared constants
+const { FILE_TRANSFER, utils } = require('../shared');
 
 // Load local .env in development if present (safe - won't crash if dotenv isn't installed)
 try {
@@ -167,7 +169,7 @@ const io = socketIo(server, {
 app.use(express.json());
 app.use(express.static('public'));
 
-// File upload configuration with 10MB limit
+// File upload configuration with configurable limit (default 20GB)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
@@ -179,7 +181,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: FILE_TRANSFER.MAX_SIZE } // configurable limit via shared constants
 });
 
 // Create uploads directory if it doesn't exist
@@ -426,8 +428,8 @@ app.post('/upload', upload.single('file'), (req, res) => {
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
-  if (req.file.size > 10 * 1024 * 1024) {
-    return res.status(400).json({ error: 'File size exceeds 10MB limit' });
+  if (req.file.size > FILE_TRANSFER.MAX_SIZE) {
+    return res.status(400).json({ error: `File size exceeds ${utils.formatFileSize(FILE_TRANSFER.MAX_SIZE)} limit` });
   }
 
   res.json({
@@ -468,7 +470,7 @@ app.get('/api/info', (req, res) => {
     features: {
       webrtc: true,
       fileTransfer: true,
-      maxFileSize: '10MB',
+      maxFileSize: utils.formatFileSize(FILE_TRANSFER.MAX_SIZE),
       socketIO: true
     },
     environment: process.env.NODE_ENV || 'development',
