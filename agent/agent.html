@@ -2006,6 +2006,132 @@
         .superdesk-modal-input::placeholder {
             color: rgba(255, 255, 255, 0.4);
         }
+
+        /* Help Button */
+        .help-button {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        .help-button:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Help Modal */
+        .help-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .help-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .help-modal {
+            background: var(--modal-bg);
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 480px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            transform: scale(0.9);
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+        .help-modal-overlay.active .help-modal {
+            transform: scale(1);
+        }
+        .help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .help-modal-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .help-modal-close {
+            background: var(--settings-item-bg);
+            border: none;
+            color: var(--text-primary);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .help-modal-close:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        .help-section {
+            margin-bottom: 20px;
+        }
+        .help-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .help-section-title .icon {
+            font-size: 16px;
+        }
+        .help-step {
+            background: var(--settings-item-bg);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .help-step strong {
+            color: var(--text-primary);
+        }
+        .help-tip {
+            background: rgba(255, 193, 7, 0.15);
+            border-left: 3px solid #ffc107;
+            border-radius: 0 8px 8px 0;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 16px;
+        }
     </style>
 </head>
 <body>
@@ -2017,7 +2143,9 @@
         </div>
     </div>
 
-    <div class="auth-container" id="auth-screen">
+    <div class="auth-container" id="auth-screen" style="display: none;">
+        <!-- Help Button -->
+        <button class="help-button" id="help-btn" title="How to use SuperDesk">?</button>
         <!-- Left Panel -->
         <div class="auth-left">
             <div style="position: relative; z-index: 1; text-align: center;">
@@ -2047,6 +2175,7 @@
                     <button class="btn btn-warning" id="continue-bypass-btn">
                         Continue Without Auth (Testing Only)
                     </button>
+                    <button class="btn btn-text hidden" id="back-to-logged-in-btn">← Back to logged in account</button>
                     <p style="font-size: 12px; color: rgba(255, 255, 255, 0.5); text-align: center; margin-top: 24px; line-height: 1.6;">
                         By continuing, you agree to our <span style="text-decoration:underline;cursor:pointer;">Terms of Service</span> and <span style="text-decoration:underline;cursor:pointer;">Privacy Policy</span>.
                     </p>
@@ -2080,6 +2209,42 @@
                     <button class="btn btn-primary" id="continue-session-btn">Continue to Dashboard</button>
                     <button class="btn btn-text" id="switch-account-btn">Sign in with different account</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="help-modal-overlay" id="help-modal">
+        <div class="help-modal">
+            <div class="help-modal-header">
+                <div class="help-modal-title">📖 How to Use SuperDesk</div>
+                <button class="help-modal-close" id="help-modal-close">×</button>
+            </div>
+            
+            <div class="help-section">
+                <div class="help-section-title"><span class="icon">🖥️</span> Share Your Screen (Host)</div>
+                <div class="help-step"><strong>1.</strong> Sign in with your email and OTP code</div>
+                <div class="help-step"><strong>2.</strong> Click <strong>"Share Screen"</strong> in the sidebar</div>
+                <div class="help-step"><strong>3.</strong> Click <strong>"Start Sharing"</strong> and select a screen/window</div>
+                <div class="help-step"><strong>4.</strong> Share the <strong>8-character Session ID</strong> with the person who wants to view/control your screen</div>
+            </div>
+            
+            <div class="help-section">
+                <div class="help-section-title"><span class="icon">🔗</span> Join a Session (Guest)</div>
+                <div class="help-step"><strong>1.</strong> Get the <strong>Session ID</strong> from the host</div>
+                <div class="help-step"><strong>2.</strong> Click <strong>"Join Session"</strong> in the sidebar</div>
+                <div class="help-step"><strong>3.</strong> Enter the Session ID and click <strong>"Connect"</strong></div>
+                <div class="help-step"><strong>4.</strong> Use the control buttons to enable mouse/keyboard control or fullscreen</div>
+            </div>
+            
+            <div class="help-section">
+                <div class="help-section-title"><span class="icon">📁</span> Transfer Files</div>
+                <div class="help-step"><strong>Host:</strong> Drag & drop files into the File Transfer area while sharing</div>
+                <div class="help-step"><strong>Guest:</strong> Accept incoming files via the popup prompt, then choose where to save</div>
+            </div>
+            
+            <div class="help-tip">
+                💡 <strong>Tip:</strong> Both host and guest must be using the SuperDesk desktop app for file transfer to work. Remote control requires the host to enable it.
             </div>
         </div>
     </div>
@@ -2597,6 +2762,9 @@
                 await loadUserProfile();
                 // Show landing page with "Welcome Back" instead of going directly to dashboard
                 goToLandingPage();
+            } else {
+                // No session - show auth screen (email step)
+                showAuth();
             }
 
             // Listen for auth changes
@@ -2629,6 +2797,29 @@
         function setupEventListeners() {
             // Google sign-in removed
             // Titlebar controls now handled via window.appControls in HTML onclick
+
+            // Help button
+            const helpBtn = document.getElementById('help-btn');
+            const helpModal = document.getElementById('help-modal');
+            const helpModalClose = document.getElementById('help-modal-close');
+            
+            if (helpBtn && helpModal) {
+                helpBtn.addEventListener('click', () => {
+                    helpModal.classList.add('active');
+                });
+            }
+            if (helpModalClose && helpModal) {
+                helpModalClose.addEventListener('click', () => {
+                    helpModal.classList.remove('active');
+                });
+            }
+            if (helpModal) {
+                helpModal.addEventListener('click', (e) => {
+                    if (e.target === helpModal) {
+                        helpModal.classList.remove('active');
+                    }
+                });
+            }
 
             // Auth buttons - add null checks
             const sendOtpBtn = document.getElementById('send-otp-btn');
@@ -2732,11 +2923,30 @@
                 });
             }
             
-            // Switch account button (sign out and show login)
+            // Switch account button (show email form without signing out)
             const switchAccountBtn = document.getElementById('switch-account-btn');
             if (switchAccountBtn) {
                 switchAccountBtn.addEventListener('click', () => {
-                    signOut();
+                    // Show email step without logging out
+                    const loggedInStep = document.getElementById('logged-in-step');
+                    if (loggedInStep) loggedInStep.classList.add('hidden');
+                    emailStep.classList.remove('hidden');
+                    otpStep.classList.add('hidden');
+                    // Show back button to return to logged-in account
+                    const backToLoggedInBtn = document.getElementById('back-to-logged-in-btn');
+                    if (backToLoggedInBtn) backToLoggedInBtn.classList.remove('hidden');
+                });
+            }
+            
+            // Back to logged-in account button (from email step)
+            const backToLoggedInBtn = document.getElementById('back-to-logged-in-btn');
+            if (backToLoggedInBtn) {
+                backToLoggedInBtn.addEventListener('click', () => {
+                    // Return to logged-in step without signing out
+                    goToLandingPage();
+                    // Hide the back button again
+                    backToLoggedInBtn.classList.add('hidden');
+                    emailInput.value = '';
                 });
             }
 
@@ -2902,6 +3112,9 @@
             otpStep.classList.add('hidden');
             const loggedInStep = document.getElementById('logged-in-step');
             if (loggedInStep) loggedInStep.classList.add('hidden');
+            // Hide the back-to-logged-in button (only shown when switching accounts)
+            const backToLoggedInBtn = document.getElementById('back-to-logged-in-btn');
+            if (backToLoggedInBtn) backToLoggedInBtn.classList.add('hidden');
             emailInput.value = '';
             otpInput.value = '';
         }
