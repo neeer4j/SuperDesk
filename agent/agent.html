@@ -586,6 +586,163 @@
             display: flex;
             gap: 12px;
             align-items: center;
+            position: relative;
+        }
+
+        .add-friend-input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .friend-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--primary-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            margin-top: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .friend-suggestions.hidden {
+            display: none;
+        }
+
+        .friend-suggestion-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .friend-suggestion-item:hover {
+            background: var(--card-bg);
+        }
+
+        .friend-suggestion-item:first-child {
+            border-radius: 10px 10px 0 0;
+        }
+
+        .friend-suggestion-item:last-child {
+            border-radius: 0 0 10px 10px;
+        }
+
+        .friend-suggestion-item:only-child {
+            border-radius: 10px;
+        }
+
+        .friend-suggestion-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: var(--settings-item-bg);
+        }
+
+        .friend-suggestion-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .friend-suggestion-username {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .friend-suggestion-email {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .suggestion-item:hover {
+            background: var(--settings-item-bg);
+        }
+
+        .suggestion-item:first-child {
+            border-radius: 10px 10px 0 0;
+        }
+
+        .suggestion-item:last-child {
+            border-radius: 0 0 10px 10px;
+        }
+
+        .suggestion-item:only-child {
+            border-radius: 10px;
+        }
+
+        .suggestion-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--settings-item-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .suggestion-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .suggestion-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .suggestion-username {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .suggestion-email {
+            font-size: 12px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .suggestion-empty {
+            padding: 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .suggestion-loading {
+            padding: 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
         }
 
         .friends-list {
@@ -2132,9 +2289,69 @@
             color: var(--text-muted);
             margin-top: 16px;
         }
+
+        /* Loading Spinner Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--primary-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        .loading-text {
+            margin-top: 16px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+    <!-- Apply saved theme immediately to prevent flash -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('superdeskTheme');
+                if (savedTheme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+    
+    <!-- Loading Overlay (shown immediately, hidden after init) -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading...</div>
+    </div>
+
     <div class="titlebar">
         <div class="titlebar-title">SuperDesk Agent</div>
         <div class="titlebar-controls">
@@ -2628,7 +2845,12 @@
                         <span class="friends-section-title">➕ Add Friend</span>
                     </div>
                     <div class="add-friend-form">
-                        <input type="text" id="add-friend-email" class="input-field" placeholder="Email or @username" style="flex: 1; margin-bottom: 0;">
+                        <div class="add-friend-input-wrapper">
+                            <input type="text" id="add-friend-email" class="input-field" placeholder="Search by @username or email" style="margin-bottom: 0;" autocomplete="off">
+                            <div class="friend-suggestions hidden" id="friend-suggestions">
+                                <!-- Suggestions will be populated dynamically -->
+                            </div>
+                        </div>
                         <button id="send-friend-request-btn" class="btn btn-primary" style="width: auto; margin-bottom: 0; padding: 12px 24px;">
                             Send Request
                         </button>
@@ -2760,10 +2982,22 @@
                 currentUser = session.user;
                 // Load user profile first so avatar/username are available on landing page
                 await loadUserProfile();
-                // Show landing page with "Welcome Back" instead of going directly to dashboard
-                goToLandingPage();
+                
+                // Check if user was in dashboard before reload
+                const savedAppState = getSavedAppState();
+                if (savedAppState && savedAppState.inDashboard) {
+                    // Restore to dashboard with the same view they were on
+                    showDashboard();
+                    if (savedAppState.currentView) {
+                        switchView(savedAppState.currentView);
+                    }
+                } else {
+                    // Show landing page with "Welcome Back"
+                    goToLandingPage();
+                }
             } else {
                 // No session - show auth screen (email step)
+                clearSavedAppState();
                 showAuth();
             }
 
@@ -2792,6 +3026,20 @@
             // Generate session ID
             generateSessionId();
             setupEventListeners();
+            
+            // Hide loading overlay now that app is ready
+            hideLoadingOverlay();
+        }
+        
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                // Remove from DOM after transition completes
+                setTimeout(() => {
+                    overlay.remove();
+                }, 300);
+            }
         }
 
         function setupEventListeners() {
@@ -3123,6 +3371,8 @@
         function goToLandingPage() {
             authScreen.style.display = 'flex';
             dashboardScreen.style.display = 'none';
+            // Clear saved app state since user is back at landing page
+            clearSavedAppState();
             
             // If user is logged in, show the logged-in step
             if (currentUser) {
@@ -3157,6 +3407,37 @@
             }
         }
 
+        // App state persistence functions
+        function saveAppState() {
+            try {
+                const state = {
+                    inDashboard: dashboardScreen.style.display === 'flex',
+                    currentView: currentView
+                };
+                localStorage.setItem('superdeskAppState', JSON.stringify(state));
+            } catch (e) {
+                console.warn('Failed to save app state:', e);
+            }
+        }
+        
+        function getSavedAppState() {
+            try {
+                const saved = localStorage.getItem('superdeskAppState');
+                return saved ? JSON.parse(saved) : null;
+            } catch (e) {
+                console.warn('Failed to load app state:', e);
+                return null;
+            }
+        }
+        
+        function clearSavedAppState() {
+            try {
+                localStorage.removeItem('superdeskAppState');
+            } catch (e) {
+                console.warn('Failed to clear app state:', e);
+            }
+        }
+
         function showDashboard() {
             authScreen.style.display = 'none';
             dashboardScreen.style.display = 'flex';
@@ -3170,6 +3451,8 @@
             loadSettings();
             // Initialize friends and messages system
             initFriendsSystem();
+            // Save app state (user is now in dashboard)
+            saveAppState();
         }
 
         // Settings Panel Functions
@@ -3413,6 +3696,21 @@
                 v.classList.add('hidden');
             });
             document.getElementById(`${view}-view`).classList.remove('hidden');
+            
+            // Save app state so view is remembered on reload
+            saveAppState();
+            
+            // Refresh data and ensure listeners when switching to friends or messages view
+            if (view === 'friends' || view === 'messages') {
+                // Re-attach event listeners (safe due to data-* checks)
+                setupFriendsEventListeners();
+                // Refresh data
+                loadFriendRequests();
+                loadFriends();
+                if (view === 'messages') {
+                    loadConversations();
+                }
+            }
         }
 
         function generateSessionId() {
@@ -4871,17 +5169,13 @@
             await loadFriends();
             await loadConversations();
             
-            // Set up realtime subscriptions (only once)
-            if (!friendsSystemInitialized) {
-                setupRealtimeSubscriptions();
-                friendsSystemInitialized = true;
-            }
+            // Set up realtime subscriptions (always re-setup to ensure connection)
+            setupRealtimeSubscriptions();
+            friendsSystemInitialized = true;
             
-            // Set up event listeners for friends/messages UI (only once)
-            if (!friendsEventListenersAttached) {
-                setupFriendsEventListeners();
-                friendsEventListenersAttached = true;
-            }
+            // Set up event listeners for friends/messages UI
+            // Always call this to ensure listeners are attached (function handles duplicates)
+            setupFriendsEventListeners();
         }
 
         // Ensure user has a profile
@@ -4986,10 +5280,12 @@
         function setupRealtimeSubscriptions() {
             // Clean up any existing subscriptions first
             if (messagesSubscription) {
+                console.log('🧹 Cleaning up old messages subscription');
                 supabase.removeChannel(messagesSubscription);
                 messagesSubscription = null;
             }
             if (friendsSubscription) {
+                console.log('🧹 Cleaning up old friends subscription');
                 supabase.removeChannel(friendsSubscription);
                 friendsSubscription = null;
             }
@@ -4998,7 +5294,7 @@
             
             // Subscribe to new messages
             messagesSubscription = supabase
-                .channel('messages-channel-' + currentUser.id)
+                .channel('messages-channel-' + currentUser.id + '-' + Date.now())
                 .on('postgres_changes', {
                     event: 'INSERT',
                     schema: 'public',
@@ -5008,13 +5304,17 @@
                     console.log('📩 New message received:', payload);
                     handleNewMessage(payload.new);
                 })
-                .subscribe((status) => {
+                .subscribe((status, err) => {
                     console.log('📩 Messages subscription status:', status);
+                    if (err) console.error('📩 Messages subscription error:', err);
+                    if (status === 'CHANNEL_ERROR') {
+                        console.warn('📩 Messages channel error, will retry on next init');
+                    }
                 });
 
             // Subscribe to friend requests and removals
             friendsSubscription = supabase
-                .channel('friends-channel-' + currentUser.id)
+                .channel('friends-channel-' + currentUser.id + '-' + Date.now())
                 .on('postgres_changes', {
                     event: '*',
                     schema: 'public',
@@ -5033,9 +5333,15 @@
                     console.log('👥 Friend update (as user_id):', payload);
                     handleFriendChange(payload);
                 })
-                .subscribe((status) => {
+                .subscribe((status, err) => {
                     console.log('👥 Friends subscription status:', status);
+                    if (err) console.error('👥 Friends subscription error:', err);
+                    if (status === 'CHANNEL_ERROR') {
+                        console.warn('👥 Friends channel error, will retry on next init');
+                    }
                 });
+                
+            console.log('📡 Realtime subscriptions setup initiated');
         }
 
         // Load friend requests (where I am the friend_id and status is pending)
@@ -5829,46 +6135,163 @@
         }
 
         // Set up event listeners for friends/messages UI
-        function setupFriendsEventListeners() {
-            // Send friend request button
-            const sendRequestBtn = document.getElementById('send-friend-request-btn');
-            if (sendRequestBtn) {
-                sendRequestBtn.addEventListener('click', sendFriendRequest);
+        // Friend search functionality
+        let searchTimeout = null;
+        
+        async function searchUsers(query) {
+            if (!query || query.length < 2) {
+                hideFriendSuggestions();
+                return;
             }
             
-            // Enter key on email input
+            // Remove @ prefix if present for username search
+            const searchQuery = query.startsWith('@') ? query.slice(1) : query;
+            
+            try {
+                // Search by username or email (case insensitive)
+                const { data: users, error } = await supabase
+                    .from('profiles')
+                    .select('id, email, username, avatar_url')
+                    .or(`username.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+                    .neq('id', currentUser?.id) // Don't show current user
+                    .limit(5);
+                
+                if (error) throw error;
+                
+                renderFriendSuggestions(users || []);
+            } catch (err) {
+                console.error('Error searching users:', err);
+                hideFriendSuggestions();
+            }
+        }
+        
+        function renderFriendSuggestions(users) {
+            const container = document.getElementById('friend-suggestions');
+            if (!container) return;
+            
+            // Filter to only show users who have a username set
+            const usersWithUsername = users.filter(user => user.username && user.username.trim() !== '');
+            
+            if (usersWithUsername.length === 0) {
+                hideFriendSuggestions();
+                return;
+            }
+            
+            container.innerHTML = usersWithUsername.map(user => `
+                <div class="friend-suggestion-item" onclick="selectFriendSuggestion('${user.username}', '${user.email}')">
+                    <img src="${user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.username) + '&background=7c3aed&color=fff'}" 
+                         class="friend-suggestion-avatar" 
+                         alt="${user.username}">
+                    <div class="friend-suggestion-info">
+                        <span class="friend-suggestion-username">@${user.username}</span>
+                        <span class="friend-suggestion-email">${user.email}</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.classList.remove('hidden');
+        }
+        
+        function hideFriendSuggestions() {
+            const container = document.getElementById('friend-suggestions');
+            if (container) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+            }
+        }
+        
+        function selectFriendSuggestion(display, email) {
+            const input = document.getElementById('add-friend-email');
+            if (input) {
+                input.value = display.startsWith('@') ? display : '@' + display;
+            }
+            hideFriendSuggestions();
+            sendFriendRequest();
+        }
+        
+        // Make functions globally available
+        window.selectFriendSuggestion = selectFriendSuggestion;
+
+        function setupFriendsEventListeners() {
+            console.log('🔧 Setting up friends event listeners...');
+            
+            // Send friend request button
+            const sendRequestBtn = document.getElementById('send-friend-request-btn');
+            if (sendRequestBtn && !sendRequestBtn.dataset.listenerAttached) {
+                sendRequestBtn.addEventListener('click', sendFriendRequest);
+                sendRequestBtn.dataset.listenerAttached = 'true';
+            }
+            
+            // Enter key on email input & search as you type
             const emailInput = document.getElementById('add-friend-email');
-            if (emailInput) {
+            if (emailInput && !emailInput.dataset.listenerAttached) {
                 emailInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') sendFriendRequest();
+                    if (e.key === 'Enter') {
+                        hideFriendSuggestions();
+                        sendFriendRequest();
+                    }
                 });
+                
+                // Debounced search as user types
+                emailInput.addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        searchUsers(e.target.value.trim());
+                    }, 300);
+                });
+                
+                // Focus event to show suggestions if there's text
+                emailInput.addEventListener('focus', (e) => {
+                    if (e.target.value.trim().length >= 2) {
+                        searchUsers(e.target.value.trim());
+                    }
+                });
+                
+                emailInput.dataset.listenerAttached = 'true';
+                console.log('✅ Friend search input listeners attached');
+            }
+            
+            // Hide suggestions when clicking outside (only attach once to document)
+            if (!document.body.dataset.friendSuggestionsClickAttached) {
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.add-friend-input-wrapper')) {
+                        hideFriendSuggestions();
+                    }
+                });
+                document.body.dataset.friendSuggestionsClickAttached = 'true';
             }
             
             // Send message button
             const sendMsgBtn = document.getElementById('chat-send-btn');
-            if (sendMsgBtn) {
+            if (sendMsgBtn && !sendMsgBtn.dataset.listenerAttached) {
                 sendMsgBtn.addEventListener('click', sendMessage);
+                sendMsgBtn.dataset.listenerAttached = 'true';
             }
             
             // Enter key on chat input
             const chatInput = document.getElementById('chat-input');
-            if (chatInput) {
+            if (chatInput && !chatInput.dataset.listenerAttached) {
                 chatInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') sendMessage();
                 });
+                chatInput.dataset.listenerAttached = 'true';
             }
             
             // Session invite button
             const inviteBtn = document.getElementById('chat-invite-btn');
-            if (inviteBtn) {
+            if (inviteBtn && !inviteBtn.dataset.listenerAttached) {
                 inviteBtn.addEventListener('click', sendSessionInvite);
+                inviteBtn.dataset.listenerAttached = 'true';
             }
             
             // Back button (mobile)
             const backBtn = document.getElementById('chat-back-btn');
-            if (backBtn) {
+            if (backBtn && !backBtn.dataset.listenerAttached) {
                 backBtn.addEventListener('click', closeChat);
+                backBtn.dataset.listenerAttached = 'true';
             }
+            
+            console.log('✅ Friends event listeners setup complete');
         }
 
         // Update user status on window close/hide
