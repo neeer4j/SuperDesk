@@ -2115,10 +2115,6 @@
                     <span class="nav-icon">💬</span>
                     <span>Messages</span>
                 </button>
-                <button class="nav-item" data-view="files">
-                    <span class="nav-icon">📁</span>
-                    <span>File Transfer</span>
-                </button>
             </div>
 
             <button class="settings-button" id="settings-btn">
@@ -2557,15 +2553,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Files View -->
-            <div class="content-view hidden" id="files-view">
-                <h1 class="content-title">File Transfer</h1>
-                <div class="content-card placeholder-content">
-                    <div class="placeholder-icon">📁</div>
-                    <div class="placeholder-text">File transfer (configurable; recommended 5–20GB depending on network) coming soon!</div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -2599,23 +2586,40 @@
             // Load saved theme first
             loadSavedTheme();
             
+            // Track if this is a fresh login (not app startup)
+            let isFreshLogin = false;
+            
             // Check for existing session
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 currentUser = session.user;
-                showDashboard();
+                // Load user profile first so avatar/username are available on landing page
+                await loadUserProfile();
+                // Show landing page with "Welcome Back" instead of going directly to dashboard
+                goToLandingPage();
             }
 
             // Listen for auth changes
-            supabase.auth.onAuthStateChange((_event, session) => {
+            supabase.auth.onAuthStateChange(async (_event, session) => {
                 if (session) {
                     currentUser = session.user;
-                    showDashboard();
+                    // Load profile for fresh logins too
+                    await loadUserProfile();
+                    // Only auto-redirect to dashboard on fresh login (OTP verified)
+                    // On app startup, user sees "Welcome Back" and clicks "Continue to Dashboard"
+                    if (isFreshLogin) {
+                        showDashboard();
+                        isFreshLogin = false;
+                    }
                 } else {
                     currentUser = null;
+                    currentUserProfile = null;
                     showAuth();
                 }
             });
+            
+            // Mark subsequent logins as fresh (after initial session check)
+            setTimeout(() => { isFreshLogin = true; }, 500);
 
             // Generate session ID
             generateSessionId();
@@ -2914,17 +2918,25 @@
                 const loggedInStep = document.getElementById('logged-in-step');
                 if (loggedInStep) {
                     loggedInStep.classList.remove('hidden');
-                    // Update displayed email
+                    // Update displayed email/username
                     const loggedInEmail = document.getElementById('logged-in-email');
                     if (loggedInEmail) {
-                        loggedInEmail.textContent = currentUser.email;
+                        // Show username if available, otherwise email
+                        loggedInEmail.textContent = currentUserProfile?.username 
+                            ? `@${currentUserProfile.username}` 
+                            : currentUser.email;
                     }
                     // Update avatar if available
                     const loggedInAvatar = document.getElementById('logged-in-avatar');
-                    if (loggedInAvatar && currentUserProfile?.avatar_url) {
-                        loggedInAvatar.innerHTML = `<img src="${currentUserProfile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-                    } else if (loggedInAvatar && currentUserProfile?.username) {
-                        loggedInAvatar.textContent = getInitials(currentUserProfile.username);
+                    if (loggedInAvatar) {
+                        if (currentUserProfile?.avatar_url) {
+                            loggedInAvatar.innerHTML = `<img src="${currentUserProfile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                        } else {
+                            // Show initials as fallback
+                            const initials = getInitials(currentUserProfile?.username || currentUser?.email || '?');
+                            loggedInAvatar.innerHTML = '';
+                            loggedInAvatar.textContent = initials;
+                        }
                     }
                 }
             } else {
