@@ -121,17 +121,19 @@ async function initializeSocket() {
         socket.on('mouse-event', async (data) => {
             if (!window.superdeskState.isHost) return;
             
-            console.log('🖱️ HOST received mouse event:', { type: data.type, x: data.x, y: data.y, button: data.button });
+            console.log('🖱️ HOST received mouse event:', { type: data.type, x: data.x, y: data.y, button: data.button, deltaX: data.deltaX, deltaY: data.deltaY });
             
             try {
                 // Use IPC to send mouse events to main process for nut-js execution
                 // data.x and data.y are already normalized (0..1), pass them directly
                 if (window.appControls && window.appControls.ipcSend) {
                     window.appControls.ipcSend('robot-mouse-event', {
-                        type: data.type,  // Keep original type: 'move', 'down', 'up', 'click'
+                        type: data.type,  // Keep original type: 'move', 'down', 'up', 'click', 'scroll', 'wheel'
                         x: data.x,        // Already normalized 0..1
                         y: data.y,        // Already normalized 0..1
-                        button: data.button || 0
+                        button: data.button || 0,
+                        deltaX: data.deltaX || 0,  // For scroll events
+                        deltaY: data.deltaY || 0   // For scroll events
                     });
                     console.log('✅ HOST sent IPC robot-mouse-event');
                 } else {
@@ -1091,15 +1093,16 @@ function selectSource(sourceId) {
     if (confirmBtn) confirmBtn.disabled = false;
 }
 
-// Select source and immediately confirm (used when clicking a source item)
+// Select a source (highlight it) - user must click 'Start Sharing' button to confirm
 function selectSourceAndConfirm(sourceId) {
     if (!sourceId) {
         console.error('selectSourceAndConfirm called with invalid sourceId:', sourceId);
         return;
     }
-    window.availableSources.selected = sourceId;
-    console.log('Source selected:', sourceId);
-    confirmSourceSelection();
+    
+    // Just select/highlight the source - do NOT auto-confirm
+    selectSource(sourceId);
+    console.log('Source selected (awaiting confirmation):', sourceId);
 }
 
 async function confirmSourceSelection() {
@@ -1166,10 +1169,11 @@ function enableRemoteControl() {
     
     if (video) {
         // Use capture to ensure we intercept events before any other handlers
+        // Note: We only use mousedown/mouseup for clicks - NOT 'click' event
+        // This prevents single clicks being interpreted as double clicks
         video.addEventListener('mousemove', handleMouseMove, { capture: true });
         video.addEventListener('mousedown', handleMouseDown, { capture: true });
         video.addEventListener('mouseup', handleMouseUp, { capture: true });
-        video.addEventListener('click', handleMouseClick, { capture: true });
         video.addEventListener('wheel', handleMouseWheel, { capture: true, passive: false });
         console.log('  ✅ Event listeners attached to remote-video (capture)');
     }
@@ -1178,7 +1182,6 @@ function enableRemoteControl() {
         joinVideo.addEventListener('mousemove', handleMouseMove, { capture: true });
         joinVideo.addEventListener('mousedown', handleMouseDown, { capture: true });
         joinVideo.addEventListener('mouseup', handleMouseUp, { capture: true });
-        joinVideo.addEventListener('click', handleMouseClick, { capture: true });
         joinVideo.addEventListener('wheel', handleMouseWheel, { capture: true, passive: false });
         console.log('  ✅ Event listeners attached to join-remote-video (capture)');
     }
@@ -1212,7 +1215,6 @@ function disableRemoteControl() {
         video.removeEventListener('mousemove', handleMouseMove, { capture: true });
         video.removeEventListener('mousedown', handleMouseDown, { capture: true });
         video.removeEventListener('mouseup', handleMouseUp, { capture: true });
-        video.removeEventListener('click', handleMouseClick, { capture: true });
         video.removeEventListener('wheel', handleMouseWheel, { capture: true });
     }
     
@@ -1220,7 +1222,6 @@ function disableRemoteControl() {
         joinVideo.removeEventListener('mousemove', handleMouseMove, { capture: true });
         joinVideo.removeEventListener('mousedown', handleMouseDown, { capture: true });
         joinVideo.removeEventListener('mouseup', handleMouseUp, { capture: true });
-        joinVideo.removeEventListener('click', handleMouseClick, { capture: true });
         joinVideo.removeEventListener('wheel', handleMouseWheel, { capture: true });
         // Restore guest cursor visibility
         try {
@@ -1598,6 +1599,7 @@ window.createSession = createSession;
 window.joinSession = joinSession;
 window.startScreenShare = startScreenShare;
 window.stopScreenShare = stopScreenShare;
+window.selectSource = selectSource;
 window.selectSourceAndConfirm = selectSourceAndConfirm;
 window.confirmSourceSelection = confirmSourceSelection;
 window.enableRemoteControl = enableRemoteControl;

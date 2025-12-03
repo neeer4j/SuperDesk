@@ -195,20 +195,25 @@
             border: none;
             border-radius: 7px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.1s;
             margin-bottom: 14px;
+        }
+        .btn:active:not(:disabled) {
+            transform: scale(0.97);
         }
         .btn-primary {
             background: white;
             color: #613da9;
         }
         .btn-primary:hover:not(:disabled) { background: #f5f5f5; }
+        .btn-primary:active:not(:disabled) { background: #e8e8e8; }
         .btn-warning {
             background: transparent;
             color: white;
             border: 2px solid white;
         }
         .btn-warning:hover { background: rgba(255,255,255,0.15); }
+        .btn-warning:active { background: rgba(255,255,255,0.25); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .logo-large {
             width: 100%;
@@ -359,6 +364,11 @@
             color: white;
             box-shadow: 0 4px 12px rgba(97, 61, 169, 0.3);
         }
+        
+        .logout-button:active {
+            transform: scale(0.92);
+            box-shadow: 0 2px 6px rgba(97, 61, 169, 0.2);
+        }
 
         .sidebar-logo {
             width: 100%;
@@ -404,12 +414,17 @@
             align-items: center;
             gap: 12px;
             font-size: 16px;
-            transition: all 0.2s;
+            transition: all 0.15s;
             text-align: left;
         }
 
         .nav-item:hover {
             background: rgba(var(--primary-bg-rgb), 0.1);
+        }
+        
+        .nav-item:active {
+            background: rgba(var(--primary-bg-rgb), 0.2);
+            transform: scale(0.98);
         }
 
         .nav-item.active {
@@ -419,6 +434,23 @@
 
         .nav-icon {
             font-size: 20px;
+        }
+
+        /* Nav Badge for unread messages */
+        .nav-badge {
+            background: #ef4444;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+            margin-left: auto;
+        }
+
+        .nav-badge.hidden {
+            display: none;
         }
 
         /* Input Styles */
@@ -853,8 +885,8 @@
 
         .friend-menu {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 45px;
+            right: 50px;
             min-width: 110px;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
@@ -868,16 +900,16 @@
 
         .friend-menu button {
             width: 100%;
-            padding: 8px 12px;
-            background: transparent;
+            padding: 10px 14px;
+            background: rgba(239, 68, 68, 0.15);
             border: none;
             text-align: left;
-            color: var(--text-primary);
+            color: #ef4444;
             font-weight: 600;
             cursor: pointer;
         }
 
-        .friend-menu button:hover { background: var(--settings-item-bg); }
+        .friend-menu button:hover { background: rgba(239, 68, 68, 0.25); }
 
         /* Responsive: 2 columns on medium, 1 column on small */
         @media (max-width: 1024px) {
@@ -1440,9 +1472,6 @@
 
         /* Copy/Paste Buttons */
         .copy-button, .paste-button {
-            position: absolute;
-            top: 8px;
-            right: 8px;
             padding: 8px 16px;
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1451,14 +1480,28 @@
             font-size: 14px;
             cursor: pointer;
             transition: all 0.2s;
+            flex-shrink: 0;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .copy-button:hover, .paste-button:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .copy-button:active, .paste-button:active {
             transform: scale(0.95);
+        }
+        
+        /* Paste button needs absolute positioning in join input */
+        .join-input-container .paste-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            height: auto;
+            padding: 8px 16px;
         }
 
         .session-id-container {
@@ -1470,11 +1513,15 @@
 
         .session-id-wrapper {
             position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 24px;
         }
 
         .session-id {
+            flex: 1;
             padding: 14px 16px;
-            padding-right: 80px;
             background: rgba(255,255,255,0.02);
             border: 1px solid rgba(255,255,255,0.04);
             border-radius: 6px;
@@ -1483,8 +1530,42 @@
             color: white;
             letter-spacing: 3px;
             box-sizing: border-box;
-            width: 100%;
-            margin-bottom: 24px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+        }
+
+        .refresh-session-btn {
+            background: rgba(97, 61, 169, 0.2);
+            border: 1px solid rgba(97, 61, 169, 0.4);
+            color: #a78bfa;
+            width: 52px;
+            height: 52px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .refresh-session-btn:hover {
+            background: rgba(97, 61, 169, 0.35);
+        }
+
+        .refresh-session-btn:active {
+            transform: scale(0.95);
+        }
+
+        .refresh-session-btn.spinning {
+            animation: spin 0.6s linear;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .join-input-container {
@@ -2499,6 +2580,7 @@
                 <button class="nav-item" data-view="messages">
                     <span class="nav-icon">💬</span>
                     <span>Messages</span>
+                    <span class="nav-badge hidden" id="messages-unread-badge">0</span>
                 </button>
             </div>
 
@@ -2707,6 +2789,7 @@
                         <div class="section-label">Session ID</div>
                         <div class="session-id-wrapper">
                             <div class="session-id" id="session-id">GENERATING...</div>
+                            <button class="refresh-session-btn" id="refresh-session-btn" title="Generate new session ID">↻</button>
                             <button class="copy-button" id="copy-session-btn">Copy</button>
                         </div>
                     </div>
@@ -3238,6 +3321,28 @@
                     }
                     document.body.removeChild(tempInput);
                 }
+                });
+            }
+            
+            // Refresh session ID button - generates a new session
+            const refreshSessionBtn = document.getElementById('refresh-session-btn');
+            if (refreshSessionBtn) {
+                refreshSessionBtn.addEventListener('click', async () => {
+                    // Add spinning animation
+                    refreshSessionBtn.classList.add('spinning');
+                    
+                    // Call createSession from webrtc module to generate new session ID
+                    if (typeof window.createSession === 'function') {
+                        await window.createSession();
+                    } else {
+                        console.error('createSession not available');
+                        window.superdeskModal?.warning('Unable to refresh session. Please try reloading the app.', 'Error');
+                    }
+                    
+                    // Remove spinning animation after delay
+                    setTimeout(() => {
+                        refreshSessionBtn.classList.remove('spinning');
+                    }, 600);
                 });
             }
 
@@ -5156,29 +5261,47 @@
         let messagesSubscription = null;
         let friendsSubscription = null;
         let friendsSystemInitialized = false;
+        let friendsSystemInitializing = false; // Lock to prevent async race
         let friendsEventListenersAttached = false;
 
         // Initialize friends system when user logs in
         async function initFriendsSystem() {
             if (!currentUser) return;
             
-            console.log('🤝 Initializing friends system for:', currentUser.email);
+            // Prevent duplicate initialization (check both flag and lock)
+            if (friendsSystemInitialized || friendsSystemInitializing) {
+                console.log('🟡 Friends system already initialized or initializing, skipping');
+                return;
+            }
             
-            // Ensure user profile exists
-            await ensureUserProfile();
+            // Set lock immediately to prevent race conditions
+            friendsSystemInitializing = true;
             
-            // Load initial data
-            await loadFriendRequests();
-            await loadFriends();
-            await loadConversations();
-            
-            // Set up realtime subscriptions (always re-setup to ensure connection)
-            setupRealtimeSubscriptions();
-            friendsSystemInitialized = true;
-            
-            // Set up event listeners for friends/messages UI
-            // Always call this to ensure listeners are attached (function handles duplicates)
-            setupFriendsEventListeners();
+            try {
+                console.log('🤝 Initializing friends system for:', currentUser.email);
+                
+                // Ensure user profile exists
+                await ensureUserProfile();
+                
+                // Load initial data
+                await loadFriendRequests();
+                await loadFriends();
+                await loadConversations();
+                
+                // Set up realtime subscriptions (always re-setup to ensure connection)
+                setupRealtimeSubscriptions();
+                friendsSystemInitialized = true;
+                
+                // Set up event listeners for friends/messages UI
+                // Always call this to ensure listeners are attached (function handles duplicates)
+                setupFriendsEventListeners();
+                
+                console.log('✅ Friends system initialized successfully');
+            } catch (error) {
+                console.error('❌ Error initializing friends system:', error);
+            } finally {
+                friendsSystemInitializing = false; // Always release the lock
+            }
         }
 
         // Ensure user has a profile
@@ -5281,6 +5404,12 @@
 
         // Set up realtime subscriptions
         function setupRealtimeSubscriptions() {
+            // Skip if subscriptions already exist and are active
+            if (messagesSubscription && friendsSubscription) {
+                console.log('🟡 Realtime subscriptions already active, skipping setup');
+                return;
+            }
+            
             // Clean up any existing subscriptions first
             if (messagesSubscription) {
                 console.log('🧹 Cleaning up old messages subscription');
@@ -5345,6 +5474,46 @@
                 });
                 
             console.log('📡 Realtime subscriptions setup initiated');
+            
+            // Start periodic data refresh to ensure data stays in sync
+            // This helps when realtime subscriptions miss events
+            startPeriodicDataRefresh();
+        }
+        
+        // Periodic data refresh interval
+        let periodicRefreshInterval = null;
+        
+        function startPeriodicDataRefresh() {
+            // Clear any existing interval
+            if (periodicRefreshInterval) {
+                clearInterval(periodicRefreshInterval);
+            }
+            
+            // Refresh data every 30 seconds as a fallback
+            periodicRefreshInterval = setInterval(async () => {
+                if (!currentUser || currentUser.id === 'test-user') return;
+                
+                console.log('🔄 Periodic data refresh...');
+                try {
+                    await loadConversations();
+                    // Only refresh chat messages if we're in a chat
+                    if (currentChatFriend) {
+                        await loadChatMessages(currentChatFriend.id);
+                    }
+                } catch (err) {
+                    console.warn('Periodic refresh error:', err);
+                }
+            }, 30000); // 30 seconds
+            
+            console.log('⏰ Periodic data refresh started (every 30s)');
+        }
+        
+        function stopPeriodicDataRefresh() {
+            if (periodicRefreshInterval) {
+                clearInterval(periodicRefreshInterval);
+                periodicRefreshInterval = null;
+                console.log('⏰ Periodic data refresh stopped');
+            }
         }
 
         // Load friend requests (where I am the friend_id and status is pending)
@@ -5474,6 +5643,7 @@
 
         // Load conversations (includes all message partners, not just current friends)
         async function loadConversations() {
+            console.log('📦 loadConversations() called');
             if (!currentUser || currentUser.id === 'test-user') {
                 conversations = [];
                 renderConversations();
@@ -5661,12 +5831,17 @@
 
         // Render conversations
         function renderConversations() {
+            console.log('🎨 renderConversations() called with', conversations.length, 'conversations');
             const container = document.getElementById('conversations-list');
             
-            if (!container) return;
+            if (!container) {
+                console.warn('⚠️ conversations-list container not found!');
+                return;
+            }
             
             if (conversations.length === 0) {
                 container.innerHTML = '<div class="conversations-empty">No conversations yet. Message a friend to start!</div>';
+                updateUnreadBadge(); // Update badge even when empty
                 return;
             }
             
@@ -5701,6 +5876,25 @@
                 </div>
             `;
             }).join('');
+            
+            // Update the nav badge with total unread count
+            updateUnreadBadge();
+        }
+
+        // Update the unread messages badge in the nav
+        function updateUnreadBadge() {
+            const badge = document.getElementById('messages-unread-badge');
+            if (!badge) return;
+            
+            // Calculate total unread count from all conversations
+            const totalUnread = conversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
+            
+            if (totalUnread > 0) {
+                badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
         }
 
         // Get message preview text
@@ -6138,13 +6332,17 @@
 
         // Handle new message (realtime)
         function handleNewMessage(message) {
+            console.log('🔔 handleNewMessage triggered with:', message);
+            
             // If this message is from the current chat friend, reload messages
             if (currentChatFriend && message.sender_id === currentChatFriend.id) {
+                console.log('📥 Message is from current chat friend, reloading messages');
                 loadChatMessages(currentChatFriend.id);
                 markMessagesAsRead(currentChatFriend.id);
             }
             
             // Update conversations list
+            console.log('📋 Reloading conversations list...');
             loadConversations();
             
             // Show notification if not viewing this chat

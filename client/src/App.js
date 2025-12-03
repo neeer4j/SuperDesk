@@ -1365,11 +1365,9 @@ function App() {
           
           function handleMouseEvent(event) {
             if (!remoteControlEnabled || !parentWindow || parentWindow.closed) return;
-            // Prevent default media behaviors (e.g., dblclick fullscreen/pause in some UIs)
-            if (event.type === 'dblclick' || event.type === 'click') {
-              event.preventDefault();
-              event.stopPropagation();
-            }
+            // Prevent default media behaviors
+            event.preventDefault();
+            event.stopPropagation();
             
             const rect = event.target.getBoundingClientRect();
             const x = ((event.clientX - rect.left) / rect.width) * 1920;
@@ -1403,6 +1401,32 @@ function App() {
             }, '*');
           }
           
+          function handleWheelEvent(event) {
+            if (!remoteControlEnabled || !parentWindow || parentWindow.closed) return;
+            
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const rect = event.target.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 1920;
+            const y = ((event.clientY - rect.top) / rect.height) * 1080;
+            
+            // Normalize delta values - cap at 120 for one scroll "click"
+            const deltaX = Math.sign(event.deltaX) * Math.min(Math.abs(event.deltaX), 120);
+            const deltaY = Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY), 120);
+            
+            parentWindow.postMessage({
+              type: 'mouseEvent',
+              event: {
+                type: 'wheel',
+                x: Math.round(x),
+                y: Math.round(y),
+                deltaX: deltaX,
+                deltaY: deltaY
+              }
+            }, '*');
+          }
+          
           window.addEventListener('message', function(event) {
             const message = event.data;
             if (!message || typeof message !== 'object') {
@@ -1424,11 +1448,12 @@ function App() {
           remoteVideoElement.addEventListener('contextmenu', function(e){ e.preventDefault(); });
           remoteVideoElement.addEventListener('dblclick', function(e){ e.preventDefault(); e.stopPropagation(); });
           remoteVideoElement.addEventListener('click', function(e){ if (remoteControlEnabled) { e.preventDefault(); e.stopPropagation(); } });
+          // Note: Only use mousedown/mouseup for clicks - NOT 'click' event
+          // This prevents single clicks being interpreted as double clicks
           remoteVideoElement.addEventListener('mousedown', handleMouseEvent);
           remoteVideoElement.addEventListener('mouseup', handleMouseEvent);
           remoteVideoElement.addEventListener('mousemove', handleMouseEvent);
-          remoteVideoElement.addEventListener('click', handleMouseEvent);
-          remoteVideoElement.addEventListener('dblclick', handleMouseEvent);
+          remoteVideoElement.addEventListener('wheel', handleWheelEvent, { passive: false });
           
           document.addEventListener('keydown', handleKeyboardEvent);
           document.addEventListener('keyup', handleKeyboardEvent);
