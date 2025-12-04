@@ -816,6 +816,9 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
         }
 
         .friend-avatar {
@@ -868,48 +871,81 @@
             box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
         }
 
-        /* compact action: three-dot menu */
+        /* compact action: three-dot menu container */
+        .friend-menu-container {
+            position: relative;
+            flex-shrink: 0;
+        }
+
         .friend-more-btn {
-            background: transparent;
-            border: none;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-primary);
-            font-size: 20px;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
+            font-size: 18px;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .friend-more-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .friend-more-btn:active {
+            transform: scale(0.95);
         }
 
         .friend-menu {
             position: absolute;
-            top: 45px;
-            right: 50px;
-            min-width: 110px;
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-            z-index: 50;
+            top: calc(100% + 6px);
+            right: 0;
+            min-width: 130px;
+            background: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
             overflow: hidden;
+            animation: menuFadeIn 0.15s ease;
+        }
+
+        @keyframes menuFadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .friend-menu.hidden { display: none; }
 
         .friend-menu button {
             width: 100%;
-            padding: 10px 14px;
-            background: rgba(239, 68, 68, 0.15);
+            padding: 12px 16px;
+            background: transparent;
             border: none;
             text-align: left;
             color: #ef4444;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.15s ease;
         }
 
-        .friend-menu button:hover { background: rgba(239, 68, 68, 0.25); }
+        .friend-menu button::before {
+            content: '🗑️';
+            font-size: 14px;
+        }
+
+        .friend-menu button:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
 
         /* Responsive: 2 columns on medium, 1 column on small */
         @media (max-width: 1024px) {
@@ -5801,9 +5837,11 @@
                             </div>
                         </div>
                     </div>
-                    <button class="friend-more-btn" onclick="toggleFriendMenu(event, this)">⋯</button>
-                    <div class="friend-menu hidden">
-                        <button onclick="removeFriend('${friend.friendshipId}', '${escapedDisplayName}')">Remove</button>
+                    <div class="friend-menu-container">
+                        <button class="friend-more-btn" onclick="toggleFriendMenu(event, this)">⋯</button>
+                        <div class="friend-menu hidden">
+                            <button onclick="removeFriend('${friend.friendshipId}', '${escapedDisplayName}')">Remove</button>
+                        </div>
                     </div>
                 </div>
             `}).join('');
@@ -5814,9 +5852,9 @@
             event.stopPropagation();
             // close other menus
             document.querySelectorAll('.friend-menu').forEach(m => m.classList.add('hidden'));
-            const card = btn.closest('.friend-card');
-            if (!card) return;
-            const menu = card.querySelector('.friend-menu');
+            const container = btn.closest('.friend-menu-container');
+            if (!container) return;
+            const menu = container.querySelector('.friend-menu');
             if (!menu) return;
             menu.classList.toggle('hidden');
         }
@@ -6334,14 +6372,28 @@
         function handleNewMessage(message) {
             console.log('🔔 handleNewMessage triggered with:', message);
             
-            // If this message is from the current chat friend, reload messages
+            // If this message is from the current chat friend AND chat is visible, reload messages
+            // BUT DO NOT auto-mark as read - only mark read when user explicitly opens chat
             if (currentChatFriend && message.sender_id === currentChatFriend.id) {
                 console.log('📥 Message is from current chat friend, reloading messages');
                 loadChatMessages(currentChatFriend.id);
-                markMessagesAsRead(currentChatFriend.id);
+                
+                // Only mark as read if the chat panel is actually visible on screen
+                // Check if we're on Messages tab AND the chat view is open
+                const chatView = document.getElementById('chat-view');
+                const messagesSection = document.getElementById('messages-section');
+                const isMessagesTabActive = messagesSection && !messagesSection.classList.contains('hidden');
+                const isChatViewVisible = chatView && !chatView.classList.contains('hidden');
+                
+                if (isMessagesTabActive && isChatViewVisible) {
+                    console.log('📖 Chat is visible, marking messages as read');
+                    markMessagesAsRead(currentChatFriend.id);
+                } else {
+                    console.log('👀 Chat not visible, keeping messages unread for badge');
+                }
             }
             
-            // Update conversations list
+            // Update conversations list (this updates the unread counts)
             console.log('📋 Reloading conversations list...');
             loadConversations();
             
