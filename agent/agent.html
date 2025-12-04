@@ -545,10 +545,10 @@
         }
 
         .sidebar-logo {
-            width: 44px;
-            height: 44px;
+            width: 64px;
+            height: 64px;
             object-fit: contain;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
 
         .user-info {
@@ -2467,7 +2467,9 @@
         #messages-view {
             display: flex;
             flex-direction: column;
+            flex: 1;
             height: 100%;
+            min-height: 0;
         }
 
         #messages-view.hidden {
@@ -2477,6 +2479,7 @@
         .messages-container {
             display: flex;
             flex: 1;
+            height: 100%;
             min-height: 0;
             overflow: hidden;
             background: var(--card-bg);
@@ -4654,66 +4657,66 @@
                     </div>
                     <div class="modal-overlay hidden" id="friend-requests-overlay" onclick="toggleFriendRequestsPopup()"></div>
                 </div>
-            </div>
 
-            <!-- Messages View -->
-            <div class="content-view hidden" id="messages-view">
-                <div class="messages-container">
-                    <!-- Conversations List -->
-                    <div class="conversations-panel" id="conversations-panel">
-                        <div class="conversations-header">
-                            <span>Conversations</span>
-                        </div>
-                        <div id="conversations-list" class="conversations-list">
-                            <div class="conversations-empty">No conversations yet. Message a friend to start!</div>
-                        </div>
-                    </div>
-
-                    <!-- Chat Panel -->
-                    <div class="chat-panel" id="chat-panel">
-                        <div class="chat-placeholder" id="chat-placeholder">
-                            <div class="chat-placeholder-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <!-- Messages View -->
+                <div class="content-view hidden" id="messages-view">
+                    <div class="messages-container">
+                        <!-- Conversations List -->
+                        <div class="conversations-panel" id="conversations-panel">
+                            <div class="conversations-header">
+                                <span>Conversations</span>
                             </div>
-                            <div class="chat-placeholder-text">Select a conversation to start chatting</div>
+                            <div id="conversations-list" class="conversations-list">
+                                <div class="conversations-empty">No conversations yet. Message a friend to start!</div>
+                            </div>
                         </div>
-                        
-                        <div class="chat-active hidden" id="chat-active">
-                            <!-- Chat Header -->
-                            <div class="chat-header" id="chat-header">
-                                <button class="chat-back-btn" id="chat-back-btn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
-                                </button>
-                                <div class="chat-user-info">
-                                    <div class="chat-user-avatar" id="chat-user-avatar">?</div>
-                                    <div class="chat-user-details">
-                                        <div class="chat-user-name" id="chat-user-name">Select a friend</div>
-                                        <div class="chat-user-status" id="chat-user-status">offline</div>
-                                    </div>
+
+                        <!-- Chat Panel -->
+                        <div class="chat-panel" id="chat-panel">
+                            <div class="chat-placeholder" id="chat-placeholder">
+                                <div class="chat-placeholder-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                                 </div>
-                                <button class="chat-invite-btn" id="chat-invite-btn" title="Send Session Invite">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                                    Invite
-                                </button>
+                                <div class="chat-placeholder-text">Select a conversation to start chatting</div>
                             </div>
+                            
+                            <div class="chat-active hidden" id="chat-active">
+                                <!-- Chat Header -->
+                                <div class="chat-header" id="chat-header">
+                                    <button class="chat-back-btn" id="chat-back-btn">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+                                    </button>
+                                    <div class="chat-user-info">
+                                        <div class="chat-user-avatar" id="chat-user-avatar">?</div>
+                                        <div class="chat-user-details">
+                                            <div class="chat-user-name" id="chat-user-name">Select a friend</div>
+                                            <div class="chat-user-status" id="chat-user-status">offline</div>
+                                        </div>
+                                    </div>
+                                    <button class="chat-invite-btn" id="chat-invite-btn" title="Send Session Invite">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                        Invite
+                                    </button>
+                                </div>
 
-                            <!-- Chat Messages -->
-                            <div class="chat-messages" id="chat-messages">
-                                <!-- Messages will be populated here -->
-                            </div>
+                                <!-- Chat Messages -->
+                                <div class="chat-messages" id="chat-messages">
+                                    <!-- Messages will be populated here -->
+                                </div>
 
-                            <!-- Not Friends Warning -->
-                            <div class="not-friends-warning hidden" id="not-friends-warning">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                <span>You need to be friends to send messages</span>
-                            </div>
+                                <!-- Not Friends Warning -->
+                                <div class="not-friends-warning hidden" id="not-friends-warning">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                    <span>You need to be friends to send messages</span>
+                                </div>
 
-                            <!-- Chat Input -->
-                            <div class="chat-input-container" id="chat-input-container">
-                                <input type="text" id="chat-input" class="chat-input" placeholder="Type a message...">
-                                <button id="chat-send-btn" class="chat-send-btn">
-                                    <span>Send</span>
-                                </button>
+                                <!-- Chat Input -->
+                                <div class="chat-input-container" id="chat-input-container">
+                                    <input type="text" id="chat-input" class="chat-input" placeholder="Type a message...">
+                                    <button id="chat-send-btn" class="chat-send-btn">
+                                        <span>Send</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -4878,11 +4881,13 @@
                 });
             }
 
-            // Navigation
-            document.querySelectorAll('.nav-item').forEach(item => {
+            // Navigation - only handle items with data-view attribute (excludes settings and logout buttons)
+            document.querySelectorAll('.nav-item[data-view]').forEach(item => {
                 item.addEventListener('click', () => {
                     const view = item.dataset.view;
-                    switchView(view);
+                    if (view) {
+                        switchView(view);
+                    }
                 });
             });
 
