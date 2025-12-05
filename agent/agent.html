@@ -1278,6 +1278,217 @@
             background: linear-gradient(90deg, #10b981, #059669);
         }
 
+        /* ==================== Host Floating Toolbar ==================== */
+        .host-floating-toolbar {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 999999;
+            display: none; /* Hidden by default, shown when sharing */
+        }
+
+        .host-toolbar-collapsed {
+            display: flex;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .host-toolbar-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .host-toolbar-btn:hover {
+            background: rgba(139, 92, 246, 0.6);
+            transform: scale(1.05);
+        }
+
+        .host-toolbar-btn.active {
+            background: rgba(139, 92, 246, 0.8);
+        }
+
+        .host-toolbar-btn.end-session {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .host-toolbar-btn.end-session:hover {
+            background: rgba(239, 68, 68, 0.6);
+        }
+
+        .host-toolbar-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        /* Expanded panels */
+        .host-toolbar-panel {
+            position: absolute;
+            bottom: 56px;
+            right: 0;
+            min-width: 220px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.2s ease;
+        }
+
+        .host-toolbar-panel.visible {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .host-panel-header {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .host-session-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .host-session-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .host-session-user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+        }
+
+        .host-session-user-name {
+            font-size: 13px;
+            color: white;
+            flex: 1;
+        }
+
+        .host-session-status {
+            font-size: 10px;
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .host-session-status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .host-end-session-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .host-end-session-btn:hover {
+            background: rgba(239, 68, 68, 0.4);
+        }
+
+        /* File transfer panel for host toolbar */
+        .host-file-panel {
+            min-width: 200px;
+        }
+
+        .host-file-drop {
+            padding: 20px;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .host-file-drop:hover {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .host-file-drop-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .host-file-drop-text {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Badge for notifications */
+        .host-toolbar-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 16px;
+            height: 16px;
+            background: #ef4444;
+            border-radius: 50%;
+            font-size: 10px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
         /* ==================== JOIN SESSION - Professional Layout ==================== */
         #join-view {
             display: flex;
@@ -6146,6 +6357,57 @@
             </button>
         </div>
         
+        <!-- Host Floating Toolbar (shown when sharing as host) -->
+        <div id="host-floating-toolbar" class="host-floating-toolbar">
+            <div class="host-toolbar-collapsed">
+                <!-- Session Info Button -->
+                <button class="host-toolbar-btn" id="host-session-btn" title="Session Info" onclick="toggleHostPanel('session')">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </button>
+                <!-- File Transfer Button -->
+                <button class="host-toolbar-btn" id="host-file-btn" title="Send File" onclick="toggleHostPanel('file')">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                </button>
+                <!-- End Session Button -->
+                <button class="host-toolbar-btn end-session" id="host-end-btn" title="End Session" onclick="endHostSession()">
+                    <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                </button>
+            </div>
+            
+            <!-- Session Info Panel -->
+            <div id="host-session-panel" class="host-toolbar-panel">
+                <div class="host-panel-header">Connected User</div>
+                <div class="host-session-info">
+                    <div class="host-session-user" id="host-connected-user">
+                        <div class="host-session-user-avatar" id="host-guest-avatar">👤</div>
+                        <div>
+                            <div class="host-session-user-name" id="host-guest-name">Waiting...</div>
+                            <div class="host-session-status" id="host-guest-status">Connected</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="host-end-session-btn" onclick="endHostSession()">
+                    End Session
+                </button>
+            </div>
+            
+            <!-- File Transfer Panel -->
+            <div id="host-file-panel" class="host-toolbar-panel host-file-panel">
+                <div class="host-panel-header">Send File</div>
+                <div class="host-file-drop" id="host-toolbar-file-drop" onclick="selectFileToSendFromToolbar()" ondragover="handleToolbarDragOver(event)" ondragleave="handleToolbarDragLeave(event)" ondrop="handleToolbarFileDrop(event)">
+                    <div class="host-file-drop-icon">📤</div>
+                    <div class="host-file-drop-text">Drop file or click</div>
+                </div>
+                <!-- File Progress -->
+                <div id="host-toolbar-file-progress" style="display: none; margin-top: 10px;">
+                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-bottom: 4px;" id="host-toolbar-file-status">Sending...</div>
+                    <div style="background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; overflow: hidden;">
+                        <div id="host-toolbar-progress-bar" style="background: #8b5cf6; height: 100%; width: 0%; transition: width 0.2s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- File Transfer Drop Zone (Guest) - Floating icon -->
         <div id="guest-file-transfer-zone" style="display: none; position: absolute; bottom: 60px; right: 20px; z-index: 1000003;">
             <div id="guest-file-drop-area" style="width: 80px; height: 80px; background: rgba(97, 61, 169, 0.9); border: 2px dashed rgba(255,255,255,0.5); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px);" onclick="selectFileToSend()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)">
@@ -6899,13 +7161,200 @@
         function showHostFileTransferSection() {
             const section = document.getElementById('host-file-transfer-section');
             if (section) section.style.display = 'block';
+            // Also show the floating toolbar
+            showHostFloatingToolbar();
         }
         
         // Hide host file transfer section when sharing stops
         function hideHostFileTransferSection() {
             const section = document.getElementById('host-file-transfer-section');
             if (section) section.style.display = 'none';
+            // Also hide the floating toolbar
+            hideHostFloatingToolbar();
         }
+        
+        // ==================== Host Floating Toolbar Functions ====================
+        let activeHostPanel = null;
+        
+        function showHostFloatingToolbar() {
+            const toolbar = document.getElementById('host-floating-toolbar');
+            if (toolbar) {
+                toolbar.style.display = 'block';
+            }
+        }
+        
+        function hideHostFloatingToolbar() {
+            const toolbar = document.getElementById('host-floating-toolbar');
+            if (toolbar) {
+                toolbar.style.display = 'none';
+                closeAllHostPanels();
+            }
+        }
+        
+        function toggleHostPanel(panelType) {
+            const sessionPanel = document.getElementById('host-session-panel');
+            const filePanel = document.getElementById('host-file-panel');
+            const sessionBtn = document.getElementById('host-session-btn');
+            const fileBtn = document.getElementById('host-file-btn');
+            
+            // Close all panels first
+            sessionPanel.classList.remove('visible');
+            filePanel.classList.remove('visible');
+            sessionBtn.classList.remove('active');
+            fileBtn.classList.remove('active');
+            
+            // Toggle the requested panel
+            if (activeHostPanel === panelType) {
+                activeHostPanel = null;
+                return;
+            }
+            
+            if (panelType === 'session') {
+                sessionPanel.classList.add('visible');
+                sessionBtn.classList.add('active');
+                activeHostPanel = 'session';
+            } else if (panelType === 'file') {
+                filePanel.classList.add('visible');
+                fileBtn.classList.add('active');
+                activeHostPanel = 'file';
+            }
+        }
+        
+        function closeAllHostPanels() {
+            const sessionPanel = document.getElementById('host-session-panel');
+            const filePanel = document.getElementById('host-file-panel');
+            const sessionBtn = document.getElementById('host-session-btn');
+            const fileBtn = document.getElementById('host-file-btn');
+            
+            if (sessionPanel) sessionPanel.classList.remove('visible');
+            if (filePanel) filePanel.classList.remove('visible');
+            if (sessionBtn) sessionBtn.classList.remove('active');
+            if (fileBtn) fileBtn.classList.remove('active');
+            activeHostPanel = null;
+        }
+        
+        // Close panels when clicking outside
+        document.addEventListener('click', (event) => {
+            const toolbar = document.getElementById('host-floating-toolbar');
+            if (toolbar && !toolbar.contains(event.target) && activeHostPanel) {
+                closeAllHostPanels();
+            }
+        });
+        
+        // Update guest info in toolbar when someone connects
+        function updateHostToolbarGuestInfo(guestInfo) {
+            const nameEl = document.getElementById('host-guest-name');
+            const avatarEl = document.getElementById('host-guest-avatar');
+            const statusEl = document.getElementById('host-guest-status');
+            
+            if (nameEl && guestInfo) {
+                nameEl.textContent = guestInfo.name || guestInfo.username || 'Guest';
+            }
+            if (avatarEl && guestInfo) {
+                if (guestInfo.avatar) {
+                    avatarEl.innerHTML = `<img src="${guestInfo.avatar}" style="width:100%;height:100%;border-radius:8px;object-fit:cover;">`;
+                } else {
+                    const initial = (guestInfo.name || guestInfo.username || 'G').charAt(0).toUpperCase();
+                    avatarEl.textContent = initial;
+                }
+            }
+            if (statusEl) {
+                statusEl.textContent = 'Connected';
+            }
+        }
+        
+        // End host session
+        async function endHostSession() {
+            const confirmed = await window.superdeskModal.confirm(
+                'This will end the screen sharing session for all participants.',
+                'End Session'
+            );
+            
+            if (confirmed) {
+                // Stop screen share
+                if (window.stopScreenShare) {
+                    window.stopScreenShare();
+                }
+                // Hide toolbar
+                hideHostFloatingToolbar();
+                // Notify UI
+                if (window.superdeskModal) {
+                    window.superdeskModal.success('Session ended', 'Session');
+                }
+            }
+        }
+        
+        // Toolbar file transfer functions
+        function selectFileToSendFromToolbar() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file && typeof sendFile === 'function') {
+                    await sendFile(file);
+                }
+            };
+            input.click();
+        }
+        
+        function handleToolbarDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const dropArea = document.getElementById('host-toolbar-file-drop');
+            if (dropArea) {
+                dropArea.style.borderColor = '#10b981';
+                dropArea.style.background = 'rgba(16, 185, 129, 0.2)';
+            }
+        }
+        
+        function handleToolbarDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const dropArea = document.getElementById('host-toolbar-file-drop');
+            if (dropArea) {
+                dropArea.style.borderColor = 'rgba(255,255,255,0.2)';
+                dropArea.style.background = 'transparent';
+            }
+        }
+        
+        async function handleToolbarFileDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const dropArea = document.getElementById('host-toolbar-file-drop');
+            if (dropArea) {
+                dropArea.style.borderColor = 'rgba(255,255,255,0.2)';
+                dropArea.style.background = 'transparent';
+            }
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0 && typeof sendFile === 'function') {
+                await sendFile(files[0]);
+            }
+        }
+        
+        // Update toolbar file progress
+        function updateToolbarFileProgress(percent, status) {
+            const progressContainer = document.getElementById('host-toolbar-file-progress');
+            const progressBar = document.getElementById('host-toolbar-progress-bar');
+            const statusEl = document.getElementById('host-toolbar-file-status');
+            
+            if (progressContainer) progressContainer.style.display = 'block';
+            if (progressBar) progressBar.style.width = percent + '%';
+            if (statusEl) statusEl.textContent = status || 'Sending...';
+        }
+        
+        function hideToolbarFileProgress() {
+            const progressContainer = document.getElementById('host-toolbar-file-progress');
+            if (progressContainer) progressContainer.style.display = 'none';
+        }
+        
+        // Expose functions globally
+        window.showHostFloatingToolbar = showHostFloatingToolbar;
+        window.hideHostFloatingToolbar = hideHostFloatingToolbar;
+        window.updateHostToolbarGuestInfo = updateHostToolbarGuestInfo;
+        window.updateToolbarFileProgress = updateToolbarFileProgress;
+        window.hideToolbarFileProgress = hideToolbarFileProgress;
         
         // Handle drag over event
         function handleDragOver(event) {
