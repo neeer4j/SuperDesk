@@ -326,6 +326,9 @@ function handleFileOffer(offer) {
     // Store pending offer
     state.pendingOffer = offer;
     
+    // Show desktop notification so user knows even if app is minimized
+    showFileTransferNotification(offer);
+    
     // Check if auto-accept is enabled
     if (state.autoAccept) {
         console.log('📁 Auto-accepting file offer');
@@ -335,6 +338,46 @@ function handleFileOffer(offer) {
     
     // Show accept/reject dialog
     showFileOfferDialog(offer);
+}
+
+/**
+ * Show desktop notification for incoming file transfer
+ * @param {Object} offer - The file offer details
+ */
+function showFileTransferNotification(offer) {
+    const fileSize = formatFileSize(offer.size);
+    
+    // Use Electron's IPC to show native notification
+    if (window.require) {
+        try {
+            const { ipcRenderer } = window.require('electron');
+            ipcRenderer.send('show-notification', {
+                title: '📁 Incoming File Transfer',
+                body: `${offer.name} (${fileSize})`,
+                onClick: 'file-transfer'
+            });
+        } catch (e) {
+            console.log('📁 Could not show native notification:', e);
+        }
+    }
+    
+    // Fallback to web notification API
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Incoming File Transfer', {
+            body: `${offer.name} (${fileSize})`,
+            icon: 'assets/icon.png'
+        });
+    }
+}
+
+/**
+ * Format file size to human readable string
+ */
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
 }
 
 /**

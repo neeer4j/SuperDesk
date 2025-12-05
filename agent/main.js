@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen, dialog, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
@@ -343,10 +343,14 @@ ipcMain.on('robot-keyboard-event', async (_event, data = {}) => {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    fullscreen: true,
+    width: 1280,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
     frame: false,
     transparent: false,
-  backgroundColor: '#613da9',
+    backgroundColor: '#613da9',
+    show: false, // Don't show until ready
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -361,6 +365,12 @@ function createWindow() {
 
   // Load the agent interface
   mainWindow.loadFile('agent.html');
+
+  // Maximize and show window when ready
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.maximize();
+    mainWindow.show();
+  });
 
   // Open DevTools only in development mode (optional)
   // mainWindow.webContents.openDevTools();
@@ -396,6 +406,32 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+
+  // Handle show-notification IPC for file transfer alerts
+  ipcMain.on('show-notification', (event, { title, body, onClick }) => {
+    if (Notification.isSupported()) {
+      const notification = new Notification({
+        title: title || 'SuperDesk',
+        body: body || '',
+        icon: path.join(__dirname, 'assets', 'icon.png'),
+        silent: false
+      });
+      
+      notification.on('click', () => {
+        // Bring window to front when notification is clicked
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.focus();
+        }
+        // Send click event back to renderer if needed
+        if (onClick && mainWindow) {
+          mainWindow.webContents.send('notification-clicked', onClick);
+        }
+      });
+      
+      notification.show();
+    }
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
