@@ -419,11 +419,11 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 mandatory: {
                     chromeMediaSource: 'desktop',
                     chromeMediaSourceId: sourceId,
-                    minWidth: 1280,
+                    minWidth: 640,
                     maxWidth: 1920,
-                    minHeight: 720,
+                    minHeight: 480,
                     maxHeight: 1080,
-                    minFrameRate: 15,
+                    minFrameRate: 5,
                     maxFrameRate: 30
                 }
             }
@@ -1134,6 +1134,11 @@ async function confirmSourceSelection() {
         if (typeof showHostFileTransferSection === 'function') {
             showHostFileTransferSection();
         }
+        
+        // Show host floating toolbar
+        if (typeof window.showHostFloatingToolbar === 'function') {
+            window.showHostFloatingToolbar();
+        }
 
     } catch (error) {
         console.error('Failed to start screen sharing:', error);
@@ -1465,6 +1470,11 @@ function stopScreenShare() {
     // Hide file transfer section
     if (typeof hideHostFileTransferSection === 'function') {
         hideHostFileTransferSection();
+    }
+    
+    // Hide host floating toolbar
+    if (typeof window.hideHostFloatingToolbar === 'function') {
+        window.hideHostFloatingToolbar();
     }
     
     console.log('✅ Screen sharing stopped and remote control disabled');
