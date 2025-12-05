@@ -1125,6 +1125,34 @@
             font-weight: 500;
         }
 
+        /* End Session Button in Share View */
+        .end-session-main-btn {
+            margin-top: 12px;
+            padding: 14px 32px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            color: #f87171;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .end-session-main-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .end-session-main-btn svg {
+            stroke: currentColor;
+        }
+
         /* Session Info Panel */
         .session-info-panel {
             display: flex;
@@ -1283,8 +1311,13 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            z-index: 999999;
+            z-index: 9999999; /* Very high z-index to always be on top */
             display: none; /* Hidden by default, shown when sharing */
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
         }
 
         .host-toolbar-collapsed {
@@ -1807,7 +1840,7 @@
             background: rgba(255, 255, 255, 0.08);
         }
 
-        /* Waiting Card */
+        /* Waiting Card - OLD (keeping for compatibility) */
         .waiting-card {
             background: var(--card-bg);
             backdrop-filter: blur(20px);
@@ -1822,6 +1855,72 @@
 
         .waiting-card.visible {
             display: block;
+        }
+
+        /* Waiting Status Card - NEW compact version for side panel */
+        .waiting-status-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .waiting-status-card.visible {
+            display: flex;
+        }
+
+        .waiting-status-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(139, 92, 246, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .waiting-status-icon svg {
+            width: 22px;
+            height: 22px;
+            stroke: #8b5cf6;
+        }
+
+        .waiting-status-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .waiting-status-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .waiting-status-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .waiting-status-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            border-top-color: #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         .waiting-icon {
@@ -1854,6 +1953,295 @@
         .waiting-subtitle {
             font-size: 14px;
             color: var(--text-muted);
+        }
+
+        /* ==================== FILES VIEW - File Transfer Section ==================== */
+        #files-view {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #files-view.hidden {
+            display: none !important;
+        }
+
+        .files-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 24px;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        @media (max-width: 900px) {
+            .files-layout {
+                grid-template-columns: 1fr;
+            }
+            .files-info-panel {
+                display: none;
+            }
+        }
+
+        .files-main-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+        }
+
+        .files-visual {
+            position: relative;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 140px;
+            height: 140px;
+        }
+
+        .files-visual-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.1));
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .files-visual-icon svg {
+            width: 50px;
+            height: 50px;
+            stroke: #8b5cf6;
+        }
+
+        .files-visual-rings {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 140px;
+            height: 140px;
+            border: 2px solid rgba(139, 92, 246, 0.15);
+            border-radius: 50%;
+            animation: pulse-ring 2s ease-out infinite;
+            z-index: 1;
+        }
+
+        .files-status-info {
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .files-status-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .files-status-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .files-drop-area {
+            width: 100%;
+            max-width: 400px;
+            padding: 32px;
+            border: 2px dashed rgba(139, 92, 246, 0.3);
+            border-radius: 16px;
+            background: rgba(139, 92, 246, 0.05);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 24px;
+        }
+
+        .files-drop-area:hover {
+            border-color: rgba(139, 92, 246, 0.6);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .files-drop-area.dragover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .files-drop-icon {
+            margin-bottom: 12px;
+        }
+
+        .files-drop-icon svg {
+            width: 48px;
+            height: 48px;
+            stroke: #8b5cf6;
+        }
+
+        .files-drop-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .files-drop-hint {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .files-progress {
+            width: 100%;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .files-progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .files-progress-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .files-progress-percent {
+            font-size: 13px;
+            font-weight: 600;
+            color: #8b5cf6;
+        }
+
+        .files-progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .files-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #6366f1);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .files-progress-status {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .files-info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .files-recent-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .files-recent-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .files-recent-header svg {
+            stroke: currentColor;
+        }
+
+        .files-recent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .files-recent-empty {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 20px;
+        }
+
+        .files-recent-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: rgba(139, 92, 246, 0.05);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .files-recent-item:hover {
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .files-recent-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(139, 92, 246, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #8b5cf6;
+        }
+
+        .files-recent-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .files-recent-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .files-recent-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .files-drop-area.drag-over {
+            border-color: #10b981 !important;
+            background: rgba(16, 185, 129, 0.15) !important;
+            transform: scale(1.01);
         }
 
         /* ==================== FRIENDS - Professional Layout ==================== */
@@ -4495,6 +4883,9 @@
                 <button class="nav-item" data-view="join" title="Join Session">
                     <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                 </button>
+                <button class="nav-item" data-view="files" title="File Transfer">
+                    <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
+                </button>
                 <button class="nav-item" data-view="friends" title="Friends">
                     <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </button>
@@ -4763,6 +5154,12 @@
                                 <span class="btn-text">Start Sharing</span>
                                 <span class="btn-hint">Waiting for guest to connect...</span>
                             </button>
+                            
+                            <!-- End Session Button (shown when sharing) -->
+                            <button class="end-session-main-btn" id="end-session-main-btn" style="display: none;" onclick="endHostSession()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                                <span>End Session</span>
+                            </button>
                         </div>
 
                         <!-- Side Info Panel -->
@@ -4795,44 +5192,6 @@
                                 <div class="info-card-text">
                                     Send an invite directly to a friend from the Messages tab for faster setup.
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Host File Transfer Section (shown when sharing) -->
-                    <div id="host-file-transfer-section" class="file-transfer-section" style="display: none;">
-                        <div class="file-transfer-header">
-                            <div class="file-transfer-title">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                <span>File Transfer</span>
-                            </div>
-                            <label class="file-transfer-toggle">
-                                <span>Enabled</span>
-                                <div class="toggle-switch active" id="host-file-transfer-toggle" onclick="toggleHostFileTransfer()"></div>
-                            </label>
-                        </div>
-                        <div id="host-file-drop-area" class="file-drop-area" onclick="selectFileToSend()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)">
-                            <span class="file-drop-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            </span>
-                            <span class="file-drop-text">Drag & drop a file here or click to select</span>
-                        </div>
-                        <div id="host-send-progress" class="file-progress" style="display: none;">
-                            <div class="file-progress-header">
-                                <span id="host-send-status">Sending...</span>
-                                <span id="host-send-percent">0%</span>
-                            </div>
-                            <div class="file-progress-bar">
-                                <div id="host-send-progress-bar" class="file-progress-fill"></div>
-                            </div>
-                        </div>
-                        <div id="host-receive-progress" class="file-progress" style="display: none;">
-                            <div class="file-progress-header">
-                                <span id="host-receive-status">Receiving...</span>
-                                <span id="host-receive-percent">0%</span>
-                            </div>
-                            <div class="file-progress-bar receive">
-                                <div id="host-receive-progress-bar" class="file-progress-fill"></div>
                             </div>
                         </div>
                     </div>
@@ -4913,15 +5272,94 @@
                                     <button onclick="copyDebugLog()">Copy</button>
                                 </div>
                             </div>
+                            
+                            <!-- Waiting Status Card (inside side panel) -->
+                            <div id="waiting-message" class="waiting-status-card">
+                                <div class="waiting-status-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                </div>
+                                <div class="waiting-status-content">
+                                    <div class="waiting-status-title">Waiting for host...</div>
+                                    <div class="waiting-status-subtitle">Screen will open in popup</div>
+                                </div>
+                                <div class="waiting-status-spinner"></div>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div id="waiting-message" class="waiting-card">
-                        <div class="waiting-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <!-- Files View (File Transfer Section) -->
+                <div class="content-view hidden" id="files-view">
+                    <div class="files-layout">
+                        <!-- File Transfer Main Card -->
+                        <div class="files-main-card">
+                            <div class="files-visual">
+                                <div class="files-visual-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
+                                </div>
+                                <div class="files-visual-rings"></div>
+                            </div>
+                            
+                            <div class="files-status-info">
+                                <div class="files-status-title" id="files-status-title">File Transfer</div>
+                                <div class="files-status-subtitle" id="files-status-subtitle">Connect to a session to send or receive files</div>
+                            </div>
+                            
+                            <!-- File Drop Area -->
+                            <div id="files-drop-area" class="files-drop-area" onclick="selectFileFromFilesView()" ondragover="handleFilesViewDragOver(event)" ondragleave="handleFilesViewDragLeave(event)" ondrop="handleFilesViewDrop(event)">
+                                <div class="files-drop-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                </div>
+                                <div class="files-drop-text">Drag & drop files here</div>
+                                <div class="files-drop-hint">or click to browse</div>
+                            </div>
+                            
+                            <!-- File Progress -->
+                            <div id="files-view-progress" class="files-progress" style="display: none;">
+                                <div class="files-progress-info">
+                                    <span class="files-progress-name" id="files-progress-name">file.txt</span>
+                                    <span class="files-progress-percent" id="files-progress-percent">0%</span>
+                                </div>
+                                <div class="files-progress-bar">
+                                    <div class="files-progress-fill" id="files-progress-fill"></div>
+                                </div>
+                                <div class="files-progress-status" id="files-progress-status">Sending...</div>
+                            </div>
                         </div>
-                        <div class="waiting-title">Waiting for host's screen...</div>
-                        <div class="waiting-subtitle">The remote desktop will open in a popup window once the host starts sharing</div>
+
+                        <!-- Files Info Panel -->
+                        <div class="files-info-panel">
+                            <div class="info-card">
+                                <div class="info-card-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                </div>
+                                <div class="info-card-title">How it works</div>
+                                <div class="info-card-text">
+                                    Files are transferred directly peer-to-peer. Start or join a session first, then use this page to send files.
+                                </div>
+                            </div>
+                            
+                            <div class="info-card">
+                                <div class="info-card-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                </div>
+                                <div class="info-card-title">Secure Transfer</div>
+                                <div class="info-card-text">
+                                    All files are encrypted end-to-end and transferred directly between devices.
+                                </div>
+                            </div>
+                            
+                            <!-- Recent Files (placeholder) -->
+                            <div class="files-recent-card">
+                                <div class="files-recent-header">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    <span>Recent Transfers</span>
+                                </div>
+                                <div class="files-recent-list" id="files-recent-list">
+                                    <div class="files-recent-empty">No recent transfers</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -5811,6 +6249,8 @@
 
         function switchView(view) {
             currentView = view;
+            // Debugging: log view switches for QA
+            console.log('🧭 Switching view ->', view);
 
             // Update nav items
             document.querySelectorAll('.nav-item').forEach(item => {
@@ -5842,6 +6282,11 @@
                     title: 'Join Session', 
                     subtitle: 'Connect to a remote desktop' 
                 },
+                'files': { 
+                    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>', 
+                    title: 'File Transfer', 
+                    subtitle: 'Send and receive files' 
+                },
                 'friends': { 
                     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', 
                     title: 'Friends', 
@@ -5862,6 +6307,18 @@
             
             // Save app state so view is remembered on reload
             saveAppState();
+
+            // If switching to files view, refresh its status UI
+            if (view === 'files') {
+                try {
+                    if (typeof updateFilesViewStatus === 'function') {
+                        console.log('📁 Updating Files View status (switchView)');
+                        updateFilesViewStatus();
+                    }
+                } catch (e) {
+                    console.error('Failed to update Files View status:', e);
+                }
+            }
             
             // Refresh data and ensure listeners when switching to friends or messages view
             if (view === 'friends' || view === 'messages') {
@@ -6337,6 +6794,62 @@
         </div>
     </div>
 
+    <!-- Host Floating Toolbar (shown when HOST is sharing - OUTSIDE popup so it's visible on host screen) -->
+    <div id="host-floating-toolbar" class="host-floating-toolbar">
+        <div class="host-toolbar-collapsed">
+            <!-- Sharing Indicator -->
+            <div style="display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #10b981; font-size: 12px; font-weight: 600;">
+                <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: pulse-dot 1.5s ease infinite;"></span>
+                SHARING
+            </div>
+            <!-- Session Info Button -->
+            <button class="host-toolbar-btn" id="host-session-btn" title="Session Info" onclick="toggleHostPanel('session')">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </button>
+            <!-- File Transfer Button -->
+            <button class="host-toolbar-btn" id="host-file-btn" title="Send File" onclick="toggleHostPanel('file')">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </button>
+            <!-- End Session Button -->
+            <button class="host-toolbar-btn end-session" id="host-end-btn" title="End Session" onclick="endHostSession()">
+                <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+            </button>
+        </div>
+        
+        <!-- Session Info Panel -->
+        <div id="host-session-panel" class="host-toolbar-panel">
+            <div class="host-panel-header">Connected User</div>
+            <div class="host-session-info">
+                <div class="host-session-user" id="host-connected-user">
+                    <div class="host-session-user-avatar" id="host-guest-avatar">👤</div>
+                    <div>
+                        <div class="host-session-user-name" id="host-guest-name">Waiting...</div>
+                        <div class="host-session-status" id="host-guest-status">Connected</div>
+                    </div>
+                </div>
+            </div>
+            <button class="host-end-session-btn" onclick="endHostSession()">
+                End Session
+            </button>
+        </div>
+        
+        <!-- File Transfer Panel -->
+        <div id="host-file-panel" class="host-toolbar-panel host-file-panel">
+            <div class="host-panel-header">Send File</div>
+            <div class="host-file-drop" id="host-toolbar-file-drop" onclick="selectFileToSendFromToolbar()" ondragover="handleToolbarDragOver(event)" ondragleave="handleToolbarDragLeave(event)" ondrop="handleToolbarFileDrop(event)">
+                <div class="host-file-drop-icon">📤</div>
+                <div class="host-file-drop-text">Drop file or click</div>
+            </div>
+            <!-- File Progress -->
+            <div id="host-toolbar-file-progress" style="display: none; margin-top: 10px;">
+                <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-bottom: 4px;" id="host-toolbar-file-status">Sending...</div>
+                <div style="background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; overflow: hidden;">
+                    <div id="host-toolbar-progress-bar" style="background: #8b5cf6; height: 100%; width: 0%; transition: width 0.2s;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Remote Desktop Popup Viewer (for guests joining sessions) -->
     <div id="remote-desktop-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; flex-direction: column;">
         <!-- Centered control bar at top (auto-hide after 3s) -->
@@ -6351,61 +6864,10 @@
             <button id="end-session-btn" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;">
                 ✕ Close
             </button>
-            <!-- File Transfer Toggle Button (Guest) -->
-            <button id="file-transfer-toggle-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;" onclick="toggleFileTransferUI()">
-                📁 Files
+            <!-- File Transfer Toggle Button (Guest) - Styled with gradient -->
+            <button id="file-transfer-toggle-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);" onclick="toggleFileTransferUI()">
+                <span style="display: flex; align-items: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Files</span>
             </button>
-        </div>
-        
-        <!-- Host Floating Toolbar (shown when sharing as host) -->
-        <div id="host-floating-toolbar" class="host-floating-toolbar">
-            <div class="host-toolbar-collapsed">
-                <!-- Session Info Button -->
-                <button class="host-toolbar-btn" id="host-session-btn" title="Session Info" onclick="toggleHostPanel('session')">
-                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </button>
-                <!-- File Transfer Button -->
-                <button class="host-toolbar-btn" id="host-file-btn" title="Send File" onclick="toggleHostPanel('file')">
-                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                </button>
-                <!-- End Session Button -->
-                <button class="host-toolbar-btn end-session" id="host-end-btn" title="End Session" onclick="endHostSession()">
-                    <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-                </button>
-            </div>
-            
-            <!-- Session Info Panel -->
-            <div id="host-session-panel" class="host-toolbar-panel">
-                <div class="host-panel-header">Connected User</div>
-                <div class="host-session-info">
-                    <div class="host-session-user" id="host-connected-user">
-                        <div class="host-session-user-avatar" id="host-guest-avatar">👤</div>
-                        <div>
-                            <div class="host-session-user-name" id="host-guest-name">Waiting...</div>
-                            <div class="host-session-status" id="host-guest-status">Connected</div>
-                        </div>
-                    </div>
-                </div>
-                <button class="host-end-session-btn" onclick="endHostSession()">
-                    End Session
-                </button>
-            </div>
-            
-            <!-- File Transfer Panel -->
-            <div id="host-file-panel" class="host-toolbar-panel host-file-panel">
-                <div class="host-panel-header">Send File</div>
-                <div class="host-file-drop" id="host-toolbar-file-drop" onclick="selectFileToSendFromToolbar()" ondragover="handleToolbarDragOver(event)" ondragleave="handleToolbarDragLeave(event)" ondrop="handleToolbarFileDrop(event)">
-                    <div class="host-file-drop-icon">📤</div>
-                    <div class="host-file-drop-text">Drop file or click</div>
-                </div>
-                <!-- File Progress -->
-                <div id="host-toolbar-file-progress" style="display: none; margin-top: 10px;">
-                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-bottom: 4px;" id="host-toolbar-file-status">Sending...</div>
-                    <div style="background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; overflow: hidden;">
-                        <div id="host-toolbar-progress-bar" style="background: #8b5cf6; height: 100%; width: 0%; transition: width 0.2s;"></div>
-                    </div>
-                </div>
-            </div>
         </div>
         
         <!-- File Transfer Drop Zone (Guest) - Floating icon -->
@@ -7159,18 +7621,20 @@
         
         // Show host file transfer section when sharing starts
         function showHostFileTransferSection() {
-            const section = document.getElementById('host-file-transfer-section');
-            if (section) section.style.display = 'block';
-            // Also show the floating toolbar
+            // Show the floating toolbar for host
             showHostFloatingToolbar();
+            // Show the End Session button in main view
+            const endBtn = document.getElementById('end-session-main-btn');
+            if (endBtn) endBtn.style.display = 'flex';
         }
         
         // Hide host file transfer section when sharing stops
         function hideHostFileTransferSection() {
-            const section = document.getElementById('host-file-transfer-section');
-            if (section) section.style.display = 'none';
-            // Also hide the floating toolbar
+            // Hide the floating toolbar
             hideHostFloatingToolbar();
+            // Hide the End Session button in main view
+            const endBtn = document.getElementById('end-session-main-btn');
+            if (endBtn) endBtn.style.display = 'none';
         }
         
         // ==================== Host Floating Toolbar Functions ====================
@@ -7180,6 +7644,7 @@
             const toolbar = document.getElementById('host-floating-toolbar');
             if (toolbar) {
                 toolbar.style.display = 'block';
+                console.log('✅ Host floating toolbar shown');
             }
         }
         
@@ -7188,6 +7653,7 @@
             if (toolbar) {
                 toolbar.style.display = 'none';
                 closeAllHostPanels();
+                console.log('✅ Host floating toolbar hidden');
             }
         }
         
@@ -7352,6 +7818,8 @@
         // Expose functions globally
         window.showHostFloatingToolbar = showHostFloatingToolbar;
         window.hideHostFloatingToolbar = hideHostFloatingToolbar;
+        window.showHostFileTransferSection = showHostFileTransferSection;
+        window.hideHostFileTransferSection = hideHostFileTransferSection;
         window.updateHostToolbarGuestInfo = updateHostToolbarGuestInfo;
         window.updateToolbarFileProgress = updateToolbarFileProgress;
         window.hideToolbarFileProgress = hideToolbarFileProgress;
@@ -7563,6 +8031,201 @@
             };
             return icons[ext] || '📄';
         }
+        
+        // ==================== FILES VIEW FUNCTIONS ====================
+        
+        // Handle drag over for Files View
+        function handleFilesViewDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const dropArea = document.getElementById('files-drop-area');
+            if (dropArea) {
+                dropArea.classList.add('drag-over');
+            }
+        }
+        
+        // Handle drag leave for Files View
+        function handleFilesViewDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const dropArea = document.getElementById('files-drop-area');
+            if (dropArea) {
+                dropArea.classList.remove('drag-over');
+            }
+        }
+        
+        // Handle file drop in Files View
+        async function handleFilesViewDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const dropArea = document.getElementById('files-drop-area');
+            if (dropArea) {
+                dropArea.classList.remove('drag-over');
+            }
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                await sendFileFromFilesView(files[0]);
+            }
+        }
+        
+        // Select file via file picker from Files View
+        async function selectFileFromFilesView() {
+            console.log('📁 Opening file picker from Files View...');
+            
+            // Check if connected to a session
+            if (!window.fileTransfer || !window.fileTransfer.isConnected) {
+                if (window.superdeskModal) {
+                    window.superdeskModal.info('Connect to a session first to send files.', 'Not Connected');
+                }
+                return;
+            }
+            
+            try {
+                if (window.appControls && window.appControls.ipcInvoke) {
+                    const result = await window.appControls.ipcInvoke('open-file-dialog');
+                    
+                    if (result.success) {
+                        const uint8Array = new Uint8Array(result.data);
+                        const blob = new Blob([uint8Array]);
+                        const file = new File([blob], result.fileName, { type: 'application/octet-stream' });
+                        await sendFileFromFilesView(file);
+                    } else if (!result.cancelled) {
+                        throw new Error(result.error || 'Failed to open file');
+                    }
+                } else {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.onchange = async (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            await sendFileFromFilesView(file);
+                        }
+                    };
+                    input.click();
+                }
+            } catch (error) {
+                console.error('📁 Error selecting file:', error);
+                if (window.superdeskModal) {
+                    window.superdeskModal.error('Failed to select file: ' + error.message, 'Error');
+                }
+            }
+        }
+        
+        // Send file from Files View
+        async function sendFileFromFilesView(file) {
+            if (!window.fileTransfer) {
+                if (window.superdeskModal) {
+                    window.superdeskModal.error('File transfer not available. Connect to a session first.', 'Error');
+                }
+                return;
+            }
+            
+            // Show progress in Files View
+            const progressEl = document.getElementById('files-view-progress');
+            const progressName = document.getElementById('files-progress-name');
+            const progressFill = document.getElementById('files-progress-fill');
+            const progressPercent = document.getElementById('files-progress-percent');
+            const progressStatus = document.getElementById('files-progress-status');
+            
+            if (progressEl) progressEl.style.display = 'block';
+            if (progressName) progressName.textContent = file.name;
+            if (progressFill) progressFill.style.width = '0%';
+            if (progressPercent) progressPercent.textContent = '0%';
+            if (progressStatus) progressStatus.textContent = 'Preparing...';
+            
+            // Update progress callback
+            const originalUpdateSend = window.updateFileSendProgress;
+            window.updateFileSendProgress = function(percent, status) {
+                // Call original
+                if (originalUpdateSend) originalUpdateSend(percent, status);
+                
+                // Update Files View progress
+                if (progressFill) progressFill.style.width = percent + '%';
+                if (progressPercent) progressPercent.textContent = Math.round(percent) + '%';
+                if (progressStatus) progressStatus.textContent = status || 'Sending...';
+                
+                // Add to recent when complete
+                if (percent >= 100) {
+                    setTimeout(() => {
+                        if (progressEl) progressEl.style.display = 'none';
+                        addToRecentTransfers(file.name, file.size, 'sent');
+                    }, 1000);
+                }
+            };
+            
+            // Send the file
+            try {
+                await window.fileTransfer.sendFile(file);
+            } catch (error) {
+                console.error('📁 Error sending file:', error);
+                if (progressEl) progressEl.style.display = 'none';
+                if (window.superdeskModal) {
+                    window.superdeskModal.error('Failed to send file: ' + error.message, 'Error');
+                }
+            }
+        }
+        
+        // Add file to recent transfers list
+        function addToRecentTransfers(filename, size, direction) {
+            const listEl = document.getElementById('files-recent-list');
+            if (!listEl) return;
+            
+            // Remove empty message
+            const emptyMsg = listEl.querySelector('.files-recent-empty');
+            if (emptyMsg) emptyMsg.remove();
+            
+            // Create new item
+            const item = document.createElement('div');
+            item.className = 'files-recent-item';
+            item.innerHTML = `
+                <span class="files-recent-icon">${direction === 'sent' ? '↑' : '↓'}</span>
+                <div class="files-recent-info">
+                    <div class="files-recent-name">${filename}</div>
+                    <div class="files-recent-meta">${formatFileSize(size)} • ${direction === 'sent' ? 'Sent' : 'Received'}</div>
+                </div>
+            `;
+            
+            // Add to top of list
+            listEl.insertBefore(item, listEl.firstChild);
+            
+            // Limit to 10 items
+            const items = listEl.querySelectorAll('.files-recent-item');
+            if (items.length > 10) {
+                items[items.length - 1].remove();
+            }
+        }
+        
+        // Update Files View status based on connection
+        function updateFilesViewStatus() {
+            const titleEl = document.getElementById('files-status-title');
+            const subtitleEl = document.getElementById('files-status-subtitle');
+            const dropArea = document.getElementById('files-drop-area');
+            
+            const isConnected = window.fileTransfer && window.fileTransfer.isConnected;
+            
+            if (titleEl) {
+                titleEl.textContent = isConnected ? 'Ready to Transfer' : 'File Transfer';
+            }
+            if (subtitleEl) {
+                subtitleEl.textContent = isConnected 
+                    ? 'Drag & drop files or click to browse' 
+                    : 'Connect to a session to send or receive files';
+            }
+            if (dropArea) {
+                dropArea.style.opacity = isConnected ? '1' : '0.5';
+                dropArea.style.pointerEvents = isConnected ? 'auto' : 'none';
+            }
+        }
+        
+        // Expose Files View functions
+        window.handleFilesViewDragOver = handleFilesViewDragOver;
+        window.handleFilesViewDragLeave = handleFilesViewDragLeave;
+        window.handleFilesViewDrop = handleFilesViewDrop;
+        window.selectFileFromFilesView = selectFileFromFilesView;
+        window.updateFilesViewStatus = updateFilesViewStatus;
+        window.addToRecentTransfers = addToRecentTransfers;
 
         // ==================== FRIENDS & MESSAGES SYSTEM ====================
         
