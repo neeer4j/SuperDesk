@@ -24,21 +24,21 @@
             --sidebar-border: rgba(97, 61, 169, 0.12);
             --text-primary: #ffffff;
             --text-secondary: rgba(255, 255, 255, 0.9);
-            --text-muted: rgba(255, 255, 255, 0.65);
-            --card-bg: rgba(255, 255, 255, 0.12);
-            --card-border: rgba(255, 255, 255, 0.15);
-            --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
-            --input-bg: rgba(0, 0, 0, 0.15);
-            --input-border: rgba(255, 255, 255, 0.2);
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --card-bg: rgba(80, 45, 140, 0.55);
+            --card-border: rgba(255, 255, 255, 0.18);
+            --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-border: rgba(255, 255, 255, 0.25);
             --btn-primary-bg: #ffffff;
             --btn-primary-text: #613da9;
             --settings-bg: #5a3498;
-            --settings-item-bg: rgba(255, 255, 255, 0.1);
+            --settings-item-bg: rgba(255, 255, 255, 0.12);
             --modal-bg: linear-gradient(145deg, #7c4dbd 0%, #5a3498 100%);
             --logo-image: url('assets/superdesk.png');
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.12);
-            --accent-glow: rgba(255, 255, 255, 0.2);
+            --glass-bg: rgba(80, 45, 140, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --accent-glow: rgba(255, 255, 255, 0.25);
             /* Light mode specific depth colors */
             --depth-1: rgba(0, 0, 0, 0.08);
             --depth-2: rgba(0, 0, 0, 0.12);
@@ -75,6 +75,20 @@
             --depth-2: rgba(0, 0, 0, 0.3);
             --depth-3: rgba(0, 0, 0, 0.4);
             --highlight: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Landing page logo theme switching */
+        .landing-logo-light {
+            display: block;
+        }
+        .landing-logo-dark {
+            display: none !important;
+        }
+        [data-theme="dark"] .landing-logo-light {
+            display: none !important;
+        }
+        [data-theme="dark"] .landing-logo-dark {
+            display: block !important;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -222,8 +236,8 @@
             background: white;
             color: #613da9;
         }
-        .btn-primary:hover:not(:disabled) { background: #f5f5f5; }
-        .btn-primary:active:not(:disabled) { background: #e8e8e8; }
+        .btn-primary:hover:not(:disabled) { background: #f5f5f5; color: #4a2d82; }
+        .btn-primary:active:not(:disabled) { background: #613da9; color: white; }
         .btn-warning {
             background: transparent;
             color: white;
@@ -233,9 +247,11 @@
         .btn-warning:active { background: rgba(255,255,255,0.25); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .logo-large {
-            width: 100%;
-            max-width: 220px;
-            margin-bottom: 32px;
+            width: 85%;
+            max-width: 500px;
+            height: auto;
+            margin: 0 auto 16px auto;
+            display: block;
             filter: drop-shadow(0 8px 32px rgba(var(--primary-bg-rgb),0.15));
             animation: fadeInUp 0.7s ease-out;
         }
@@ -334,22 +350,80 @@
             color: #4a2d82;
         }
 
-        :root .settings-btn {
+        html:not([data-theme="dark"]) .settings-btn {
             color: #613da9;
         }
 
-        :root .settings-btn:hover {
+        html:not([data-theme="dark"]) .settings-btn:hover {
             background: rgba(97, 61, 169, 0.1);
             color: #4a2d82;
         }
 
-        :root .logout-nav-btn {
+        html:not([data-theme="dark"]) .settings-btn svg {
+            stroke: #613da9;
+        }
+
+        html:not([data-theme="dark"]) .back-nav-btn {
             color: #613da9 !important;
         }
 
-        :root .logout-nav-btn:hover {
-            color: #ef4444 !important;
-            background: rgba(239, 68, 68, 0.1);
+        html:not([data-theme="dark"]) .back-nav-btn:hover {
+            color: #4a2d82 !important;
+            background: rgba(97, 61, 169, 0.1);
+        }
+
+        html:not([data-theme="dark"]) .back-nav-btn svg {
+            stroke: #613da9;
+        }
+
+        /* Light mode - improve icon and text visibility on cards */
+        :root .info-card-icon {
+            color: #ffffff;
+        }
+
+        :root .info-card-icon svg {
+            stroke: #ffffff;
+        }
+
+        :root .info-card-title {
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        :root .info-card-text {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        :root .session-visual-icon {
+            color: #ffffff;
+        }
+
+        :root .session-visual-icon svg {
+            stroke: #ffffff;
+        }
+
+        :root .session-id-label {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        :root .session-status-item {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        :root .start-sharing-btn .btn-hint {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        :root .join-visual-icon {
+            color: #ffffff;
+        }
+
+        :root .join-visual-icon svg {
+            stroke: #ffffff;
+        }
+
+        :root .join-label {
+            color: rgba(255, 255, 255, 0.85);
         }
 
         /* Dark mode override - reset to dark values */
@@ -2329,7 +2403,7 @@
             width: 44px;
             height: 44px;
             border-radius: 12px;
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2338,6 +2412,18 @@
             color: white;
             text-transform: uppercase;
             flex-shrink: 0;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .friend-avatar img {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            object-fit: cover;
+            border-radius: 12px;
+            display: block;
         }
 
         .friend-details {
@@ -2562,7 +2648,7 @@
             width: 48px;
             height: 48px;
             border-radius: 14px;
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2572,6 +2658,17 @@
             text-transform: uppercase;
             position: relative;
             flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .conversation-avatar img {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            min-height: 48px;
+            object-fit: cover;
+            border-radius: 14px;
+            display: block;
         }
 
         .conversation-avatar .status-indicator {
@@ -2709,13 +2806,24 @@
             width: 44px;
             height: 44px;
             border-radius: 12px;
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 16px;
             font-weight: 700;
             color: white;
+            overflow: hidden;
+        }
+
+        .chat-user-avatar img {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            object-fit: cover;
+            border-radius: 12px;
+            display: block;
         }
 
         .chat-user-details {
@@ -2984,9 +3092,11 @@
         }
 
         .logo-large {
-            width: 100%;
-            max-width: 300px;
-            margin-bottom: 40px;
+            width: 85%;
+            max-width: 500px;
+            height: auto;
+            margin: 0 auto 16px auto;
+            display: block;
             filter: drop-shadow(0 10px 40px rgba(0, 0, 0, 0.3));
             animation: fadeInUp 0.8s ease-out;
         }
@@ -4058,7 +4168,8 @@
         <!-- Left Panel -->
         <div class="auth-left">
             <div style="position: relative; z-index: 1; text-align: center;">
-                <img src="assets/superdesk.png" alt="SuperDesk" class="logo-large">
+                <img src="assets/superdeskL.png" alt="SuperDesk" class="logo-large landing-logo-light">
+                <img src="assets/superdeskwL.png" alt="SuperDesk" class="logo-large landing-logo-dark">
                 <div class="brand-text">
                     Secure remote desktop sharing<br />
                     for modern teams
@@ -4186,8 +4297,8 @@
                 <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
             
-            <button class="nav-item logout-nav-btn" id="logout-button" title="Sign Out">
-                <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <button class="nav-item back-nav-btn" id="logout-button" title="Back to Home">
+                <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
         </div>
 
@@ -5217,7 +5328,7 @@
         function saveAppState() {
             try {
                 const state = {
-                    inDashboard: dashboardScreen.style.display === 'flex',
+                    inDashboard: dashboardScreen.classList.contains('active'),
                     currentView: currentView
                 };
                 localStorage.setItem('superdeskAppState', JSON.stringify(state));
@@ -5445,16 +5556,16 @@
             localStorage.setItem('superdeskTheme', isDark ? 'light' : 'dark');
         }
         
-        // Update logo based on theme
+        // Update logo based on theme (only sidebar logo, landing page logos are CSS controlled)
         function updateLogoForTheme(theme) {
-            const logos = document.querySelectorAll('.sidebar-logo, .logo-large');
-            logos.forEach(logo => {
+            const sidebarLogo = document.querySelector('.sidebar-logo');
+            if (sidebarLogo) {
                 if (theme === 'dark') {
-                    logo.src = 'assets/superdeskw.png';
+                    sidebarLogo.src = 'assets/superdeskw.png';
                 } else {
-                    logo.src = 'assets/superdesk.png';
+                    sidebarLogo.src = 'assets/superdesk.png';
                 }
-            });
+            }
         }
         
         // Load saved theme on startup
