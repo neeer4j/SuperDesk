@@ -94,6 +94,21 @@ async function initializeSocket() {
         socket.on('guest-joined', (data) => {
             console.log('🎉 Guest joined!', data.guestId);
             window.superdeskState.guestConnected = true;
+            
+            // Store guest info and send to toolbar
+            const guestInfo = {
+                name: data.guestName || data.username || 'Guest',
+                id: data.guestId,
+                avatar: data.avatar || null
+            };
+            window.superdeskState.connectedGuest = guestInfo;
+            
+            // Send guest info to toolbar window
+            if (window.appControls && window.appControls.ipcSend) {
+                window.appControls.ipcSend('update-toolbar-guest', guestInfo);
+                console.log('📤 Sent guest info to toolbar:', guestInfo);
+            }
+            
             showNotification('Guest Connected', 'A user has joined your session');
             enableShareButton();
         });
@@ -1541,6 +1556,12 @@ function endSession() {
     window.superdeskState.sharingActive = false;
     window.superdeskState.remoteControlEnabled = false;
     window.superdeskState.webrtc = null;
+    window.superdeskState.connectedGuest = null;
+    
+    // Clear guest info from toolbar
+    if (window.appControls && window.appControls.ipcSend) {
+        window.appControls.ipcSend('update-toolbar-guest', null);
+    }
     
     // Reset UI - Start Screen Share button to WHITE (disabled state)
     const shareBtn = document.getElementById('start-share-btn');
