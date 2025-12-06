@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            background: transparent;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            user-select: none;
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 8px;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.15); }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toolbar-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .toolbar-wrapper.slide-out {
+            transform: translateX(calc(100% - 36px));
+        }
+
+        .toolbar-toggle {
+            width: 32px;
+            height: 32px;
+            background: rgba(30, 30, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .toolbar-toggle:hover {
+            background: rgba(139, 92, 246, 0.6);
+            color: white;
+        }
+
+        .toolbar-toggle svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.5;
+            transition: transform 0.3s ease;
+        }
+
+        .toolbar-wrapper.slide-out .toolbar-toggle svg {
+            transform: rotate(180deg);
+        }
+
+        .toolbar-main {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(30, 30, 35, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 6px 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+        }
+
+        .sharing-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(16, 185, 129, 0.15);
+            border-radius: 8px;
+            color: #10b981;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .sharing-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse-dot 1.5s ease infinite;
+        }
+
+        .toolbar-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .toolbar-btn:hover {
+            background: rgba(139, 92, 246, 0.5);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .toolbar-btn.active {
+            background: rgba(139, 92, 246, 0.6);
+            color: white;
+        }
+
+        .toolbar-btn.end-session {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .toolbar-btn.end-session:hover {
+            background: rgba(239, 68, 68, 0.5);
+            color: white;
+        }
+
+        .toolbar-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        /* Guest Info Popup */
+        .guest-popup {
+            position: absolute;
+            bottom: 100%;
+            right: 60px;
+            margin-bottom: 8px;
+            background: rgba(30, 30, 35, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 12px;
+            min-width: 180px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.2s ease;
+        }
+
+        .guest-popup.visible {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .guest-popup-header {
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .guest-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .guest-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .guest-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+
+        .guest-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .guest-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .guest-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: #10b981;
+            margin-top: 2px;
+        }
+
+        .guest-status-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+        }
+
+        .no-guest {
+            text-align: center;
+            padding: 8px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar-wrapper" id="toolbar-wrapper">
+        <!-- Toggle Button -->
+        <button class="toolbar-toggle" id="toolbar-toggle" title="Hide/Show Toolbar">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+
+        <!-- Main Toolbar -->
+        <div class="toolbar-main">
+            <!-- Sharing Badge -->
+            <div class="sharing-badge">
+                <span class="sharing-dot"></span>
+                <span>SHARING</span>
+            </div>
+
+            <!-- Session/Users Button -->
+            <button class="toolbar-btn" id="session-btn" title="Connected Users">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </button>
+
+            <!-- Guest Info Popup -->
+            <div class="guest-popup" id="guest-popup">
+                <div class="guest-popup-header">Connected User</div>
+                <div id="guest-content">
+                    <div class="guest-info" id="guest-info" style="display: none;">
+                        <div class="guest-avatar" id="guest-avatar">?</div>
+                        <div class="guest-details">
+                            <div class="guest-name" id="guest-name">Guest</div>
+                            <div class="guest-status">
+                                <span class="guest-status-dot"></span>
+                                <span>Connected</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="no-guest" id="no-guest">Waiting for guest...</div>
+                </div>
+            </div>
+
+            <!-- File Transfer Button -->
+            <button class="toolbar-btn" id="file-btn" title="Send File">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </button>
+
+            <!-- End Session Button -->
+            <button class="toolbar-btn end-session" id="end-btn" title="End Session">
+                <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        let isSlideOut = false;
+        let isGuestPopupVisible = false;
+        let connectedGuest = null;
+        
+        const wrapper = document.getElementById('toolbar-wrapper');
+        const toggleBtn = document.getElementById('toolbar-toggle');
+        const endBtn = document.getElementById('end-btn');
+        const sessionBtn = document.getElementById('session-btn');
+        const fileBtn = document.getElementById('file-btn');
+        const guestPopup = document.getElementById('guest-popup');
+        const guestInfo = document.getElementById('guest-info');
+        const noGuest = document.getElementById('no-guest');
+        const guestAvatar = document.getElementById('guest-avatar');
+        const guestName = document.getElementById('guest-name');
+
+        // Toggle slide in/out
+        toggleBtn.addEventListener('click', () => {
+            isSlideOut = !isSlideOut;
+            if (isSlideOut) {
+                wrapper.classList.add('slide-out');
+                hideGuestPopup();
+            } else {
+                wrapper.classList.remove('slide-out');
+            }
+        });
+
+        // End session
+        endBtn.addEventListener('click', () => {
+            hideGuestPopup();
+            ipcRenderer.send('toolbar-end-session');
+        });
+
+        // Session/Users button - toggle guest info popup
+        sessionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleGuestPopup();
+        });
+
+        // File transfer
+        fileBtn.addEventListener('click', () => {
+            hideGuestPopup();
+            ipcRenderer.send('toolbar-action', 'file');
+        });
+
+        function toggleGuestPopup() {
+            if (isGuestPopupVisible) {
+                hideGuestPopup();
+            } else {
+                showGuestPopup();
+            }
+        }
+
+        function showGuestPopup() {
+            guestPopup.classList.add('visible');
+            sessionBtn.classList.add('active');
+            isGuestPopupVisible = true;
+        }
+
+        function hideGuestPopup() {
+            guestPopup.classList.remove('visible');
+            sessionBtn.classList.remove('active');
+            isGuestPopupVisible = false;
+        }
+
+        // Update guest info when received from main process
+        function updateGuestInfo(guest) {
+            connectedGuest = guest;
+            if (guest && guest.name) {
+                guestInfo.style.display = 'flex';
+                noGuest.style.display = 'none';
+                guestName.textContent = guest.name || guest.username || 'Guest';
+                
+                if (guest.avatar) {
+                    guestAvatar.innerHTML = `<img src="${guest.avatar}" alt="">`;
+                } else {
+                    const initial = (guest.name || guest.username || 'G').charAt(0).toUpperCase();
+                    guestAvatar.innerHTML = initial;
+                }
+            } else {
+                guestInfo.style.display = 'none';
+                noGuest.style.display = 'block';
+            }
+        }
+
+        // Listen for guest info updates from main process
+        ipcRenderer.on('update-guest-info', (event, guestData) => {
+            console.log('📥 Received guest info:', guestData);
+            updateGuestInfo(guestData);
+        });
+
+        // Close popup when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!sessionBtn.contains(e.target) && !guestPopup.contains(e.target)) {
+                hideGuestPopup();
+            }
+        });
+
+        // Log that toolbar is ready
+        console.log('✅ Toolbar window loaded and ready');
+    </script>
+</body>
+</html>

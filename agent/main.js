@@ -14,6 +14,7 @@ console.log('   - screen:', typeof screen);
 console.log('   - mouse speed configured:', mouse.config.mouseSpeed);
 
 let mainWindow;
+let toolbarWindow = null;
 
 const REMOTE_REFERENCE_WIDTH = 1920;
 const REMOTE_REFERENCE_HEIGHT = 1080;
@@ -341,6 +342,52 @@ ipcMain.on('robot-keyboard-event', async (_event, data = {}) => {
   }
 });
 
+function createToolbarWindow() {
+  if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+    toolbarWindow.show();
+    return toolbarWindow;
+  }
+
+  // Get screen dimensions
+  const { width, height } = electronScreen.getPrimaryDisplay().workAreaSize;
+
+  toolbarWindow = new BrowserWindow({
+    width: 340,
+    height: 56,
+    x: width - 360,
+    y: height - 70,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    focusable: false, // Prevent focus stealing and title display
+    title: '', // Empty title
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+
+  // Keep it always on top even when other apps are focused
+  toolbarWindow.setAlwaysOnTop(true, 'screen-saver');
+  toolbarWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  
+  // Remove any title that might show
+  toolbarWindow.setTitle('');
+
+  // Load the separate toolbar HTML
+  toolbarWindow.loadFile('toolbar.html');
+
+  toolbarWindow.on('closed', () => {
+    toolbarWindow = null;
+  });
+
+  console.log('✅ Toolbar window created and shown');
+  return toolbarWindow;
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -406,6 +453,64 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+
+  // Handle toolbar window control
+  ipcMain.on('show-toolbar', () => {
+    if (!toolbarWindow || toolbarWindow.isDestroyed()) {
+      createToolbarWindow();
+    } else {
+      toolbarWindow.show();
+    }
+  });
+
+  ipcMain.on('hide-toolbar', () => {
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.hide();
+    }
+  });
+
+  ipcMain.on('close-toolbar', () => {
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.close();
+      toolbarWindow = null;
+    }
+  });
+
+  ipcMain.on('toolbar-end-session', () => {
+    // Forward end session command to main window
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('end-session-from-toolbar');
+    }
+    // Also close the toolbar
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.close();
+      toolbarWindow = null;
+    }
+  });
+
+  ipcMain.on('toolbar-action', (event, actionType) => {
+    // Forward action to main window (for file transfer, session info, etc.)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      // Bring main window to front for these actions
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+      mainWindow.webContents.send('toolbar-action', actionType);
+    }
+  });
+
+  // Update toolbar with guest info
+  ipcMain.on('update-toolbar-guest', (event, guestData) => {
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.webContents.send('update-guest-info', guestData);
+    }
+  });
+
+  ipcMain.on('toolbar-toggle-panel', (event, panelType) => {
+    // Forward panel toggle to main window
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('toggle-panel-from-toolbar', panelType);
+    }
+  });
 
   // Handle show-notification IPC for file transfer alerts
   ipcMain.on('show-notification', (event, { title, body, onClick }) => {
