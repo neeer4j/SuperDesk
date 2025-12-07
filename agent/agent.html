@@ -1313,11 +1313,21 @@
             right: 20px;
             z-index: 9999999; /* Very high z-index to always be on top */
             display: none; /* Hidden by default, shown when sharing */
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .host-floating-toolbar.slide-out {
+            transform: translateX(calc(100% + 40px));
         }
 
         @keyframes pulse-dot {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(calc(100% + 40px)); }
+            to { transform: translateX(0); }
         }
 
         .host-toolbar-collapsed {
@@ -1330,6 +1340,46 @@
             padding: 8px;
             box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .host-toolbar-toggle {
+            position: absolute;
+            right: calc(100% + 8px);
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .host-toolbar-toggle:hover {
+            background: rgba(139, 92, 246, 0.6);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .host-toolbar-toggle svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            transition: transform 0.3s ease;
+        }
+
+        .host-floating-toolbar.slide-out .host-toolbar-toggle svg {
+            transform: rotate(180deg);
         }
 
         .host-toolbar-btn {
@@ -5261,7 +5311,7 @@
                             </div>
 
                             <!-- Debug Panel -->
-                            <div class="debug-card" id="debug-panel">
+                            <div class="debug-card" id="debug-panel" style="display: none;">
                                 <div class="debug-header">
                                     <span class="debug-title">Connection Status</span>
                                     <span id="health-indicator" class="debug-indicator">Idle</span>
@@ -6797,6 +6847,11 @@
     <!-- Host Floating Toolbar (shown when HOST is sharing - OUTSIDE popup so it's visible on host screen) -->
     <div id="host-floating-toolbar" class="host-floating-toolbar">
         <div class="host-toolbar-collapsed">
+            <!-- Toggle Button (slides toolbar in/out) -->
+            <button class="host-toolbar-toggle" id="host-toolbar-toggle" onclick="toggleToolbarSlide()" title="Hide/Show Toolbar">
+                <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            
             <!-- Sharing Indicator -->
             <div style="display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #10b981; font-size: 12px; font-weight: 600;">
                 <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: pulse-dot 1.5s ease infinite;"></span>
@@ -7639,21 +7694,58 @@
         
         // ==================== Host Floating Toolbar Functions ====================
         let activeHostPanel = null;
+        let toolbarSlideState = 'visible'; // 'visible' or 'hidden'
         
         function showHostFloatingToolbar() {
+            // Use the separate toolbar window (always-on-top, visible even when app is minimized)
+            if (typeof require !== 'undefined') {
+                try {
+                    const { ipcRenderer } = require('electron');
+                    ipcRenderer.send('show-toolbar');
+                    console.log('✅ Host toolbar window requested');
+                } catch (e) {
+                    console.warn('Could not show toolbar window:', e);
+                }
+            }
+            
+            // Also show the DOM-based toolbar as a fallback (but it won't be visible when minimized)
             const toolbar = document.getElementById('host-floating-toolbar');
             if (toolbar) {
-                toolbar.style.display = 'block';
-                console.log('✅ Host floating toolbar shown');
+                toolbar.style.display = 'none'; // Hide DOM toolbar since we're using the window
             }
         }
         
         function hideHostFloatingToolbar() {
+            // Close the separate toolbar window
+            if (typeof require !== 'undefined') {
+                try {
+                    const { ipcRenderer } = require('electron');
+                    ipcRenderer.send('close-toolbar');
+                    console.log('✅ Host toolbar window closed');
+                } catch (e) {
+                    console.warn('Could not close toolbar window:', e);
+                }
+            }
+            
+            // Also hide the DOM-based toolbar
             const toolbar = document.getElementById('host-floating-toolbar');
             if (toolbar) {
                 toolbar.style.display = 'none';
                 closeAllHostPanels();
-                console.log('✅ Host floating toolbar hidden');
+            }
+        }
+        
+        function toggleToolbarSlide() {
+            const toolbar = document.getElementById('host-floating-toolbar');
+            if (!toolbar) return;
+            
+            if (toolbarSlideState === 'visible') {
+                toolbar.classList.add('slide-out');
+                toolbarSlideState = 'hidden';
+                closeAllHostPanels();
+            } else {
+                toolbar.classList.remove('slide-out');
+                toolbarSlideState = 'visible';
             }
         }
         
@@ -7823,6 +7915,35 @@
         window.updateHostToolbarGuestInfo = updateHostToolbarGuestInfo;
         window.updateToolbarFileProgress = updateToolbarFileProgress;
         window.hideToolbarFileProgress = hideToolbarFileProgress;
+        
+        // ==================== IPC Listeners for Toolbar Window ====================
+        if (typeof require !== 'undefined') {
+            try {
+                const { ipcRenderer } = require('electron');
+                
+                // Handle end session from toolbar window
+                ipcRenderer.on('end-session-from-toolbar', () => {
+                    console.log('📥 End session requested from toolbar');
+                    endHostSession();
+                });
+                
+                // Handle toolbar actions (file transfer, session info)
+                ipcRenderer.on('toolbar-action', (event, actionType) => {
+                    console.log('📥 Toolbar action:', actionType);
+                    if (actionType === 'file') {
+                        // Open file dialog for sending file
+                        selectFileToSendFromToolbar();
+                    } else if (actionType === 'session') {
+                        // Show session info (bring app to front - already done in main.js)
+                        switchView('share');
+                    }
+                });
+                
+                console.log('✅ Toolbar IPC listeners registered');
+            } catch (e) {
+                console.warn('Could not set up toolbar IPC listeners:', e);
+            }
+        }
         
         // Handle drag over event
         function handleDragOver(event) {
