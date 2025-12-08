@@ -39,7 +39,7 @@
     "extraFiles": [],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico",
+      "icon": "assets/superdeskicon.png",
       "publisherName": "SuperDesk"
     },
     "nsis": {

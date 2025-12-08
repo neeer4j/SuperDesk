@@ -58,6 +58,11 @@
             position: absolute;
             right: 0;
             top: 0;
+            cursor: grab;
+        }
+
+        .toolbar-container:active {
+            cursor: grabbing;
         }
 
         .toolbar-container.collapsed .toolbar-buttons {
@@ -201,9 +206,9 @@
 
         /* Guest popup that appears above the user button */
         .guest-popup {
-            position: absolute;
-            bottom: 56px;
-            right: 200px;
+            position: fixed;
+            bottom: 60px;
+            right: 56px;
             background: #1e1e24;
             border-radius: 12px;
             padding: 12px 16px;
@@ -213,15 +218,17 @@
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.1);
             opacity: 0;
+            visibility: hidden;
             transform: translateY(8px);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: none;
             white-space: nowrap;
-            z-index: 100;
+            z-index: 99999;
         }
 
         .guest-popup.show {
             opacity: 1;
+            visibility: visible;
             transform: translateY(0);
             pointer-events: auto;
         }
@@ -230,19 +237,27 @@
             content: '';
             position: absolute;
             bottom: -6px;
-            right: 16px;
+            left: var(--arrow-left, 50%);
+            transform: translateX(-50%) rotate(45deg);
             width: 12px;
             height: 12px;
             background: #1e1e24;
             border-right: 1px solid rgba(255, 255, 255, 0.1);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            transform: rotate(45deg);
         }
 
         .guest-popup-content {
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+
+        .toolbar-buttons {
+            z-index: 10;
+        }
+
+        .btn {
+            z-index: 20;
         }
 
         .guest-popup-avatar {
@@ -302,7 +317,7 @@
                 <span>SHARING</span>
             </div>
 
-            <button class="btn" id="userBtn" title="Connected User">
+            <button class="btn" id="userBtn" title="Connected User" data-guest-name="">
                 <svg viewBox="0 0 24 24">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
@@ -333,6 +348,10 @@
         let guest = null;
         let toastTimer = null;
         let popupVisible = false;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let currentEdge = 'right'; // 'top', 'right', 'bottom', 'left'
 
         const toolbar = document.getElementById('toolbar');
         const toggleBtn = document.getElementById('toggleBtn');
@@ -344,6 +363,9 @@
         const guestAvatar = document.getElementById('guestAvatar');
         const guestName = document.getElementById('guestName');
 
+        // Request latest guest info from main process on load
+        ipcRenderer.send('toolbar-request-guest-info');
+
         function showToast(msg) {
             toast.textContent = msg;
             toast.classList.add('show');
@@ -351,9 +373,48 @@
             toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
+        // Drag functionality
+        toolbar.addEventListener('mousedown', (e) => {
+            // Don't drag if clicking on buttons
+            if (e.target.closest('button')) return;
+            
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            toolbar.style.cursor = 'grabbing';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - dragStartX;
+            const deltaY = e.clientY - dragStartY;
+            
+            // Show visual feedback during drag
+            if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+                // Notify main process that we're dragging
+                ipcRenderer.send('toolbar-dragging', { x: e.screenX, y: e.screenY });
+            }
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            toolbar.style.cursor = 'grab';
+            
+            // Send final position to main process for snap-to-edge
+            ipcRenderer.send('toolbar-drag-end', { x: e.screenX, y: e.screenY });
+        });
+
         function toggleGuestPopup() {
             popupVisible = !popupVisible;
             guestPopup.classList.toggle('show', popupVisible);
+            console.log('[Toolbar] Guest popup toggled:', popupVisible, 'classList:', guestPopup.classList.toString());
+            if (popupVisible) {
+                // Wait for the next frame so the popup is rendered and measured correctly
+                requestAnimationFrame(positionGuestPopup);
+            }
         }
 
         function hideGuestPopup() {
@@ -362,13 +423,37 @@
         }
 
         function updateGuestPopup() {
-            if (guest && guest.name) {
-                guestName.textContent = guest.name;
-                guestAvatar.textContent = guest.name.charAt(0).toUpperCase();
+            if (guest && (guest.name || guest.id)) {
+                const displayName = guest.name || `ID: ${guest.id}`;
+                const avatarText = (guest.name || guest.id || '?').toString().charAt(0).toUpperCase();
+
+                guestName.textContent = displayName;
+                guestAvatar.textContent = avatarText;
+                userBtn.setAttribute('title', `Connected: ${displayName}`);
+                userBtn.setAttribute('data-guest-name', displayName);
             } else {
                 guestName.textContent = 'Waiting...';
                 guestAvatar.textContent = '?';
+                userBtn.setAttribute('title', 'Connected User (waiting...)');
+                userBtn.setAttribute('data-guest-name', '');
             }
+        }
+
+        function positionGuestPopup() {
+            // Position the popup centered above the user button
+            const btnRect = userBtn.getBoundingClientRect();
+            const popupRect = guestPopup.getBoundingClientRect();
+
+            const left = Math.max(8, Math.round(btnRect.left + (btnRect.width / 2) - (popupRect.width / 2)));
+            guestPopup.style.left = `${left}px`;
+            guestPopup.style.right = 'auto';
+            guestPopup.style.bottom = '60px';
+
+            // position arrow so it centers below button
+            const arrowOffset = Math.round(btnRect.left + (btnRect.width / 2) - left);
+            guestPopup.style.setProperty('--arrow-left', `${arrowOffset}px`);
+            
+            console.log('[Toolbar] Guest popup positioned:', { left, bottom: 60, arrowOffset, btnRect, visible: popupVisible });
         }
 
         // TOGGLE
@@ -376,9 +461,21 @@
             e.stopPropagation();
             collapsed = !collapsed;
             toolbar.classList.toggle('collapsed', collapsed);
-            ipcRenderer.send('toolbar-resize', { collapsed });
+            ipcRenderer.send('toolbar-resize', { collapsed, edge: currentEdge });
             hideGuestPopup();
-            console.log('[Toolbar] Toggle clicked:', collapsed ? 'collapsed' : 'expanded');
+            console.log('[Toolbar] Toggle clicked:', collapsed ? 'collapsed' : 'expanded', 'edge:', currentEdge);
+        });
+
+        // Listen for edge updates from main process
+        ipcRenderer.on('toolbar-edge-updated', (event, { edge }) => {
+            currentEdge = edge;
+            console.log('[Toolbar] Edge updated to:', edge);
+            if (popupVisible) positionGuestPopup();
+        });
+
+        // Ensure popup repositions on window resize
+        window.addEventListener('resize', () => {
+            if (popupVisible) positionGuestPopup();
         });
 
         // USER - toggle popup
@@ -410,6 +507,7 @@
             console.log('[Toolbar] Guest info updated:', data);
             guest = data;
             updateGuestPopup();
+            if (popupVisible) positionGuestPopup();
         });
 
         // Hide popup when clicking outside
