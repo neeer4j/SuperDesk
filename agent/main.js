@@ -352,18 +352,19 @@ function createToolbarWindow() {
   const { width, height } = electronScreen.getPrimaryDisplay().workAreaSize;
 
   toolbarWindow = new BrowserWindow({
-    width: 340,
-    height: 56,
-    x: width - 360,
-    y: height - 70,
+    width: 328,
+    height: 52,
+    x: width - 328,
+    y: height - 60,
     frame: false,
-    transparent: true,
+    transparent: false,
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
     hasShadow: false,
-    focusable: false, // Prevent focus stealing and title display
-    title: '', // Empty title
+    focusable: true,
+    title: '',
+    backgroundColor: '#2a2a32',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -477,8 +478,10 @@ app.whenReady().then(() => {
   });
 
   ipcMain.on('toolbar-end-session', () => {
+    console.log('📥 Received toolbar-end-session from toolbar window');
     // Forward end session command to main window
     if (mainWindow && !mainWindow.isDestroyed()) {
+      console.log('📤 Sending end-session-from-toolbar to main window');
       mainWindow.webContents.send('end-session-from-toolbar');
     }
     // Also close the toolbar
@@ -489,11 +492,16 @@ app.whenReady().then(() => {
   });
 
   ipcMain.on('toolbar-action', (event, actionType) => {
+    console.log('📥 Received toolbar-action from toolbar window:', actionType);
     // Forward action to main window (for file transfer, session info, etc.)
     if (mainWindow && !mainWindow.isDestroyed()) {
-      // Bring main window to front for these actions
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
+      // Only bring main window to front for session info, not for file transfer
+      // File picker dialog should open without disrupting the desktop view
+      if (actionType === 'session') {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+      }
+      console.log('📤 Sending toolbar-action to main window:', actionType);
       mainWindow.webContents.send('toolbar-action', actionType);
     }
   });
@@ -502,6 +510,15 @@ app.whenReady().then(() => {
   ipcMain.on('update-toolbar-guest', (event, guestData) => {
     if (toolbarWindow && !toolbarWindow.isDestroyed()) {
       toolbarWindow.webContents.send('update-guest-info', guestData);
+    }
+  });
+
+  // Show guest info when session button clicked on toolbar
+  ipcMain.on('toolbar-show-guest-info', (event, guestData) => {
+    console.log('📥 Show guest info requested:', guestData);
+    // Send guest info back to toolbar to display inline (no notification)
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.webContents.send('display-guest-inline', guestData);
     }
   });
 
