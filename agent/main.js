@@ -24,6 +24,9 @@ console.log('   - mouse speed configured:', mouse.config.mouseSpeed);
 
 let mainWindow;
 let toolbarWindow = null;
+let toolbarEdge = 'right'; // 'top', 'right', 'bottom', 'left'
+let toolbarCollapsed = false;
+let lastGuestInfo = null;
 
 const TOOLBAR_WIDTH = 328;
 const TOOLBAR_COLLAPSED_WIDTH = 64;
@@ -395,27 +398,100 @@ function createToolbarWindow() {
   // Load the separate toolbar HTML
   toolbarWindow.loadFile('toolbar.html');
 
+  toolbarWindow.webContents.once('did-finish-load', () => {
+    try {
+      toolbarWindow.webContents.send('toolbar-edge-updated', { edge: toolbarEdge });
+      if (lastGuestInfo) {
+        toolbarWindow.webContents.send('update-guest-info', lastGuestInfo);
+      }
+    } catch (err) {
+      console.warn('[Toolbar] Failed to send initial data:', err);
+    }
+  });
+
   toolbarWindow.on('closed', () => {
     toolbarWindow = null;
   });
 
   console.log('✅ Toolbar window created and shown');
-  repositionToolbar(false);
+  repositionToolbar(false, 'right');
   return toolbarWindow;
 }
 
-function repositionToolbar(collapsed = false) {
+function repositionToolbar(collapsed = false, edge = 'right') {
   if (!toolbarWindow || toolbarWindow.isDestroyed()) return;
 
   const { width: screenW, height: screenH } = electronScreen.getPrimaryDisplay().workAreaSize;
-  const targetWidth = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+  let x, y, width, height;
 
-  toolbarWindow.setBounds({
-    width: targetWidth,
-    height: TOOLBAR_HEIGHT,
-    x: screenW - targetWidth,
-    y: screenH - TOOLBAR_BOTTOM_MARGIN
-  });
+  toolbarEdge = edge;
+  toolbarCollapsed = collapsed;
+
+  switch (edge) {
+    case 'top':
+      width = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+      height = TOOLBAR_HEIGHT;
+      x = screenW - width;
+      y = 0;
+      break;
+    case 'bottom':
+      width = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+      height = TOOLBAR_HEIGHT;
+      x = screenW - width;
+      y = screenH - TOOLBAR_HEIGHT;
+      break;
+    case 'left':
+      width = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+      height = TOOLBAR_HEIGHT;
+      x = 0;
+      y = screenH - TOOLBAR_BOTTOM_MARGIN;
+      break;
+    case 'right':
+    default:
+      width = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+      height = TOOLBAR_HEIGHT;
+      x = screenW - width;
+      y = screenH - TOOLBAR_BOTTOM_MARGIN;
+      break;
+  }
+
+  toolbarWindow.setBounds({ x, y, width, height });
+
+  // Notify renderer of edge change
+  if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+    toolbarWindow.webContents.send('toolbar-edge-updated', { edge });
+  }
+
+  console.log(`[Toolbar] Repositioned to ${edge}, collapsed: ${collapsed}, bounds: ${JSON.stringify({ x, y, width, height })}`);
+}
+
+function snapToEdge(screenX, screenY) {
+  const display = electronScreen.getPrimaryDisplay();
+  const { width: screenW, height: screenH } = display.workAreaSize;
+  const { x: screenOriginX, y: screenOriginY } = display.workArea;
+
+  // Convert screen coordinates to workArea-relative coordinates
+  const relX = screenX - screenOriginX;
+  const relY = screenY - screenOriginY;
+
+  // Calculate distances to each edge (all should be positive)
+  const distTop = Math.abs(relY);
+  const distBottom = Math.abs(screenH - relY);
+  const distLeft = Math.abs(relX);
+  const distRight = Math.abs(screenW - relX);
+
+  // Find nearest edge
+  const minDist = Math.min(distTop, distBottom, distLeft, distRight);
+
+  let edge = 'right';
+  if (minDist === distTop) edge = 'top';
+  else if (minDist === distBottom) edge = 'bottom';
+  else if (minDist === distLeft) edge = 'left';
+  else if (minDist === distRight) edge = 'right';
+
+  console.log(`[Toolbar] Snap calculation: screenX=${screenX}, screenY=${screenY}, relX=${relX.toFixed(0)}, relY=${relY.toFixed(0)}`);
+  console.log(`[Toolbar] Distances -> Top:${distTop.toFixed(0)} Bottom:${distBottom.toFixed(0)} Left:${distLeft.toFixed(0)} Right:${distRight.toFixed(0)} -> minDist=${minDist.toFixed(0)} -> edge=${edge}`);
+  return edge;
 }
 
 function createWindow() {
@@ -491,7 +567,7 @@ app.whenReady().then(() => {
     } else {
       toolbarWindow.show();
     }
-    repositionToolbar(false);
+    repositionToolbar(false, toolbarEdge);
   });
 
   ipcMain.on('hide-toolbar', () => {
@@ -507,8 +583,36 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.on('toolbar-resize', (_event, { collapsed } = {}) => {
-    repositionToolbar(!!collapsed);
+  ipcMain.on('toolbar-resize', (_event, { collapsed, edge } = {}) => {
+    const targetEdge = edge || toolbarEdge || 'right';
+    repositionToolbar(!!collapsed, targetEdge);
+  });
+
+  ipcMain.on('toolbar-dragging', (_event, { x, y }) => {
+    if (!toolbarWindow || toolbarWindow.isDestroyed()) return;
+    // Move toolbar so that mouse is in the center of toolbar during drag
+    const { width: screenW, height: screenH } = electronScreen.getPrimaryDisplay().workAreaSize;
+    const { x: screenOriginX, y: screenOriginY } = electronScreen.getPrimaryDisplay().bounds;
+    const relX = x - screenOriginX;
+    const relY = y - screenOriginY;
+    const width = toolbarCollapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+    const height = TOOLBAR_HEIGHT;
+    let targetX = Math.round(relX - width / 2);
+    let targetY = Math.round(relY - height / 2);
+    // clamp to screen
+    targetX = Math.max(0, Math.min(screenW - width, targetX));
+    targetY = Math.max(0, Math.min(screenH - height, targetY));
+    try {
+      toolbarWindow.setBounds({ x: targetX, y: targetY, width, height });
+    } catch (err) {
+      console.warn('[Toolbar] live drag setBounds failed:', err);
+    }
+  });
+
+  ipcMain.on('toolbar-drag-end', (_event, { x, y }) => {
+    console.log('[Toolbar] Drag ended at screen coords:', x, y);
+    const edge = snapToEdge(x, y);
+    repositionToolbar(toolbarCollapsed, edge);
   });
 
   ipcMain.on('toolbar-end-session', () => {
@@ -542,8 +646,18 @@ app.whenReady().then(() => {
 
   // Update toolbar with guest info
   ipcMain.on('update-toolbar-guest', (event, guestData) => {
+    lastGuestInfo = guestData || null;
     if (toolbarWindow && !toolbarWindow.isDestroyed()) {
-      toolbarWindow.webContents.send('update-guest-info', guestData);
+      toolbarWindow.webContents.send('update-guest-info', lastGuestInfo);
+    }
+  });
+
+  ipcMain.on('toolbar-request-guest-info', (event) => {
+    const sender = event.sender;
+    try {
+      sender.send('update-guest-info', lastGuestInfo);
+    } catch (err) {
+      console.warn('[Toolbar] Failed to respond with guest info:', err);
     }
   });
 
