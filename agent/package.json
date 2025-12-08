@@ -28,6 +28,7 @@
     "files": [
       "main.js",
       "agent.html",
+      "toolbar.html",
       "preload.js",
       "superdesk-webrtc.js",
       "modules/**/*",

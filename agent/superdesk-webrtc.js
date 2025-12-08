@@ -17,15 +17,15 @@ async function fetchWebRTCConfig() {
     try {
         console.log('🔧 Fetching WebRTC config from server...');
         const response = await fetch(`${window.superdeskState.serverUrl}/api/webrtc-config`);
-        
+
         if (!response.ok) {
             console.warn('⚠️ Failed to fetch WebRTC config from server, using fallback TURN servers');
             return getFallbackIceServers();
         }
-        
+
         const config = await response.json();
         console.log('✅ Received WebRTC config from server:', config);
-        
+
         if (config.iceServers && config.iceServers.length > 0) {
             console.log('🎯 Using Cloudflare TURN servers:', config.iceServers.length, 'servers');
             return config.iceServers;
@@ -94,7 +94,7 @@ async function initializeSocket() {
         socket.on('guest-joined', (data) => {
             console.log('🎉 Guest joined!', data.guestId);
             window.superdeskState.guestConnected = true;
-            
+
             // Store guest info and send to toolbar
             const guestInfo = {
                 name: data.guestName || data.username || 'Guest',
@@ -102,13 +102,13 @@ async function initializeSocket() {
                 avatar: data.avatar || null
             };
             window.superdeskState.connectedGuest = guestInfo;
-            
+
             // Send guest info to toolbar window
             if (window.appControls && window.appControls.ipcSend) {
                 window.appControls.ipcSend('update-toolbar-guest', guestInfo);
                 console.log('📤 Sent guest info to toolbar:', guestInfo);
             }
-            
+
             showNotification('Guest Connected', 'A user has joined your session');
             enableShareButton();
         });
@@ -135,9 +135,9 @@ async function initializeSocket() {
         // Handle incoming mouse events (when guest controls our mouse)
         socket.on('mouse-event', async (data) => {
             if (!window.superdeskState.isHost) return;
-            
+
             console.log('🖱️ HOST received mouse event:', { type: data.type, x: data.x, y: data.y, button: data.button, deltaX: data.deltaX, deltaY: data.deltaY });
-            
+
             try {
                 // Use IPC to send mouse events to main process for nut-js execution
                 // data.x and data.y are already normalized (0..1), pass them directly
@@ -162,9 +162,9 @@ async function initializeSocket() {
         // Handle incoming keyboard events (when guest types on our keyboard)
         socket.on('keyboard-event', async (data) => {
             if (!window.superdeskState.isHost) return;
-            
+
             console.log('⌨️ HOST received keyboard event:', { type: data.type, key: data.key, code: data.code });
-            
+
             try {
                 // Use IPC to send keyboard events to main process for nut-js execution
                 if (window.appControls && window.appControls.ipcSend) {
@@ -214,7 +214,7 @@ async function initializeSocket() {
                 if (window.superdeskState.remoteControlEnabled) {
                     disableRemoteControl();
                 }
-                
+
                 // Reset control button to default state
                 const controlBtn = document.getElementById('control-toggle-btn');
                 if (controlBtn) {
@@ -223,7 +223,7 @@ async function initializeSocket() {
                 }
                 const indicator = document.getElementById('control-indicator');
                 if (indicator) indicator.style.display = 'none';
-                
+
                 // Show "Sharing Ended" overlay on the popup
                 showSharingEndedOverlay();
             }
@@ -235,21 +235,21 @@ async function initializeSocket() {
 function showSharingEndedOverlay() {
     const popup = document.getElementById('remote-desktop-popup');
     if (!popup || popup.style.display === 'none') return;
-    
+
     // Ensure guest cursor is visible
     const joinVideo = document.getElementById('join-remote-video');
     if (joinVideo) {
         joinVideo.classList.remove('control-active');
         joinVideo.style.cursor = 'default';
     }
-    
+
     // Make sure body cursor is visible
     document.body.style.cursor = 'default';
-    
+
     // Hide controls bar
     const controls = document.getElementById('popup-controls');
     if (controls) controls.style.display = 'none';
-    
+
     // Create overlay with visible cursor
     let overlay = document.getElementById('sharing-ended-overlay');
     if (!overlay) {
@@ -267,7 +267,7 @@ function showSharingEndedOverlay() {
             </div>
         `;
         popup.appendChild(overlay);
-        
+
         // Add click handler for exit button
         document.getElementById('exit-session-btn').addEventListener('click', () => {
             if (typeof window.hideRemoteDesktopPopup === 'function') {
@@ -285,9 +285,9 @@ async function createSession() {
     try {
         const socket = await initializeSocket();
         window.superdeskState.isHost = true;
-        
+
         socket.emit('create-session', { type: 'agent' });
-        
+
         console.log('Creating session...');
     } catch (error) {
         console.error('Failed to create session:', error);
@@ -310,7 +310,7 @@ async function joinSession(sessionId) {
         console.log('🔄 ========== JOINING SESSION ==========');
         console.log('🔄 Session ID:', sessionId);
         updateJoinButtonState('connecting');
-        
+
         // Update placeholder to show connecting state
         const placeholder = document.getElementById('stream-placeholder');
         if (placeholder) {
@@ -322,7 +322,7 @@ async function joinSession(sessionId) {
                 </div>
             `;
         }
-        
+
         const socket = await initializeSocket();
         window.superdeskState.isHost = false;
         window.superdeskState.sessionId = sessionId;
@@ -332,11 +332,11 @@ async function joinSession(sessionId) {
         console.log('🔄 Setting up WebRTC receiver BEFORE joining...');
         await setupWebRTCReceiver(socket, sessionId);
         console.log('✅ WebRTC receiver ready');
-        
+
         console.log('🔄 Now emitting join-session...');
         socket.emit('join-session', sessionId);
         console.log('✅ Join request sent');
-        
+
         console.log('✅ ========== JOIN COMPLETE ==========');
     } catch (error) {
         console.error('❌ Failed to join session:', error);
@@ -344,7 +344,7 @@ async function joinSession(sessionId) {
             window.superdeskModal.error('Failed to join session: ' + error.message, 'Join Failed');
         }
         updateJoinButtonState('disconnected');
-        
+
         // Show error in placeholder
         const placeholder = document.getElementById('stream-placeholder');
         if (placeholder) {
@@ -364,10 +364,10 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     console.log('🎥 ========== SETTING UP HOST (SENDER) ==========');
     console.log('🎥 Session ID:', sessionId);
     console.log('🎥 Source ID:', sourceId);
-    
+
     console.log('🔧 Fetching ICE servers from backend...');
     const iceServers = await fetchWebRTCConfig();
-    
+
     console.log('🔧 Configuring RTCPeerConnection with', iceServers.length, 'ICE servers');
     const peerConnection = new RTCPeerConnection({
         iceServers: iceServers,
@@ -376,9 +376,9 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
     });
-    
+
     console.log('✅ HOST ICE configuration complete with Cloudflare TURN servers');
-    
+
     // Create file transfer DataChannel (HOST creates, GUEST receives)
     if (window.fileTransfer && typeof window.fileTransfer.createChannel === 'function') {
         console.log('📁 HOST: Creating file transfer DataChannel...');
@@ -392,7 +392,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
             console.error('❌ WebRTC connection FAILED');
             console.error('ICE state:', peerConnection.iceConnectionState);
             console.error('Signaling state:', peerConnection.signalingState);
-            
+
             // Try ICE restart
             console.log('🔄 Attempting ICE restart...');
             peerConnection.restartIce();
@@ -401,7 +401,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
     peerConnection.oniceconnectionstatechange = () => {
         console.log('🧊 HOST ICE connection state:', peerConnection.iceConnectionState);
-        
+
         if (peerConnection.iceConnectionState === 'checking') {
             console.log('🔄 HOST Checking ICE candidates...');
         } else if (peerConnection.iceConnectionState === 'connected') {
@@ -454,7 +454,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     console.log('🎥 ========== ADDING TRACKS TO PEER CONNECTION ==========');
     const tracks = stream.getTracks();
     console.log('🎥 Total tracks to add:', tracks.length);
-    
+
     tracks.forEach((track, index) => {
         console.log(`🎥 Track #${index + 1}:`, {
             kind: track.kind,
@@ -464,16 +464,16 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
             muted: track.muted,
             readyState: track.readyState
         });
-        
+
         const sender = peerConnection.addTrack(track, stream);
         console.log('✅ Track added successfully, Sender:', {
             track: sender.track ? 'SET' : 'NOT SET',
             transport: sender.transport ? 'SET' : 'NOT SET'
         });
     });
-    
+
     console.log('🎥 All tracks added. Total senders:', peerConnection.getSenders().length);
-    
+
     // Verify tracks were actually added
     setTimeout(() => {
         const senders = peerConnection.getSenders();
@@ -495,15 +495,15 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         if (event.candidate) {
             const type = event.candidate.type;
             hostCandidates[type] = (hostCandidates[type] || 0) + 1;
-            
+
             console.log('🧊 HOST ICE candidate #' + (hostCandidates.host + hostCandidates.srflx + hostCandidates.relay) + ':', type, event.candidate.protocol);
             console.log('   Address:', event.candidate.address || 'N/A');
             console.log('   Port:', event.candidate.port || 'N/A');
-            
+
             if (type === 'relay') {
                 console.log('✅ TURN RELAY WORKING! Got relay candidate from:', event.candidate.relatedAddress);
             }
-            
+
             socket.emit('ice-candidate', {
                 sessionId,
                 candidate: event.candidate
@@ -514,7 +514,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
             console.log('   - host (local):', hostCandidates.host);
             console.log('   - srflx (STUN):', hostCandidates.srflx);
             console.log('   - relay (TURN):', hostCandidates.relay);
-            
+
             if (hostCandidates.relay === 0) {
                 console.error('❌ NO TURN RELAY CANDIDATES! TURN servers not working!');
                 console.error('❌ This will cause connection failures on different networks!');
@@ -534,7 +534,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         console.log('📨 Answer SDP length:', data.answer?.sdp?.length || 0);
         console.log('📨 From guest:', data.from);
         console.log('📨 Current signaling state:', peerConnection.signalingState);
-        
+
         if (peerConnection.signalingState === 'have-local-offer') {
             try {
                 console.log('📨 Setting remote description with answer...');
@@ -555,13 +555,13 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     socket.on('ice-candidate', async (data) => {
         if (data.candidate) {
             console.log('🧊 HOST Received ICE candidate from guest');
-            
+
             // Check if connection is still open
             if (peerConnection.signalingState === 'closed') {
                 console.warn('⚠️ HOST Ignoring ICE candidate - connection already closed');
                 return;
             }
-            
+
             try {
                 await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                 console.log('✅ HOST ICE candidate added');
@@ -576,7 +576,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     const offer = await peerConnection.createOffer();
     console.log('📤 Offer created, type:', offer.type);
     console.log('📤 Offer SDP length:', offer.sdp?.length || 0);
-    
+
     await peerConnection.setLocalDescription(offer);
     console.log('✅ HOST Local description set');
     console.log('✅ Signaling state after setLocalDescription:', peerConnection.signalingState);
@@ -592,7 +592,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
     window.superdeskState.webrtc = { peerConnection, stream };
     window.superdeskState.sharingActive = true;
-    
+
     console.log('✅ HOST WebRTC state saved globally - ready for remote control');
 
     // Start connection health monitoring
@@ -607,10 +607,10 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 async function setupWebRTCReceiver(socket, sessionId) {
     console.log('🎥 ========== SETTING UP RECEIVER (GUEST) ==========');
     console.log('🎥 Session ID:', sessionId);
-    
+
     console.log('🔧 Fetching ICE servers from backend...');
     const iceServers = await fetchWebRTCConfig();
-    
+
     console.log('🔧 Configuring RTCPeerConnection with', iceServers.length, 'ICE servers');
     const peerConnection = new RTCPeerConnection({
         iceServers: iceServers,
@@ -619,9 +619,9 @@ async function setupWebRTCReceiver(socket, sessionId) {
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
     });
-    
+
     console.log('✅ GUEST ICE configuration complete with Cloudflare TURN servers');
-    
+
     // Setup file transfer DataChannel receiver (GUEST receives DataChannel created by HOST)
     if (window.fileTransfer && typeof window.fileTransfer.setupReceiver === 'function') {
         console.log('📁 GUEST: Setting up file transfer DataChannel receiver...');
@@ -632,18 +632,18 @@ async function setupWebRTCReceiver(socket, sessionId) {
     peerConnection.onconnectionstatechange = () => {
         console.log('🔌 GUEST Connection state:', peerConnection.connectionState);
         updateDebugStatus('connection', peerConnection.connectionState);
-        
+
         if (peerConnection.connectionState === 'failed') {
             console.error('❌ GUEST WebRTC connection FAILED');
             console.error('ICE state:', peerConnection.iceConnectionState);
             console.error('Signaling state:', peerConnection.signalingState);
             updateDebugStatus('error', 'Connection failed - trying ICE restart');
-            
+
             // Try ICE restart
             console.log('🔄 GUEST Attempting ICE restart...');
             peerConnection.restartIce();
         }
-        
+
         // Update health indicator
         if (typeof updateHealthIndicator === 'function') {
             updateHealthIndicator(peerConnection.connectionState);
@@ -653,14 +653,14 @@ async function setupWebRTCReceiver(socket, sessionId) {
     peerConnection.oniceconnectionstatechange = () => {
         console.log('🧊 GUEST ICE connection state:', peerConnection.iceConnectionState);
         updateDebugStatus('ice', peerConnection.iceConnectionState);
-        
+
         if (peerConnection.iceConnectionState === 'checking') {
             console.log('🔄 GUEST Checking ICE candidates...');
             updateDebugStatus('status', 'Negotiating connection');
         } else if (peerConnection.iceConnectionState === 'connected') {
             console.log('✅ GUEST ICE CONNECTED! Video should appear now.');
             updateDebugStatus('status', 'Connected - waiting for video');
-            
+
             // Log selected candidate pair
             peerConnection.getStats().then(stats => {
                 stats.forEach(report => {
@@ -684,7 +684,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
             console.warn('⚠️ GUEST ICE DISCONNECTED - Connection lost');
             updateDebugStatus('warning', 'Connection lost');
         }
-        
+
         // Update health indicator for ICE states
         if (typeof updateHealthIndicator === 'function') {
             const iceState = peerConnection.iceConnectionState;
@@ -719,19 +719,19 @@ async function setupWebRTCReceiver(socket, sessionId) {
             console.log('📺 Stream audio tracks:', event.streams[0].getAudioTracks().length);
         }
         updateDebugStatus('stream', 'received');
-        
+
         const stream = event.streams[0];
-        
+
         // Get video elements
         const video = document.getElementById('join-remote-video');
         const placeholder = document.getElementById('stream-placeholder');
         const controlsOverlay = document.getElementById('video-controls-overlay');
-        
+
         console.log('📺 Looking for elements...');
         console.log('   - video:', video ? 'FOUND' : 'NOT FOUND');
         console.log('   - placeholder:', placeholder ? 'FOUND' : 'NOT FOUND');
         console.log('   - controlsOverlay:', controlsOverlay ? 'FOUND' : 'NOT FOUND');
-        
+
         if (video) {
             console.log('📺 Setting srcObject...');
             video.srcObject = stream;
@@ -748,13 +748,13 @@ async function setupWebRTCReceiver(socket, sessionId) {
             } else {
                 console.warn('⚠️ Received stream but no active video tracks - not opening popup');
             }
-            
+
             // Hide placeholder and update status
             if (placeholder) {
                 placeholder.style.display = 'none';
                 console.log('✅ Placeholder hidden');
             }
-            
+
             // Update connection status indicator
             const statusIndicator = document.getElementById('status-indicator');
             const statusText = document.getElementById('status-text');
@@ -764,14 +764,14 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 statusText.style.color = '#10b981';
                 console.log('✅ Status updated to streaming');
             }
-            
+
             video.play()
                 .then(() => {
                     console.log('✅ Video playing successfully');
                     console.log('📺 Video dimensions:', video.videoWidth, 'x', video.videoHeight);
                 })
                 .catch(e => console.log('⚠️ Auto-play handled:', e.message));
-            
+
             console.log('📺 Video element state:', {
                 srcObject: video.srcObject ? 'SET' : 'NOT SET',
                 readyState: video.readyState,
@@ -793,15 +793,15 @@ async function setupWebRTCReceiver(socket, sessionId) {
         if (event.candidate) {
             const type = event.candidate.type;
             guestCandidates[type] = (guestCandidates[type] || 0) + 1;
-            
+
             console.log('🧊 GUEST ICE candidate #' + (guestCandidates.host + guestCandidates.srflx + guestCandidates.relay) + ':', type, event.candidate.protocol);
             console.log('   Address:', event.candidate.address || 'N/A');
             console.log('   Port:', event.candidate.port || 'N/A');
-            
+
             if (type === 'relay') {
                 console.log('✅ TURN RELAY WORKING! Got relay candidate from:', event.candidate.relatedAddress);
             }
-            
+
             updateDebugStatus('ice-candidate', event.candidate.type);
             socket.emit('ice-candidate', {
                 sessionId,
@@ -813,7 +813,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
             console.log('   - host (local):', guestCandidates.host);
             console.log('   - srflx (STUN):', guestCandidates.srflx);
             console.log('   - relay (TURN):', guestCandidates.relay);
-            
+
             if (guestCandidates.relay === 0) {
                 console.error('❌ NO TURN RELAY CANDIDATES! TURN servers not working!');
                 console.error('❌ Connection will fail if on different networks!');
@@ -832,23 +832,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
         console.log('📨 Session ID:', data.sessionId);
         console.log('📨 Current signaling state:', peerConnection.signalingState);
         updateDebugStatus('offer', 'received');
-        
+
         if (peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer') {
             try {
                 console.log('📨 Setting remote description with offer...');
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                 console.log('✅ Remote description set successfully');
                 console.log('✅ New signaling state:', peerConnection.signalingState);
-                
+
                 console.log('📨 Creating answer...');
                 const answer = await peerConnection.createAnswer();
                 console.log('📨 Answer created, type:', answer.type);
                 console.log('📨 Answer SDP length:', answer.sdp?.length || 0);
-                
+
                 await peerConnection.setLocalDescription(answer);
                 console.log('✅ Local description (answer) set');
                 console.log('✅ Signaling state after setLocalDescription:', peerConnection.signalingState);
-                
+
                 // Check what transceivers are expecting
                 console.log('🔍 GUEST: Checking expected tracks...');
                 const transceivers = peerConnection.getTransceivers();
@@ -862,7 +862,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
                         receiverTrack: t.receiver?.track ? t.receiver.track.kind : 'NO TRACK'
                     });
                 });
-                
+
                 const answerPayload = {
                     sessionId,
                     targetId: data.from,
@@ -889,13 +889,13 @@ async function setupWebRTCReceiver(socket, sessionId) {
     socket.on('ice-candidate', async (data) => {
         if (data.candidate) {
             console.log('🧊 GUEST Received ICE candidate from host');
-            
+
             // Check if connection is still open
             if (peerConnection.signalingState === 'closed') {
                 console.warn('⚠️ GUEST Ignoring ICE candidate - connection already closed');
                 return;
             }
-            
+
             try {
                 await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                 console.log('✅ GUEST ICE candidate added');
@@ -907,11 +907,11 @@ async function setupWebRTCReceiver(socket, sessionId) {
 
     // Store peer connection globally for remote control access
     window.superdeskState.webrtc = { peerConnection };
-    
+
     console.log('✅ WebRTC receiver setup complete');
     console.log('✅ GUEST WebRTC state saved globally - ready for remote control');
     updateDebugStatus('setup', 'complete');
-    
+
     // Log if NO tracks received after 10 seconds
     setTimeout(() => {
         if (tracksReceived === 0) {
@@ -928,11 +928,11 @@ async function setupWebRTCReceiver(socket, sessionId) {
             updateDebugStatus('error', 'no-tracks-received');
         }
     }, 10000);
-    
+
     // Start connection health monitoring
     const healthMonitor = monitorConnectionHealth(peerConnection);
     window.superdeskState.healthMonitor = healthMonitor;
-    
+
     window.superdeskState.webrtc = { peerConnection };
     return peerConnection;
 }
@@ -972,10 +972,10 @@ function monitorConnectionHealth(peerConnection) {
     let lastState = peerConnection.iceConnectionState;
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 3;
-    
+
     const checkInterval = setInterval(() => {
         const currentState = peerConnection.iceConnectionState;
-        
+
         // If connection failed or disconnected, try to recover
         if (currentState === 'failed' && reconnectAttempts < maxReconnectAttempts) {
             console.log(`🔄 Connection failed, attempting reconnect (${reconnectAttempts + 1}/${maxReconnectAttempts})`);
@@ -988,17 +988,17 @@ function monitorConnectionHealth(peerConnection) {
             clearInterval(checkInterval);
             updateDebugStatus('monitor', 'stopped - connection closed');
         }
-        
+
         lastState = currentState;
     }, 5000); // Check every 5 seconds
-    
+
     // Stop monitoring when connection closes
     peerConnection.oniceconnectionstatechange = () => {
         if (peerConnection.iceConnectionState === 'closed') {
             clearInterval(checkInterval);
         }
     };
-    
+
     return checkInterval;
 }
 
@@ -1055,7 +1055,7 @@ async function startScreenShare() {
 function showSourceSelectionModal() {
     const modal = document.getElementById('source-selection-modal');
     modal.classList.remove('hidden');
-    
+
     // Show screens tab by default
     switchSourceTab('screens');
 }
@@ -1068,12 +1068,12 @@ function closeSourceModal() {
 
 function switchSourceTab(tab) {
     window.availableSources.currentTab = tab;
-    
+
     // Update tab buttons
     document.querySelectorAll('.source-tab').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
-    
+
     // Render sources for the selected tab
     renderSources(tab);
 }
@@ -1081,12 +1081,12 @@ function switchSourceTab(tab) {
 function renderSources(tab) {
     const sourceList = document.getElementById('source-list');
     const sources = tab === 'screens' ? window.availableSources.screens : window.availableSources.windows;
-    
+
     if (sources.length === 0) {
         sourceList.innerHTML = '<div style="color: rgba(255,255,255,0.5); text-align: center; padding: 40px;">No ' + tab + ' available</div>';
         return;
     }
-    
+
     sourceList.innerHTML = sources.map((source, index) => `
         <div class="source-item" data-source-id="${source.id}" onclick="selectSourceAndConfirm('${source.id}')">
             <img src="${source.thumbnail.toDataURL()}" class="source-thumbnail" alt="${source.name}">
@@ -1097,12 +1097,12 @@ function renderSources(tab) {
 
 function selectSource(sourceId) {
     window.availableSources.selected = sourceId;
-    
+
     // Update visual selection
     document.querySelectorAll('.source-item').forEach(item => {
         item.classList.toggle('selected', item.dataset.sourceId === sourceId);
     });
-    
+
     // Enable confirm button
     const confirmBtn = document.getElementById('confirm-share-btn');
     if (confirmBtn) confirmBtn.disabled = false;
@@ -1114,7 +1114,7 @@ function selectSourceAndConfirm(sourceId) {
         console.error('selectSourceAndConfirm called with invalid sourceId:', sourceId);
         return;
     }
-    
+
     // Just select/highlight the source - do NOT auto-confirm
     selectSource(sourceId);
     console.log('Source selected (awaiting confirmation):', sourceId);
@@ -1128,13 +1128,13 @@ async function confirmSourceSelection() {
         }
         return;
     }
-    
+
     try {
         const selectedSourceId = window.availableSources.selected;
         console.log('Starting screen share with sourceId:', selectedSourceId);
-        
+
         closeSourceModal();
-        
+
         await setupWebRTCSender(
             window.superdeskState.socket,
             window.superdeskState.sessionId,
@@ -1144,15 +1144,24 @@ async function confirmSourceSelection() {
         showNotification('Sharing Started', 'Your screen is now being shared');
         document.getElementById('start-share-btn').textContent = 'Stop Sharing';
         document.getElementById('start-share-btn').style.background = '#dc2626';
-        
+
         // Show file transfer section
         if (typeof showHostFileTransferSection === 'function') {
             showHostFileTransferSection();
         }
-        
+
         // Show host floating toolbar
         if (typeof window.showHostFloatingToolbar === 'function') {
             window.showHostFloatingToolbar();
+        }
+
+        // Minimize the main window so only the toolbar is visible
+        // This prevents the main app from appearing on desktop during sharing
+        if (window.appControls && window.appControls.minimize) {
+            setTimeout(() => {
+                window.appControls.minimize();
+                console.log('✅ Main window minimized for clean desktop view');
+            }, 300); // Small delay to ensure toolbar is visible first
         }
 
     } catch (error) {
@@ -1169,24 +1178,24 @@ function enableRemoteControl() {
     console.log('  - Current state:', window.superdeskState?.remoteControlEnabled);
     console.log('  - Socket connected:', window.superdeskState?.socket?.connected);
     console.log('  - Session ID:', window.superdeskState?.sessionId);
-    
+
     if (!window.superdeskState || !window.superdeskState.socket) {
         console.error('❌ Cannot enable remote control: socket not available');
         return;
     }
-    
+
     window.superdeskState.remoteControlEnabled = true;
     window.superdeskState.socket.emit('enable-remote-control', {
         sessionId: window.superdeskState.sessionId
     });
-    
+
     // Setup mouse/keyboard event capture on video element(s)
     const video = document.getElementById('remote-video');
     const joinVideo = document.getElementById('join-remote-video');
-    
+
     console.log('  - video element found:', !!video);
     console.log('  - joinVideo element found:', !!joinVideo);
-    
+
     if (video) {
         // Use capture to ensure we intercept events before any other handlers
         // Note: We only use mousedown/mouseup for clicks - NOT 'click' event
@@ -1197,7 +1206,7 @@ function enableRemoteControl() {
         video.addEventListener('wheel', handleMouseWheel, { capture: true, passive: false });
         console.log('  ✅ Event listeners attached to remote-video (capture)');
     }
-    
+
     if (joinVideo) {
         joinVideo.addEventListener('mousemove', handleMouseMove, { capture: true });
         joinVideo.addEventListener('mousedown', handleMouseDown, { capture: true });
@@ -1205,11 +1214,11 @@ function enableRemoteControl() {
         joinVideo.addEventListener('wheel', handleMouseWheel, { capture: true, passive: false });
         console.log('  ✅ Event listeners attached to join-remote-video (capture)');
     }
-    
+
     // Use capture so key events are captured regardless of focus inside the UI
     document.addEventListener('keydown', handleKeyDown, { capture: true });
     document.addEventListener('keyup', handleKeyUp, { capture: true });
-    
+
     console.log('✅ Remote control enabled successfully');
     // Hide guest cursor over video when control is enabled
     if (joinVideo) {
@@ -1227,17 +1236,17 @@ function disableRemoteControl() {
     window.superdeskState.socket.emit('disable-remote-control', {
         sessionId: window.superdeskState.sessionId
     });
-    
+
     const video = document.getElementById('remote-video');
     const joinVideo = document.getElementById('join-remote-video');
-    
+
     if (video) {
         video.removeEventListener('mousemove', handleMouseMove, { capture: true });
         video.removeEventListener('mousedown', handleMouseDown, { capture: true });
         video.removeEventListener('mouseup', handleMouseUp, { capture: true });
         video.removeEventListener('wheel', handleMouseWheel, { capture: true });
     }
-    
+
     if (joinVideo) {
         joinVideo.removeEventListener('mousemove', handleMouseMove, { capture: true });
         joinVideo.removeEventListener('mousedown', handleMouseDown, { capture: true });
@@ -1250,10 +1259,10 @@ function disableRemoteControl() {
             console.warn('Could not remove control-active class from joinVideo', e);
         }
     }
-    
+
     document.removeEventListener('keydown', handleKeyDown, { capture: true });
     document.removeEventListener('keyup', handleKeyUp, { capture: true });
-    
+
     // Reset control button to default styling
     const controlBtn = document.getElementById('control-toggle-btn');
     if (controlBtn) {
@@ -1262,7 +1271,7 @@ function disableRemoteControl() {
     }
     const indicator = document.getElementById('control-indicator');
     if (indicator) indicator.style.display = 'none';
-    
+
     console.log('Remote control disabled');
 }
 
@@ -1279,21 +1288,21 @@ function handleMouseMove(e) {
         }
         return;
     }
-    
+
     mouseMoveCount++;
-    
+
     const video = e.target;
     const rect = video.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    
+
     if (!window.superdeskState.socket || !window.superdeskState.socket.connected) {
         return;
     }
-    
+
     // Always store the latest position
     pendingMouseMove = { x, y };
-    
+
     // Use requestAnimationFrame for optimal timing - syncs with display refresh
     if (!rafScheduled) {
         rafScheduled = true;
@@ -1365,21 +1374,21 @@ function handleMouseUp(e) {
 let wheelEventCount = 0;
 function handleMouseWheel(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
-    
+
     // Prevent page scrolling
     e.preventDefault();
     e.stopPropagation();
-    
+
     wheelEventCount++;
     if (wheelEventCount === 1 || wheelEventCount % 5 === 0) {
         console.log(`🖱️ Wheel event #${wheelEventCount}:`, { deltaX: e.deltaX, deltaY: e.deltaY });
     }
-    
+
     const video = e.target;
     const rect = video.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    
+
     // Normalize delta values - different browsers report different scales
     // Most browsers use 100 for one "click" of the scroll wheel
     const deltaX = Math.sign(e.deltaX) * Math.min(Math.abs(e.deltaX), 120);
@@ -1399,15 +1408,15 @@ function handleMouseWheel(e) {
 let keyEventCount = 0;
 function handleKeyDown(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
-    
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     keyEventCount++;
     if (keyEventCount === 1 || keyEventCount % 10 === 0) {
         console.log(`⌨️ Key down event #${keyEventCount}:`, e.key, e.code);
     }
-    
+
     window.superdeskState.socket.emit('keyboard-event', {
         sessionId: window.superdeskState.sessionId,
         type: 'down',
@@ -1424,10 +1433,10 @@ function handleKeyDown(e) {
 
 function handleKeyUp(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
-    
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     window.superdeskState.socket.emit('keyboard-event', {
         sessionId: window.superdeskState.sessionId,
         type: 'up',
@@ -1439,7 +1448,7 @@ function handleKeyUp(e) {
 // Stop screen sharing
 function stopScreenShare() {
     console.log('🛑 Stopping screen share...');
-    
+
     // Disable remote control if we're the host
     if (window.superdeskState.isHost) {
         console.log('🛑 Disabling remote control on host...');
@@ -1449,14 +1458,14 @@ function stopScreenShare() {
         }
         window.superdeskState.remoteControlEnabled = false;
     }
-    
+
     // Notify server and all guests that sharing has stopped
     if (window.superdeskState.socket) {
         window.superdeskState.socket.emit('stop-sharing', {
             sessionId: window.superdeskState.sessionId
         });
     }
-    
+
     // Stop all tracks
     if (window.superdeskState.webrtc && window.superdeskState.webrtc.stream) {
         window.superdeskState.webrtc.stream.getTracks().forEach(track => {
@@ -1464,34 +1473,34 @@ function stopScreenShare() {
             console.log('Stopped track:', track.kind);
         });
     }
-    
+
     // Close peer connection
     if (window.superdeskState.webrtc && window.superdeskState.webrtc.peerConnection) {
         window.superdeskState.webrtc.peerConnection.close();
         console.log('Closed peer connection');
     }
-    
+
     // Reset state
     window.superdeskState.sharingActive = false;
     window.superdeskState.webrtc = null;
-    
+
     // Update button to WHITE (default state)
     const shareBtn = document.getElementById('start-share-btn');
     if (shareBtn) {
         shareBtn.textContent = 'Start Screen Share';
         shareBtn.style.background = 'rgba(255,255,255,0.15)';  // White/transparent default
     }
-    
+
     // Hide file transfer section
     if (typeof hideHostFileTransferSection === 'function') {
         hideHostFileTransferSection();
     }
-    
+
     // Hide host floating toolbar
     if (typeof window.hideHostFloatingToolbar === 'function') {
         window.hideHostFloatingToolbar();
     }
-    
+
     console.log('✅ Screen sharing stopped and remote control disabled');
     showNotification('Sharing Stopped', 'Screen sharing has been stopped');
 }
@@ -1499,29 +1508,29 @@ function stopScreenShare() {
 // End session
 function endSession() {
     console.log('🛑 Ending session...');
-    
+
     // FIRST: Disable remote control on main process (stops cursor movement immediately)
     if (window.appControls && window.appControls.ipcSend) {
         console.log('🛑 Sending robot-set-enabled FALSE to main process');
         window.appControls.ipcSend('robot-set-enabled', false);
         window.appControls.ipcSend('robot-release-keys');
     }
-    
+
     // Disable remote control state
     if (window.superdeskState.remoteControlEnabled) {
         disableRemoteControl();
     }
     window.superdeskState.remoteControlEnabled = false;
-    
+
     if (window.superdeskState.socket) {
         window.superdeskState.socket.emit('end-session', window.superdeskState.sessionId);
     }
-    
+
     // Stop sharing if active
     if (window.superdeskState.sharingActive) {
         stopScreenShare();
     }
-    
+
     // Cleanup
     if (window.superdeskState.webrtc) {
         if (window.superdeskState.webrtc.stream) {
@@ -1531,13 +1540,13 @@ function endSession() {
             window.superdeskState.webrtc.peerConnection.close();
         }
     }
-    
+
     // Close the popup if guest
     if (typeof window.hideRemoteDesktopPopup === 'function') {
         window.hideRemoteDesktopPopup();
         console.log('✅ Popup closed');
     }
-    
+
     // Restore cursor visibility for guest
     const joinVideo = document.getElementById('join-remote-video');
     if (joinVideo) {
@@ -1545,24 +1554,24 @@ function endSession() {
         joinVideo.srcObject = null;
         console.log('✅ Guest cursor restored');
     }
-    
+
     const videoContainer = document.getElementById('remote-video-container');
     if (videoContainer) {
         videoContainer.remove();
     }
-    
+
     // Reset state
     window.superdeskState.guestConnected = false;
     window.superdeskState.sharingActive = false;
     window.superdeskState.remoteControlEnabled = false;
     window.superdeskState.webrtc = null;
     window.superdeskState.connectedGuest = null;
-    
+
     // Clear guest info from toolbar
     if (window.appControls && window.appControls.ipcSend) {
         window.appControls.ipcSend('update-toolbar-guest', null);
     }
-    
+
     // Reset UI - Start Screen Share button to WHITE (disabled state)
     const shareBtn = document.getElementById('start-share-btn');
     if (shareBtn) {
@@ -1571,7 +1580,7 @@ function endSession() {
         shareBtn.disabled = true;
         shareBtn.style.opacity = '0.5';
     }
-    
+
     // Reset join button
     const joinBtn = document.getElementById('connect-session-btn');
     if (joinBtn) {
@@ -1579,7 +1588,7 @@ function endSession() {
         joinBtn.disabled = false;
         joinBtn.style.opacity = '1';
     }
-    
+
     console.log('✅ Session ended successfully');
     showNotification('Session Ended', 'The remote desktop session has ended');
 }
@@ -1598,7 +1607,7 @@ function enableShareButton() {
 function updateJoinButtonState(state) {
     const joinBtn = document.getElementById('connect-session-btn');
     if (!joinBtn) return;
-    
+
     if (state === 'connected') {
         joinBtn.textContent = '✓ Connected';
         joinBtn.style.background = '#10b981';

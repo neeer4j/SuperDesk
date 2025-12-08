@@ -3,6 +3,15 @@ const path = require('path');
 const fs = require('fs');
 const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
 
+// ==================== DISABLE CHROME SCREEN SHARING INDICATOR ====================
+// These flags attempt to disable Chrome's built-in "Your screen is being shared" bar
+// that appears at the bottom of the screen when using screen capture.
+// The flags MUST be set before app is ready.
+app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns,HardwareMediaKeyHandling');
+app.commandLine.appendSwitch('enable-features', 'WebRtcPipeWireCapturer');
+// Disable the desktop capture picker UI warning
+app.commandLine.appendSwitch('auto-select-desktop-capture-source', 'Entire screen');
+
 // Configure nut-js for instant mouse movement (no animation)
 mouse.config.autoDelayMs = 0;
 mouse.config.mouseSpeed = 10000; // Very fast movement
@@ -15,6 +24,11 @@ console.log('   - mouse speed configured:', mouse.config.mouseSpeed);
 
 let mainWindow;
 let toolbarWindow = null;
+
+const TOOLBAR_WIDTH = 328;
+const TOOLBAR_COLLAPSED_WIDTH = 64;
+const TOOLBAR_HEIGHT = 52;
+const TOOLBAR_BOTTOM_MARGIN = 60;
 
 const REMOTE_REFERENCE_WIDTH = 1920;
 const REMOTE_REFERENCE_HEIGHT = 1080;
@@ -30,9 +44,9 @@ async function refreshScreenSize() {
     // This accounts for DPI scaling correctly!
     const nutWidth = await screen.width();
     const nutHeight = await screen.height();
-    
+
     screenSize = { width: nutWidth, height: nutHeight };
-    
+
     // Also log Electron's values for comparison
     const primaryDisplay = electronScreen.getPrimaryDisplay();
     console.log('[robot] Screen refresh - nut-js native size:', screenSize);
@@ -207,16 +221,16 @@ ipcMain.on('window-close', () => {
 
 ipcMain.on('robot-set-enabled', async (_event, enabled) => {
   remoteControlEnabled = !!enabled;
-  
+
   // Refresh screen size when enabling to ensure we have current dimensions
   if (remoteControlEnabled) {
     await refreshScreenSize();
   }
-  
+
   console.log('[robot] 🎮 set-enabled:', remoteControlEnabled);
   console.log('[robot] Screen size:', screenSize);
   console.log('[robot] Reference resolution:', REMOTE_REFERENCE_WIDTH, 'x', REMOTE_REFERENCE_HEIGHT);
-  
+
   if (!remoteControlEnabled) {
     releaseActiveKeys();
   }
@@ -237,11 +251,11 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
   try {
     // Log every 50th event to avoid spam but still see what's happening
     if (Math.random() < 0.02 || x > 0.9 || y > 0.9) {
-      console.log('[robot] mouse', { 
-        type, 
+      console.log('[robot] mouse', {
+        type,
         inputX: x,
         inputY: y,
-        outputX: coords.x, 
+        outputX: coords.x,
         outputY: coords.y,
         screenW: screenSize.width,
         screenH: screenSize.height,
@@ -257,18 +271,18 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
         break;
       case 'down':
       case 'mousedown':
-        mouse.setPosition({ x: coords.x, y: coords.y }).then(() => 
+        mouse.setPosition({ x: coords.x, y: coords.y }).then(() =>
           mouse.pressButton(mapNutButton(button))
         ).catch(err => console.error('[robot] down error:', err));
         break;
       case 'up':
       case 'mouseup':
-        mouse.setPosition({ x: coords.x, y: coords.y }).then(() => 
+        mouse.setPosition({ x: coords.x, y: coords.y }).then(() =>
           mouse.releaseButton(mapNutButton(button))
         ).catch(err => console.error('[robot] up error:', err));
         break;
       case 'click':
-        mouse.setPosition({ x: coords.x, y: coords.y }).then(() => 
+        mouse.setPosition({ x: coords.x, y: coords.y }).then(() =>
           mouse.click(mapNutButton(button))
         ).catch(err => console.error('[robot] click error:', err));
         break;
@@ -277,13 +291,13 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
         // Handle scroll/wheel events
         const { deltaX, deltaY } = data;
         console.log('[robot] 🖱️ Scroll event received:', { deltaX, deltaY, x: coords.x, y: coords.y });
-        
+
         // Move mouse to position first, then scroll
         // Browser wheel deltaY: positive = scroll down, negative = scroll up
         // nut-js: scrollDown(positive) scrolls DOWN, scrollUp(positive) scrolls UP
         // Lower divisor = more sensitive scrolling (was 40, then 15, now 5 for much better responsiveness)
         const scrollAmount = Math.max(1, Math.abs(Math.round(deltaY / 5)));
-        
+
         if (scrollAmount > 0) {
           mouse.setPosition({ x: coords.x, y: coords.y }).then(async () => {
             try {
@@ -352,10 +366,10 @@ function createToolbarWindow() {
   const { width, height } = electronScreen.getPrimaryDisplay().workAreaSize;
 
   toolbarWindow = new BrowserWindow({
-    width: 328,
-    height: 52,
-    x: width - 328,
-    y: height - 60,
+    width: TOOLBAR_WIDTH,
+    height: TOOLBAR_HEIGHT,
+    x: width - TOOLBAR_WIDTH,
+    y: height - TOOLBAR_BOTTOM_MARGIN,
     frame: false,
     transparent: false,
     alwaysOnTop: true,
@@ -374,7 +388,7 @@ function createToolbarWindow() {
   // Keep it always on top even when other apps are focused
   toolbarWindow.setAlwaysOnTop(true, 'screen-saver');
   toolbarWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  
+
   // Remove any title that might show
   toolbarWindow.setTitle('');
 
@@ -386,7 +400,22 @@ function createToolbarWindow() {
   });
 
   console.log('✅ Toolbar window created and shown');
+  repositionToolbar(false);
   return toolbarWindow;
+}
+
+function repositionToolbar(collapsed = false) {
+  if (!toolbarWindow || toolbarWindow.isDestroyed()) return;
+
+  const { width: screenW, height: screenH } = electronScreen.getPrimaryDisplay().workAreaSize;
+  const targetWidth = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+
+  toolbarWindow.setBounds({
+    width: targetWidth,
+    height: TOOLBAR_HEIGHT,
+    x: screenW - targetWidth,
+    y: screenH - TOOLBAR_BOTTOM_MARGIN
+  });
 }
 
 function createWindow() {
@@ -462,6 +491,7 @@ app.whenReady().then(() => {
     } else {
       toolbarWindow.show();
     }
+    repositionToolbar(false);
   });
 
   ipcMain.on('hide-toolbar', () => {
@@ -475,6 +505,10 @@ app.whenReady().then(() => {
       toolbarWindow.close();
       toolbarWindow = null;
     }
+  });
+
+  ipcMain.on('toolbar-resize', (_event, { collapsed } = {}) => {
+    repositionToolbar(!!collapsed);
   });
 
   ipcMain.on('toolbar-end-session', () => {
@@ -538,7 +572,7 @@ app.whenReady().then(() => {
         icon: path.join(__dirname, 'assets', 'icon.png'),
         silent: false
       });
-      
+
       notification.on('click', () => {
         // Bring window to front when notification is clicked
         if (mainWindow) {
@@ -550,7 +584,7 @@ app.whenReady().then(() => {
           mainWindow.webContents.send('notification-clicked', onClick);
         }
       });
-      
+
       notification.show();
     }
   });
@@ -575,18 +609,18 @@ ipcMain.handle('save-file-dialog', async (event, { defaultPath, data }) => {
         { name: 'All Files', extensions: ['*'] }
       ]
     });
-    
+
     if (result.canceled) {
       return { success: false, cancelled: true };
     }
-    
+
     // Convert array back to Buffer and write to file
     const buffer = Buffer.from(data);
     fs.writeFileSync(result.filePath, buffer);
-    
+
     console.log('[file-transfer] File saved:', result.filePath);
     return { success: true, path: result.filePath };
-    
+
   } catch (error) {
     console.error('[file-transfer] Save error:', error);
     return { success: false, error: error.message };
@@ -601,18 +635,18 @@ ipcMain.handle('open-file-dialog', async (event) => {
       buttonLabel: 'Select',
       properties: ['openFile']
     });
-    
+
     if (result.canceled || result.filePaths.length === 0) {
       return { success: false, cancelled: true };
     }
-    
+
     const filePath = result.filePaths[0];
     const stats = fs.statSync(filePath);
     const fileName = path.basename(filePath);
-    
+
     // Read file data
     const data = fs.readFileSync(filePath);
-    
+
     console.log('[file-transfer] File selected:', fileName, 'Size:', stats.size);
     return {
       success: true,
@@ -620,7 +654,7 @@ ipcMain.handle('open-file-dialog', async (event) => {
       size: stats.size,
       data: Array.from(data)  // Convert Buffer to array for IPC
     };
-    
+
   } catch (error) {
     console.error('[file-transfer] Open error:', error);
     return { success: false, error: error.message };
