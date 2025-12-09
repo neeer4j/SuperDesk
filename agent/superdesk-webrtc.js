@@ -9,6 +9,7 @@ window.superdeskState = {
     guestConnected: false,
     sharingActive: false,
     remoteControlEnabled: false,
+    hostIsMobile: false, // Track if the host device is mobile (detected via video aspect ratio)
     serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://superdesk-7m7f.onrender.com'
 };
 
@@ -187,7 +188,10 @@ async function initializeSocket() {
         socket.on('remote-control-enabled', (data) => {
             if (!window.superdeskState.isHost) return;
 
-            console.log('Guest enabled remote control (server notification)');
+            console.log('🟢 Guest enabled remote control (server notification)');
+            // IMPORTANT: Set state so data channel input is also processed
+            window.superdeskState.remoteControlEnabled = true;
+
             if (window.appControls && window.appControls.ipcSend) {
                 // Refresh screen size to get current dimensions
                 window.appControls.ipcSend('robot-refresh-screen-size');
@@ -384,6 +388,41 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         console.log('📁 HOST: Creating file transfer DataChannel...');
         window.fileTransfer.createChannel(peerConnection);
     }
+
+    // Create input DataChannel for receiving remote control from mobile viewers
+    console.log('🎮 HOST: Creating input DataChannel for mobile viewer control...');
+    const inputDataChannel = peerConnection.createDataChannel('input', { ordered: true });
+
+    inputDataChannel.onopen = () => {
+        console.log('🎮 HOST: Input data channel OPEN - ready to receive mobile input');
+    };
+
+    inputDataChannel.onclose = () => {
+        console.log('🎮 HOST: Input data channel closed');
+    };
+
+    inputDataChannel.onerror = (error) => {
+        console.error('🎮 HOST: Input data channel error:', error);
+    };
+
+    inputDataChannel.onmessage = (event) => {
+        try {
+            const inputEvent = JSON.parse(event.data);
+            console.log('🎮 HOST: Received input from mobile viewer:', inputEvent.type, inputEvent.action);
+
+            // Process input event similar to socket events
+            if (inputEvent.type === 'mouse' || inputEvent.type === 'touch') {
+                handleMobileInputEvent(inputEvent);
+            } else if (inputEvent.type === 'keyboard') {
+                handleMobileKeyboardEvent(inputEvent);
+            }
+        } catch (e) {
+            console.warn('🎮 HOST: Failed to parse input event:', e);
+        }
+    };
+
+    // Store for later reference
+    window.superdeskState.inputDataChannel = inputDataChannel;
 
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
@@ -800,6 +839,14 @@ async function setupWebRTCReceiver(socket, sessionId) {
                     readyState: video.readyState
                 });
                 updateDebugStatus('metadata', `${video.videoWidth}x${video.videoHeight}`);
+
+                // Detect if host is mobile based on portrait aspect ratio (height > width)
+                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                    const isPortrait = video.videoHeight > video.videoWidth;
+                    window.superdeskState.hostIsMobile = isPortrait;
+                    console.log('📱 Host device detected as:', isPortrait ? 'MOBILE (portrait)' : 'DESKTOP (landscape)');
+                    console.log('🖱️ Cursor will be:', isPortrait ? 'VISIBLE (mobile host has no cursor)' : 'HIDDEN when control enabled');
+                }
 
                 // Check if dimensions are 0x0 (black screen indicator)
                 if (video.videoWidth === 0 || video.videoHeight === 0) {
@@ -1419,13 +1466,17 @@ function enableRemoteControl() {
     document.addEventListener('keyup', handleKeyUp, { capture: true });
 
     console.log('✅ Remote control enabled successfully');
-    // Hide guest cursor over video when control is enabled
-    if (joinVideo) {
+    // Hide guest cursor over video when control is enabled - BUT ONLY for desktop hosts
+    // When host is mobile (Android), there's no host cursor, so keep guest cursor visible
+    if (joinVideo && !window.superdeskState.hostIsMobile) {
         try {
             joinVideo.classList.add('control-active');
+            console.log('🖱️ Cursor hidden (desktop host)');
         } catch (e) {
             console.warn('Could not add control-active class to joinVideo', e);
         }
+    } else if (window.superdeskState.hostIsMobile) {
+        console.log('🖱️ Cursor kept visible (mobile host has no cursor to conflict with)');
     }
 }
 
@@ -1642,6 +1693,68 @@ function handleKeyUp(e) {
         key: e.key,
         code: e.code
     });
+}
+
+// Handle input events from mobile viewer (via data channel)
+// These are normalized coordinates (0.0-1.0)
+function handleMobileInputEvent(inputEvent) {
+    const { action, data } = inputEvent;
+    const x = data.x;
+    const y = data.y;
+
+    console.log('🎮 Processing mobile input:', action, 'at', x?.toFixed(3), y?.toFixed(3));
+
+    // Require remote control to be enabled (host must have enabled it)
+    if (!window.superdeskState.remoteControlEnabled) {
+        console.log('🎮 Remote control not enabled, ignoring mobile input');
+        return;
+    }
+
+    // Send to main process for execution
+    // IMPORTANT: main.js expects robot-mouse-event with { type, x, y, button, deltaX, deltaY } object
+    if (window.appControls && window.appControls.ipcSend) {
+        let eventType = action;
+        // Map action names to what main.js expects
+        if (action === 'tap') eventType = 'click';
+
+        window.appControls.ipcSend('robot-mouse-event', {
+            type: eventType,
+            x: x,
+            y: y,
+            button: data.button || 0,
+            deltaX: data.deltaX || 0,
+            deltaY: data.deltaY || 0
+        });
+        console.log('🎮 ✅ Sent IPC robot-mouse-event:', eventType, 'at', x?.toFixed(3), y?.toFixed(3));
+    } else {
+        console.error('🎮 ❌ No appControls.ipcSend available!');
+    }
+}
+
+function handleMobileKeyboardEvent(inputEvent) {
+    const { action, data } = inputEvent;
+
+    console.log('🎮 Processing mobile keyboard:', action, data?.key);
+
+    if (!window.superdeskState.remoteControlEnabled) {
+        console.log('🎮 Remote control not enabled, ignoring mobile keyboard');
+        return;
+    }
+
+    // IMPORTANT: main.js expects robot-keyboard-event with { type, key, code } object
+    if (window.appControls && window.appControls.ipcSend) {
+        let eventType = 'keydown';
+        if (action === 'up') eventType = 'keyup';
+
+        window.appControls.ipcSend('robot-keyboard-event', {
+            type: eventType,
+            key: data?.key || '',
+            code: data?.code || ''
+        });
+        console.log('🎮 ✅ Sent IPC robot-keyboard-event:', eventType, data?.key);
+    } else {
+        console.error('🎮 ❌ No appControls.ipcSend available!');
+    }
 }
 
 // Stop screen sharing
