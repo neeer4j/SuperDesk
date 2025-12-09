@@ -12,6 +12,17 @@ app.commandLine.appendSwitch('enable-features', 'WebRtcPipeWireCapturer');
 // Disable the desktop capture picker UI warning
 app.commandLine.appendSwitch('auto-select-desktop-capture-source', 'Entire screen');
 
+// ==================== H.264 CODEC SUPPORT FOR ANDROID SCREEN SHARES ====================
+// Android devices typically encode screen captures in H.264
+// These flags enable hardware accelerated H.264 decoding in Electron/Chromium
+app.commandLine.appendSwitch('enable-accelerated-video-decode');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+// Enable HEVC/H.265 and H.264 as fallback codecs
+app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEncoder,PlatformHEVCDecoderSupport');
+// Ignore GPU blocklist to ensure hardware decoding works
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+
 // Configure nut-js for instant mouse movement (no animation)
 mouse.config.autoDelayMs = 0;
 mouse.config.mouseSpeed = 10000; // Very fast movement
