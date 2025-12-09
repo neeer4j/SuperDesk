@@ -1528,6 +1528,55 @@ function disableRemoteControl() {
 // Mouse event handlers with RAF-based batching for minimum latency
 let mouseMoveCount = 0;
 let pendingMouseMove = null;
+// Helper to get normalized coordinates accounting for letterboxing (object-fit: contain)
+function getNormalizedCoordinates(e, videoElement) {
+    if (!videoElement) return null;
+
+    const rect = videoElement.getBoundingClientRect();
+
+    // If video dimensions aren't available yet, fallback to simple mapping
+    if (!videoElement.videoWidth || !videoElement.videoHeight) {
+        return {
+            x: (e.clientX - rect.left) / rect.width,
+            y: (e.clientY - rect.top) / rect.height
+        };
+    }
+
+    // Calculate aspect ratios
+    const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
+    const elementRatio = rect.width / rect.height;
+
+    let displayWidth = rect.width;
+    let displayHeight = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (elementRatio > videoRatio) {
+        // Element is wider than video - black bars on sides (pillarbox)
+        displayWidth = rect.height * videoRatio;
+        offsetX = (rect.width - displayWidth) / 2;
+    } else {
+        // Element is taller than video - black bars on top/bottom (letterbox)
+        displayHeight = rect.width / videoRatio;
+        offsetY = (rect.height - displayHeight) / 2;
+    }
+
+    // specific coordinate relative to the video display area
+    const mouseX = e.clientX - rect.left - offsetX;
+    const mouseY = e.clientY - rect.top - offsetY;
+
+    // Check if click is inside the actual video area
+    if (mouseX < 0 || mouseX > displayWidth || mouseY < 0 || mouseY > displayHeight) {
+        return null; // Click was in the black bars
+    }
+
+    // Return normalized coordinates (0.0 - 1.0)
+    return {
+        x: mouseX / displayWidth,
+        y: mouseY / displayHeight
+    };
+}
+
 let rafScheduled = false;
 
 function handleMouseMove(e) {
@@ -1542,9 +1591,11 @@ function handleMouseMove(e) {
     mouseMoveCount++;
 
     const video = e.target;
-    const rect = video.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    const coords = getNormalizedCoordinates(e, video);
+
+    if (!coords) return; // Ignore clicks in letterbox/pillarbox areas
+
+    const { x, y } = coords;
 
     if (!window.superdeskState.socket || !window.superdeskState.socket.connected) {
         return;
@@ -1575,9 +1626,11 @@ function handleMouseMove(e) {
 function handleMouseClick(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
     const video = e.target;
-    const rect = video.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    const coords = getNormalizedCoordinates(e, video);
+
+    if (!coords) return;
+
+    const { x, y } = coords;
 
     window.superdeskState.socket.emit('mouse-event', {
         sessionId: window.superdeskState.sessionId,
@@ -1591,9 +1644,11 @@ function handleMouseClick(e) {
 function handleMouseDown(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
     const video = e.target;
-    const rect = video.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    const coords = getNormalizedCoordinates(e, video);
+
+    if (!coords) return;
+
+    const { x, y } = coords;
 
     window.superdeskState.socket.emit('mouse-event', {
         sessionId: window.superdeskState.sessionId,
@@ -1607,9 +1662,17 @@ function handleMouseDown(e) {
 function handleMouseUp(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
     const video = e.target;
-    const rect = video.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    const coords = getNormalizedCoordinates(e, video);
+
+    // For mouseup, we might want to send it even if outside (drag release),
+    // but for simplicity/safety let's restrict to video area for now
+    if (!coords) {
+        // Try to clamp to nearest edge if released outside?
+        // For now, just ignore to prevent erratic jumps
+        return;
+    }
+
+    const { x, y } = coords;
 
     window.superdeskState.socket.emit('mouse-event', {
         sessionId: window.superdeskState.sessionId,
@@ -1635,9 +1698,11 @@ function handleMouseWheel(e) {
     }
 
     const video = e.target;
-    const rect = video.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    const coords = getNormalizedCoordinates(e, video);
+
+    if (!coords) return;
+
+    const { x, y } = coords;
 
     // Normalize delta values - different browsers report different scales
     // Most browsers use 100 for one "click" of the scroll wheel
