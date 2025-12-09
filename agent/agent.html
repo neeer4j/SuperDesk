@@ -6911,12 +6911,21 @@
             const waitingMsg = document.getElementById('waiting-message');
             const video = document.getElementById('join-remote-video');
 
-            // Only open popup when there is a visible/active video stream
-            const hasActiveVideo = video && video.srcObject && video.srcObject.getVideoTracks && video.srcObject.getVideoTracks().length > 0 && video.srcObject.getVideoTracks()[0].readyState !== 'ended';
+            // Only open popup when there is a video stream (allow muted tracks - common with Android)
+            const hasVideoTrack = video && video.srcObject && video.srcObject.getVideoTracks && video.srcObject.getVideoTracks().length > 0;
+            const trackNotEnded = hasVideoTrack ? video.srcObject.getVideoTracks()[0].readyState !== 'ended' : false;
+            const trackMuted = hasVideoTrack ? video.srcObject.getVideoTracks()[0].muted : false;
 
-            if (!hasActiveVideo) {
-                console.warn('⚠️ showRemoteDesktopPopup called but no active video stream present - aborting');
+            console.log('📺 showRemoteDesktopPopup check:', { hasVideoTrack, trackNotEnded, trackMuted });
+
+            if (!hasVideoTrack || !trackNotEnded) {
+                console.warn('⚠️ showRemoteDesktopPopup called but no valid video stream present - aborting');
                 return;
+            }
+
+            // Log if track is muted (will be handled by unmute polling in webrtc.js)
+            if (trackMuted) {
+                console.log('📺 Track is muted - unmute polling should handle this');
             }
 
             if (popup) {

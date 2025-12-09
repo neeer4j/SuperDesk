@@ -15,23 +15,23 @@ window.fileTransferState = {
     isEnabled: true,           // Local file transfer enabled
     peerEnabled: true,         // Remote peer's file transfer enabled
     autoAccept: false,         // Auto-accept incoming file transfers
-    
+
     // Sending state
     currentFile: null,
     sendingInProgress: false,
     bytesSent: 0,
     totalBytesToSend: 0,
-    
+
     // Receiving state
     receivingInProgress: false,
     receivedChunks: [],
     bytesReceived: 0,
     expectedFileSize: 0,
     expectedFileName: '',
-    
+
     // Pending offer (waiting for accept/reject)
     pendingOffer: null,
-    
+
     // Callbacks
     onProgress: null,
     onFileReceived: null,
@@ -59,18 +59,18 @@ const MESSAGE_TYPES = {
  */
 function createFileTransferChannel(peerConnection) {
     console.log('📁 Creating fileTransfer DataChannel...');
-    
+
     const dataChannel = peerConnection.createDataChannel('fileTransfer', {
         ordered: true,  // Ensure chunks arrive in order
         maxRetransmits: 10  // Allow retransmits for reliability
     });
-    
+
     // CRITICAL: Set binary type for ArrayBuffer transfer
     dataChannel.binaryType = 'arraybuffer';
-    
+
     setupDataChannelHandlers(dataChannel);
     window.fileTransferState.dataChannel = dataChannel;
-    
+
     console.log('✅ fileTransfer DataChannel created');
     return dataChannel;
 }
@@ -81,18 +81,19 @@ function createFileTransferChannel(peerConnection) {
  */
 function setupDataChannelReceiver(peerConnection) {
     console.log('📁 Setting up DataChannel receiver...');
-    
+
     peerConnection.ondatachannel = (event) => {
         console.log('📁 Received DataChannel:', event.channel.label);
-        
-        if (event.channel.label === 'fileTransfer') {
+
+        // Accept both 'fileTransfer' (Electron) and 'files' (Android mobile) channel names
+        if (event.channel.label === 'fileTransfer' || event.channel.label === 'files') {
             // CRITICAL: Set binary type for ArrayBuffer transfer
             event.channel.binaryType = 'arraybuffer';
-            
+
             setupDataChannelHandlers(event.channel);
             window.fileTransferState.dataChannel = event.channel;
-            console.log('✅ fileTransfer DataChannel connected');
-            
+            console.log('✅ File transfer DataChannel connected:', event.channel.label);
+
             // Show file transfer UI when channel is ready
             showFileTransferUI();
         }
@@ -108,16 +109,16 @@ function setupDataChannelHandlers(dataChannel) {
         console.log('📁 DataChannel OPEN - ready for file transfer');
         showFileTransferUI();
     };
-    
+
     dataChannel.onclose = () => {
         console.log('📁 DataChannel CLOSED');
         hideFileTransferUI();
     };
-    
+
     dataChannel.onerror = (error) => {
         console.error('📁 DataChannel error:', error);
     };
-    
+
     dataChannel.onmessage = (event) => {
         handleDataChannelMessage(event.data);
     };
@@ -136,11 +137,11 @@ function handleDataChannelMessage(data) {
         handleFileChunk(data);
         return;
     }
-    
+
     // Parse JSON message
     try {
         const message = JSON.parse(data);
-        
+
         switch (message.type) {
             case MESSAGE_TYPES.FILE_OFFER:
                 handleFileOffer(message);
@@ -176,39 +177,39 @@ function handleDataChannelMessage(data) {
  */
 async function sendFile(file) {
     const state = window.fileTransferState;
-    
+
     console.log('📁 sendFile called with:', file ? file.name : 'null');
     console.log('📁 DataChannel state:', state.dataChannel ? state.dataChannel.readyState : 'no channel');
-    
+
     if (!state.dataChannel) {
         console.error('📁 Cannot send file: No DataChannel');
         showFileTransferError('Connection not ready. Please wait for peer to connect.');
         return;
     }
-    
+
     if (state.dataChannel.readyState !== 'open') {
         console.error('📁 Cannot send file: DataChannel not open, state:', state.dataChannel.readyState);
         showFileTransferError('Connection not ready. DataChannel state: ' + state.dataChannel.readyState);
         return;
     }
-    
+
     if (!state.isEnabled) {
         showFileTransferError('File transfer is disabled.');
         return;
     }
-    
+
     if (state.sendingInProgress) {
         showFileTransferError('A file transfer is already in progress.');
         return;
     }
-    
+
     console.log('📁 Preparing to send file:', file.name, 'Size:', file.size);
-    
+
     // Store file info
     state.currentFile = file;
     state.totalBytesToSend = file.size;
     state.bytesSent = 0;
-    
+
     // Send file offer and wait for accept/reject
     const offer = {
         type: MESSAGE_TYPES.FILE_OFFER,
@@ -216,7 +217,7 @@ async function sendFile(file) {
         size: file.size,
         mimeType: file.type || 'application/octet-stream'
     };
-    
+
     try {
         state.dataChannel.send(JSON.stringify(offer));
         console.log('📁 File offer sent successfully, waiting for response...');
@@ -225,7 +226,7 @@ async function sendFile(file) {
         showFileTransferError('Failed to send file offer: ' + e.message);
         return;
     }
-    
+
     // Show pending state in UI
     updateSendProgress(0, 'Waiting for peer to accept...');
 }
@@ -236,49 +237,49 @@ async function sendFile(file) {
 async function startSendingChunks() {
     const state = window.fileTransferState;
     const file = state.currentFile;
-    
+
     if (!file) {
         console.error('📁 No file to send');
         return;
     }
-    
+
     state.sendingInProgress = true;
     state.bytesSent = 0;
-    
+
     console.log('📁 Starting chunk transfer for file:', file.name, 'Size:', file.size);
     updateSendProgress(0, 'Sending...');
-    
+
     try {
         // Read the entire file as ArrayBuffer
         const arrayBuffer = await file.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
-        
+
         console.log('📁 File loaded into memory, starting chunked transfer...');
-        
+
         // Send in chunks
         let offset = 0;
         while (offset < uint8Array.length) {
             const chunk = uint8Array.slice(offset, offset + CHUNK_SIZE);
-            
+
             // Wait for buffer to clear if needed (backpressure handling)
             while (state.dataChannel.bufferedAmount > 1024 * 1024) {
                 await new Promise(resolve => setTimeout(resolve, 10));
             }
-            
+
             // Send the chunk as ArrayBuffer
             state.dataChannel.send(chunk.buffer);
             offset += chunk.length;
             state.bytesSent = offset;
-            
+
             const progress = (state.bytesSent / state.totalBytesToSend) * 100;
             updateSendProgress(progress, 'Sending...');
-            
+
             // Small delay to prevent blocking
             if (offset % (CHUNK_SIZE * 10) === 0) {
                 await new Promise(resolve => setTimeout(resolve, 1));
             }
         }
-        
+
         // Send EOF marker
         const eofMessage = {
             type: MESSAGE_TYPES.FILE_EOF,
@@ -287,10 +288,10 @@ async function startSendingChunks() {
             totalBytes: state.bytesSent
         };
         state.dataChannel.send(JSON.stringify(eofMessage));
-        
+
         console.log('✅ File transfer complete:', state.bytesSent, 'bytes sent');
         updateSendProgress(100, 'Complete!');
-        
+
         // Reset state after a delay
         setTimeout(() => {
             state.sendingInProgress = false;
@@ -298,7 +299,7 @@ async function startSendingChunks() {
             state.bytesSent = 0;
             hideSendProgress();
         }, 2000);
-        
+
     } catch (error) {
         console.error('📁 Error sending file:', error);
         state.sendingInProgress = false;
@@ -314,28 +315,28 @@ async function startSendingChunks() {
  */
 function handleFileOffer(offer) {
     console.log('📁 Received file offer:', offer.name, 'Size:', offer.size);
-    
+
     const state = window.fileTransferState;
-    
+
     if (!state.isEnabled) {
         // Auto-reject if disabled
         rejectFileOffer();
         return;
     }
-    
+
     // Store pending offer
     state.pendingOffer = offer;
-    
+
     // Show desktop notification so user knows even if app is minimized
     showFileTransferNotification(offer);
-    
+
     // Check if auto-accept is enabled
     if (state.autoAccept) {
         console.log('📁 Auto-accepting file offer');
         acceptFileOffer();
         return;
     }
-    
+
     // Show accept/reject dialog
     showFileOfferDialog(offer);
 }
@@ -346,7 +347,7 @@ function handleFileOffer(offer) {
  */
 function showFileTransferNotification(offer) {
     const fileSize = formatFileSize(offer.size);
-    
+
     // Use Electron's IPC to show native notification
     if (window.require) {
         try {
@@ -360,7 +361,7 @@ function showFileTransferNotification(offer) {
             console.log('📁 Could not show native notification:', e);
         }
     }
-    
+
     // Fallback to web notification API
     if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Incoming File Transfer', {
@@ -385,30 +386,30 @@ function formatFileSize(bytes) {
  */
 function acceptFileOffer() {
     const state = window.fileTransferState;
-    
+
     if (!state.pendingOffer) {
         console.warn('📁 No pending offer to accept');
         return;
     }
-    
+
     console.log('📁 Accepting file offer:', state.pendingOffer.name);
-    
+
     // Initialize receiving state
     state.receivingInProgress = true;
     state.receivedChunks = [];
     state.bytesReceived = 0;
     state.expectedFileSize = state.pendingOffer.size;
     state.expectedFileName = state.pendingOffer.name;
-    
+
     // Send accept message
     state.dataChannel.send(JSON.stringify({
         type: MESSAGE_TYPES.FILE_ACCEPT
     }));
-    
+
     // Hide dialog and show progress
     hideFileOfferDialog();
     updateReceiveProgress(0, 'Receiving...');
-    
+
     state.pendingOffer = null;
 }
 
@@ -417,15 +418,15 @@ function acceptFileOffer() {
  */
 function rejectFileOffer() {
     const state = window.fileTransferState;
-    
+
     console.log('📁 Rejecting file offer');
-    
+
     if (state.dataChannel && state.dataChannel.readyState === 'open') {
         state.dataChannel.send(JSON.stringify({
             type: MESSAGE_TYPES.FILE_REJECT
         }));
     }
-    
+
     state.pendingOffer = null;
     hideFileOfferDialog();
 }
@@ -444,10 +445,10 @@ function handleFileAccept() {
 function handleFileReject() {
     console.log('📁 Peer rejected file transfer');
     const state = window.fileTransferState;
-    
+
     state.currentFile = null;
     state.sendingInProgress = false;
-    
+
     showFileTransferError('Peer rejected the file transfer.');
     hideSendProgress();
 }
@@ -458,16 +459,16 @@ function handleFileReject() {
  */
 function handleFileChunk(data) {
     const state = window.fileTransferState;
-    
+
     if (!state.receivingInProgress) {
         console.warn('📁 Received chunk but not expecting file');
         return;
     }
-    
+
     // Store chunk
     state.receivedChunks.push(new Uint8Array(data));
     state.bytesReceived += data.byteLength;
-    
+
     // Update progress
     const progress = (state.bytesReceived / state.expectedFileSize) * 100;
     updateReceiveProgress(progress, 'Receiving...');
@@ -479,30 +480,30 @@ function handleFileChunk(data) {
  */
 function handleFileEOF(message) {
     console.log('📁 Received EOF, assembling file...');
-    
+
     const state = window.fileTransferState;
-    
+
     // Combine all chunks
     const totalLength = state.receivedChunks.reduce((acc, chunk) => acc + chunk.length, 0);
     const combined = new Uint8Array(totalLength);
     let offset = 0;
-    
+
     for (const chunk of state.receivedChunks) {
         combined.set(chunk, offset);
         offset += chunk.length;
     }
-    
+
     console.log('📁 File assembled:', totalLength, 'bytes');
-    
+
     // Create blob
     const blob = new Blob([combined]);
-    
+
     // Trigger save dialog (Electron)
     saveReceivedFile(blob, state.expectedFileName);
-    
+
     // Update progress
     updateReceiveProgress(100, 'Complete!');
-    
+
     // Reset state after a delay
     setTimeout(() => {
         state.receivingInProgress = false;
@@ -519,11 +520,11 @@ function handleFileEOF(message) {
  */
 function handleFileCancel() {
     console.log('📁 File transfer cancelled by peer');
-    
+
     const state = window.fileTransferState;
     state.receivingInProgress = false;
     state.receivedChunks = [];
-    
+
     showFileTransferError('Transfer cancelled by peer.');
     hideReceiveProgress();
 }
@@ -537,9 +538,9 @@ function handleFileCancel() {
 function setFileTransferEnabled(enabled) {
     const state = window.fileTransferState;
     state.isEnabled = enabled;
-    
+
     console.log('📁 File transfer', enabled ? 'enabled' : 'disabled');
-    
+
     // Notify peer
     if (state.dataChannel && state.dataChannel.readyState === 'open') {
         state.dataChannel.send(JSON.stringify({
@@ -547,7 +548,7 @@ function setFileTransferEnabled(enabled) {
             enabled: enabled
         }));
     }
-    
+
     // Update UI
     updateFileTransferToggle(enabled);
 }
@@ -559,9 +560,9 @@ function setFileTransferEnabled(enabled) {
 function handleToggleEnabled(message) {
     const state = window.fileTransferState;
     state.peerEnabled = message.enabled;
-    
+
     console.log('📁 Peer file transfer', message.enabled ? 'enabled' : 'disabled');
-    
+
     // Update UI to reflect peer state
     updatePeerFileTransferState(message.enabled);
 }
@@ -575,19 +576,19 @@ function handleToggleEnabled(message) {
  */
 async function saveReceivedFile(blob, fileName) {
     console.log('📁 Saving file:', fileName);
-    
+
     try {
         // Convert blob to array buffer
         const arrayBuffer = await blob.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
-        
+
         // Use Electron's save dialog via IPC
         if (window.appControls && window.appControls.ipcInvoke) {
             const result = await window.appControls.ipcInvoke('save-file-dialog', {
                 defaultPath: fileName,
                 data: Array.from(uint8Array)  // Convert to regular array for IPC
             });
-            
+
             if (result.success) {
                 console.log('✅ File saved:', result.path);
                 showFileTransferSuccess(`File saved: ${fileName}`);
@@ -606,7 +607,7 @@ async function saveReceivedFile(blob, fileName) {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             console.log('✅ File downloaded via browser fallback');
             showFileTransferSuccess(`File downloaded: ${fileName}`);
         }
@@ -622,21 +623,21 @@ function showFileTransferUI() {
     // Show host file transfer section if it exists
     const hostSection = document.getElementById('host-file-transfer-section');
     if (hostSection) hostSection.style.display = 'block';
-    
+
     // Show guest file transfer zone if it exists (for guests viewing remote desktop)
     const guestZone = document.getElementById('guest-file-transfer-zone');
     if (guestZone) guestZone.style.display = 'block';
-    
+
     console.log('📁 File transfer UI shown');
 }
 
 function hideFileTransferUI() {
     const hostSection = document.getElementById('host-file-transfer-section');
     if (hostSection) hostSection.style.display = 'none';
-    
+
     const guestZone = document.getElementById('guest-file-transfer-zone');
     if (guestZone) guestZone.style.display = 'none';
-    
+
     console.log('📁 File transfer UI hidden');
 }
 

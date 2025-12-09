@@ -720,7 +720,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
         }
         updateDebugStatus('stream', 'received');
 
-        const stream = event.streams[0];
+        // Get stream - fallback to creating from track if streams array is empty
+        // This is common with react-native-webrtc where tracks may not be associated with streams
+        let stream;
+        if (event.streams.length > 0) {
+            stream = event.streams[0];
+            console.log('📺 Using stream from event.streams[0]');
+        } else {
+            console.warn('⚠️ No streams in event - creating stream from track (mobile WebRTC quirk)');
+            stream = new MediaStream([event.track]);
+            console.log('📺 Created new MediaStream from track');
+        }
+
+        // Log stream info
+        console.log('📺 Stream ID:', stream.id);
+        console.log('📺 Stream active:', stream.active);
+        console.log('📺 Stream video tracks:', stream.getVideoTracks().length);
+        console.log('📺 Stream audio tracks:', stream.getAudioTracks().length);
 
         // Get video elements
         const video = document.getElementById('join-remote-video');
@@ -736,14 +752,24 @@ async function setupWebRTCReceiver(socket, sessionId) {
             console.log('📺 Setting srcObject...');
             video.srcObject = stream;
 
-            // Only show popup when stream has at least one active video track
+            // Show popup when stream has at least one video track (even if muted - Android quirk)
             const hasVideoTrack = stream && stream.getVideoTracks && stream.getVideoTracks().length > 0;
-            const videoTrackActive = hasVideoTrack ? stream.getVideoTracks()[0].readyState !== 'ended' : false;
-            if (hasVideoTrack && videoTrackActive) {
+            const videoTrackNotEnded = hasVideoTrack ? stream.getVideoTracks()[0].readyState !== 'ended' : false;
+            const videoTrackMuted = hasVideoTrack ? stream.getVideoTracks()[0].muted : false;
+
+            console.log('📺 Popup display check:', {
+                hasVideoTrack,
+                videoTrackNotEnded,
+                videoTrackMuted,
+                readyState: hasVideoTrack ? stream.getVideoTracks()[0].readyState : 'N/A'
+            });
+
+            // Show popup for any non-ended track (even if muted - Android often sends muted initially)
+            if (hasVideoTrack && videoTrackNotEnded) {
                 // Show the remote desktop popup
                 if (typeof window.showRemoteDesktopPopup === 'function') {
                     window.showRemoteDesktopPopup();
-                    console.log('✅ Remote desktop popup opened');
+                    console.log('✅ Remote desktop popup opened (muted:', videoTrackMuted, ')');
                 }
             } else {
                 console.warn('⚠️ Received stream but no active video tracks - not opening popup');
@@ -765,12 +791,185 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 console.log('✅ Status updated to streaming');
             }
 
-            video.play()
-                .then(() => {
-                    console.log('✅ Video playing successfully');
-                    console.log('📺 Video dimensions:', video.videoWidth, 'x', video.videoHeight);
-                })
-                .catch(e => console.log('⚠️ Auto-play handled:', e.message));
+            // Add comprehensive video event listeners for debugging black screen issues
+            video.onloadedmetadata = () => {
+                console.log('📺 VIDEO METADATA LOADED:', {
+                    width: video.videoWidth,
+                    height: video.videoHeight,
+                    duration: video.duration,
+                    readyState: video.readyState
+                });
+                updateDebugStatus('metadata', `${video.videoWidth}x${video.videoHeight}`);
+
+                // Check if dimensions are 0x0 (black screen indicator)
+                if (video.videoWidth === 0 || video.videoHeight === 0) {
+                    console.error('❌ VIDEO DIMENSIONS ARE 0x0 - BLACK SCREEN LIKELY');
+                    console.error('💡 This often happens with Android screen shares due to:');
+                    console.error('   1. Codec incompatibility (H.264 vs VP8)');
+                    console.error('   2. Screen capture permission issues on Android');
+                    console.error('   3. Android MediaProjection not properly initialized');
+                    updateDebugStatus('error', 'dimensions-zero');
+                }
+            };
+
+            video.oncanplay = () => {
+                console.log('📺 VIDEO CAN PLAY:', {
+                    width: video.videoWidth,
+                    height: video.videoHeight,
+                    paused: video.paused
+                });
+                updateDebugStatus('canplay', 'ready');
+            };
+
+            video.oncanplaythrough = () => {
+                console.log('📺 VIDEO CAN PLAY THROUGH - stream buffer sufficient');
+            };
+
+            video.onerror = (e) => {
+                console.error('❌ VIDEO ERROR:', e);
+                console.error('❌ Video error code:', video.error?.code);
+                console.error('❌ Video error message:', video.error?.message);
+                updateDebugStatus('video-error', video.error?.message || 'unknown');
+            };
+
+            video.onstalled = () => {
+                console.warn('⚠️ VIDEO STALLED - stream interrupted');
+                updateDebugStatus('stalled', 'true');
+            };
+
+            video.onwaiting = () => {
+                console.log('📺 VIDEO WAITING - buffering more data');
+            };
+
+            // Monitor video track for muted state changes (common with Android)
+            const videoTrack = stream.getVideoTracks()[0];
+            let isPlaybackInProgress = false; // Prevent overlapping play calls
+
+            if (videoTrack) {
+                console.log('📺 VIDEO TRACK SETTINGS:', videoTrack.getSettings());
+                console.log('📺 VIDEO TRACK INITIAL STATE - muted:', videoTrack.muted, 'enabled:', videoTrack.enabled);
+
+                // Function to properly initialize video when track is ready
+                const initializeVideoPlayback = async () => {
+                    if (isPlaybackInProgress) {
+                        console.log('📺 Playback already in progress, skipping...');
+                        return;
+                    }
+                    isPlaybackInProgress = true;
+                    console.log('📺 Initializing video playback...');
+
+                    try {
+                        // Don't reset srcObject - just call play (resetting causes the interrupt error)
+                        await video.play();
+                        console.log('✅ Video playing!');
+                        console.log('📺 Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+                    } catch (e) {
+                        console.log('⚠️ Play attempt:', e.message);
+                        // If interrupted, wait a bit and retry once
+                        if (e.name === 'AbortError') {
+                            console.log('📺 Retrying play after abort...');
+                            setTimeout(async () => {
+                                try {
+                                    await video.play();
+                                    console.log('✅ Video playing on retry!');
+                                } catch (e2) {
+                                    console.error('❌ Retry play failed:', e2.message);
+                                }
+                            }, 100);
+                        }
+                    }
+                    isPlaybackInProgress = false;
+                };
+
+                videoTrack.onmute = () => {
+                    console.warn('⚠️ VIDEO TRACK MUTED - stream paused or interrupted');
+                    updateDebugStatus('track', 'muted');
+                };
+
+                videoTrack.onunmute = () => {
+                    console.log('✅ VIDEO TRACK UNMUTED - stream resumed');
+                    updateDebugStatus('track', 'unmuted');
+                    // When track unmutes, reinitialize video playback
+                    initializeVideoPlayback();
+                };
+
+                videoTrack.onended = () => {
+                    console.log('🛑 VIDEO TRACK ENDED - stream stopped');
+                    updateDebugStatus('track', 'ended');
+                };
+
+                // If track is initially muted (common with Android screen capture),
+                // set up periodic checks and wait for unmute
+                if (videoTrack.muted) {
+                    console.warn('⚠️ VIDEO TRACK INITIALLY MUTED - Android screen capture likely still initializing');
+                    console.log('📺 Setting up unmute waiting mechanism...');
+                    updateDebugStatus('track', 'waiting-for-unmute');
+
+                    // Periodic check for unmute (in case event doesn't fire)
+                    let unmutePollCount = 0;
+                    const maxUnmutePollAttempts = 30; // 15 seconds max
+                    const unmutePollInterval = setInterval(() => {
+                        unmutePollCount++;
+                        console.log(`📺 Unmute poll #${unmutePollCount}: muted=${videoTrack.muted}, enabled=${videoTrack.enabled}, readyState=${videoTrack.readyState}`);
+
+                        if (!videoTrack.muted) {
+                            console.log('✅ Track unmuted detected via polling!');
+                            clearInterval(unmutePollInterval);
+                            initializeVideoPlayback();
+                        } else if (unmutePollCount >= maxUnmutePollAttempts) {
+                            console.error('❌ Track still muted after 15s - Android may have issues with screen capture');
+                            clearInterval(unmutePollInterval);
+                            updateDebugStatus('error', 'track-remained-muted');
+
+                            // Try playing anyway - sometimes video works despite muted flag
+                            console.log('📺 Attempting playback despite muted flag...');
+                            initializeVideoPlayback();
+                        }
+                    }, 500);
+
+                    // Store interval for cleanup
+                    window.superdeskState.unmutePollInterval = unmutePollInterval;
+                } else {
+                    // Track is NOT muted, proceed with normal playback
+                    console.log('📺 Track not muted, proceeding with playback...');
+                    initializeVideoPlayback();
+                }
+            } else {
+                // No video track, just try to play
+                video.play()
+                    .then(() => console.log('✅ Video playing (no track to monitor)'))
+                    .catch(e => console.log('⚠️ Play:', e.message));
+            }
+
+            // Delayed check for black screen (diagnostic only - don't reset srcObject as it causes interrupts)
+            setTimeout(() => {
+                console.log('📺 DELAYED VIDEO CHECK (2s after setup):');
+                console.log('   - videoWidth:', video.videoWidth);
+                console.log('   - videoHeight:', video.videoHeight);
+                console.log('   - readyState:', video.readyState);
+                console.log('   - paused:', video.paused);
+                console.log('   - currentTime:', video.currentTime);
+
+                // Also check track state
+                const currentTrack = video.srcObject?.getVideoTracks?.()?.[0];
+                if (currentTrack) {
+                    console.log('   - track.muted:', currentTrack.muted);
+                    console.log('   - track.enabled:', currentTrack.enabled);
+                    console.log('   - track.readyState:', currentTrack.readyState);
+                }
+
+                if (video.videoWidth === 0 && video.videoHeight === 0) {
+                    console.error('❌ STILL 0x0 AFTER 2s - ANDROID SCREEN CAPTURE NOT SENDING FRAMES');
+                    console.error('💡 This is an Android-side issue:');
+                    console.error('   1. MediaProjection service may not have started capturing');
+                    console.error('   2. Screen capture permission may have been denied');
+                    console.error('   3. The video encoder may not be properly configured');
+                    console.error('   4. Check the Android app logs for MediaProjection errors');
+                    updateDebugStatus('error', 'android-no-frames');
+
+                    // Don't reset srcObject - it causes play() interrupts and won't fix the Android issue
+                }
+            }, 2000);
 
             console.log('📺 Video element state:', {
                 srcObject: video.srcObject ? 'SET' : 'NOT SET',
