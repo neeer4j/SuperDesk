@@ -233,6 +233,23 @@ ipcMain.on('window-close', () => {
   }
 });
 
+// Fullscreen toggle
+ipcMain.on('window-toggle-fullscreen', (event) => {
+  if (mainWindow) {
+    const isFullscreen = mainWindow.isFullScreen();
+    mainWindow.setFullScreen(!isFullscreen);
+    // Send back the new state
+    event.sender.send('fullscreen-changed', !isFullscreen);
+  }
+});
+
+ipcMain.handle('window-is-fullscreen', () => {
+  if (mainWindow) {
+    return mainWindow.isFullScreen();
+  }
+  return false;
+});
+
 ipcMain.on('robot-set-enabled', async (_event, enabled) => {
   remoteControlEnabled = !!enabled;
 
@@ -511,7 +528,13 @@ function createWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    frame: false,
+    frame: true,  // Enable frame for native window buttons
+    titleBarStyle: 'hidden',  // Hide the title but keep window controls (min/max/close)
+    titleBarOverlay: {  // Windows: customize the window control buttons
+      color: '#1a1a2e',
+      symbolColor: '#ffffff',
+      height: 36
+    },
     transparent: false,
     backgroundColor: '#613da9',
     show: false, // Don't show until ready

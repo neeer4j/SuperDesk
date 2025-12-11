@@ -85,8 +85,8 @@ function setupDataChannelReceiver(peerConnection) {
     peerConnection.ondatachannel = (event) => {
         console.log('📁 Received DataChannel:', event.channel.label);
 
-        // Accept both 'fileTransfer' (Electron) and 'files' (Android mobile) channel names
-        if (event.channel.label === 'fileTransfer' || event.channel.label === 'files') {
+        // Accept 'fileTransfer' (Electron), 'files', and 'file-transfer' (Android mobile) channel names
+        if (event.channel.label === 'fileTransfer' || event.channel.label === 'files' || event.channel.label === 'file-transfer') {
             // CRITICAL: Set binary type for ArrayBuffer transfer
             event.channel.binaryType = 'arraybuffer';
 
@@ -713,7 +713,20 @@ window.fileTransfer = {
     acceptOffer: acceptFileOffer,
     rejectOffer: rejectFileOffer,
     setEnabled: setFileTransferEnabled,
-    getState: () => window.fileTransferState
+    getState: () => window.fileTransferState,
+    // Check if file transfer is available (data channel open OR guest connected via session)
+    get isConnected() {
+        const state = window.fileTransferState;
+        // Check if data channel is open
+        if (state && state.dataChannel && state.dataChannel.readyState === 'open') {
+            return true;
+        }
+        // Also check if we're connected to a session (guest connected on host, or joined on guest)
+        if (window.superdeskState && window.superdeskState.guestConnected) {
+            return true;
+        }
+        return false;
+    }
 };
 
 console.log('✅ File Transfer Module loaded');

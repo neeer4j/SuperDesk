@@ -92,7 +92,7 @@ async function initializeSocket() {
             document.getElementById('session-id').textContent = data.sessionId;
         });
 
-        socket.on('guest-joined', (data) => {
+        socket.on('guest-joined', async (data) => {
             console.log('🎉 Guest joined!', data.guestId);
             window.superdeskState.guestConnected = true;
 
@@ -112,6 +112,10 @@ async function initializeSocket() {
 
             showNotification('Guest Connected', 'A user has joined your session');
             enableShareButton();
+
+            // Setup file-only connection for file transfer without screen share
+            console.log('📁 Setting up file-only connection for immediate file transfer...');
+            await setupFileOnlyConnection(socket, window.superdeskState.sessionId);
         });
 
         socket.on('session-joined', () => {
@@ -299,6 +303,169 @@ async function createSession() {
             window.superdeskModal.error('Failed to create session. Check your internet connection.', 'Connection Error');
         }
     }
+}
+
+// ==================== FILE-ONLY CONNECTION ====================
+// Creates a separate WebRTC connection just for file transfer data channel
+// This allows file transfer without requiring screen sharing
+
+async function setupFileOnlyConnection(socket, sessionId) {
+    console.log('📁 ========== SETTING UP FILE-ONLY CONNECTION (HOST) ==========');
+
+    // Don't create if we already have a file data channel from screen sharing
+    if (window.fileTransferState && window.fileTransferState.dataChannel &&
+        window.fileTransferState.dataChannel.readyState === 'open') {
+        console.log('📁 File channel already exists from screen sharing, skipping file-only connection');
+        return;
+    }
+
+    try {
+        const iceServers = await fetchWebRTCConfig();
+
+        const filePeerConnection = new RTCPeerConnection({
+            iceServers: iceServers,
+            iceTransportPolicy: 'all',
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require'
+        });
+
+        // Store reference for cleanup
+        window.superdeskState.filePeerConnection = filePeerConnection;
+
+        // Create the file transfer DataChannel
+        console.log('📁 Creating fileTransfer DataChannel...');
+        if (window.fileTransfer && typeof window.fileTransfer.createChannel === 'function') {
+            window.fileTransfer.createChannel(filePeerConnection);
+        }
+
+        // Handle ICE candidates
+        filePeerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('file-ice-candidate', {
+                    sessionId,
+                    candidate: event.candidate
+                });
+            }
+        };
+
+        // Connection state logging
+        filePeerConnection.onconnectionstatechange = () => {
+            console.log('📁 File connection state:', filePeerConnection.connectionState);
+            if (filePeerConnection.connectionState === 'connected') {
+                console.log('✅ File-only connection established!');
+            }
+        };
+
+        // Listen for answer from guest
+        socket.once('file-answer', async (data) => {
+            console.log('📁 Received file-answer from guest');
+            if (filePeerConnection.signalingState === 'have-local-offer') {
+                await filePeerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                console.log('✅ File-only connection: remote description set');
+            }
+        });
+
+        // Listen for ICE candidates from guest
+        socket.on('file-ice-candidate', async (data) => {
+            if (data.candidate && filePeerConnection.signalingState !== 'closed') {
+                try {
+                    await filePeerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                } catch (e) {
+                    console.warn('📁 Error adding file ICE candidate:', e);
+                }
+            }
+        });
+
+        // Create and send offer
+        const offer = await filePeerConnection.createOffer();
+        await filePeerConnection.setLocalDescription(offer);
+
+        socket.emit('file-offer', {
+            sessionId,
+            offer
+        });
+        console.log('📁 File-only offer sent to guest');
+
+    } catch (error) {
+        console.error('📁 Error setting up file-only connection:', error);
+    }
+}
+
+// Setup file-only connection receiver (for guests)
+async function setupFileOnlyReceiver(socket, sessionId) {
+    console.log('📁 ========== SETTING UP FILE-ONLY RECEIVER (GUEST) ==========');
+
+    // Listen for file-offer from host
+    socket.on('file-offer', async (data) => {
+        console.log('📁 Received file-offer from host');
+
+        // Don't create if we already have a file data channel
+        if (window.fileTransferState && window.fileTransferState.dataChannel &&
+            window.fileTransferState.dataChannel.readyState === 'open') {
+            console.log('📁 File channel already exists, ignoring file-offer');
+            return;
+        }
+
+        try {
+            const iceServers = await fetchWebRTCConfig();
+
+            const filePeerConnection = new RTCPeerConnection({
+                iceServers: iceServers,
+                iceTransportPolicy: 'all',
+                bundlePolicy: 'max-bundle',
+                rtcpMuxPolicy: 'require'
+            });
+
+            window.superdeskState.filePeerConnection = filePeerConnection;
+
+            // Setup file transfer receiver for incoming data channel
+            if (window.fileTransfer && typeof window.fileTransfer.setupReceiver === 'function') {
+                window.fileTransfer.setupReceiver(filePeerConnection);
+            }
+
+            // Handle ICE candidates
+            filePeerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('file-ice-candidate', {
+                        sessionId,
+                        candidate: event.candidate
+                    });
+                }
+            };
+
+            // Connection state logging
+            filePeerConnection.onconnectionstatechange = () => {
+                console.log('📁 File connection state (guest):', filePeerConnection.connectionState);
+            };
+
+            // Set remote description (the offer)
+            await filePeerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+            // Create and send answer
+            const answer = await filePeerConnection.createAnswer();
+            await filePeerConnection.setLocalDescription(answer);
+
+            socket.emit('file-answer', {
+                sessionId,
+                answer
+            });
+            console.log('📁 File-only answer sent to host');
+
+            // Listen for ICE candidates from host
+            socket.on('file-ice-candidate', async (iceData) => {
+                if (iceData.candidate && filePeerConnection.signalingState !== 'closed') {
+                    try {
+                        await filePeerConnection.addIceCandidate(new RTCIceCandidate(iceData.candidate));
+                    } catch (e) {
+                        console.warn('📁 Error adding file ICE candidate (guest):', e);
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('📁 Error handling file-offer:', error);
+        }
+    });
 }
 
 // Join session (Guest)
@@ -2026,7 +2193,8 @@ window.endSession = endSession;
 // Export WebRTC setup functions for guest to use
 window.superdeskWebRTC = {
     setupWebRTCSender: setupWebRTCSender,
-    setupWebRTCReceiver: setupWebRTCReceiver
+    setupWebRTCReceiver: setupWebRTCReceiver,
+    setupFileOnlyReceiver: setupFileOnlyReceiver
 };
 
 // Initialize on load

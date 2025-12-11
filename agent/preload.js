@@ -23,7 +23,7 @@ try {
       } catch (err) {
         console.warn('Direct desktopCapturer failed, trying IPC:', err);
       }
-      
+
       // Fallback to IPC handler in main.js (works in packaged app)
       try {
         return await ipcRenderer.invoke('get-sources', options.types || ['screen']);
@@ -42,6 +42,18 @@ try {
     },
     ipcInvoke: async (channel, ...args) => {
       return await ipcRenderer.invoke(channel, ...args);
+    },
+    // Fullscreen controls
+    toggleFullscreen: () => {
+      ipcRenderer.send('window-toggle-fullscreen');
+    },
+    isFullscreen: async () => {
+      return await ipcRenderer.invoke('window-is-fullscreen');
+    },
+    onFullscreenChange: (callback) => {
+      ipcRenderer.on('fullscreen-changed', (event, isFullscreen) => {
+        callback(isFullscreen);
+      });
     }
   };
 } catch (e) {
