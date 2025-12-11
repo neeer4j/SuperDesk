@@ -991,7 +991,7 @@ const getStyles = (darkTheme) => ({
     boxShadow: darkTheme.cardShadow
   },
   conversationsPanel: {
-    width: '300px',
+    width: '380px',
     flexShrink: 0,
     display: 'flex',
     flexDirection: 'column',
@@ -1060,18 +1060,21 @@ const getStyles = (darkTheme) => ({
     background: darkTheme.cardBg,
     backdropFilter: 'blur(20px)',
     border: `1px solid ${darkTheme.cardBorder}`,
-    borderRadius: '20px',
-    padding: '40px',
+    borderRadius: '24px',
+    padding: '60px 80px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     textAlign: 'center',
-    boxShadow: darkTheme.cardShadow
+    boxShadow: darkTheme.cardShadow,
+    minHeight: '0',
+    flex: 1,
+    position: 'relative'
   },
   filesVisual: {
     position: 'relative',
-    marginBottom: '32px',
+    marginBottom: '48px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1081,48 +1084,72 @@ const getStyles = (darkTheme) => ({
   filesVisualIcon: {
     width: '100px',
     height: '100px',
-    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.1))',
-    borderRadius: '24px',
+    background: 'transparent',
+    borderRadius: '20px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    zIndex: 2
+    zIndex: 2,
+    color: 'rgba(139, 92, 246, 0.4)'
   },
   filesStatusTitle: {
-    fontSize: '24px',
+    fontSize: '32px',
     fontWeight: 700,
     color: darkTheme.textPrimary,
-    marginBottom: '8px'
+    marginBottom: '12px',
+    letterSpacing: '-0.5px'
   },
   filesStatusSubtitle: {
-    fontSize: '14px',
+    fontSize: '15px',
     color: darkTheme.textMuted,
-    marginBottom: '24px'
+    marginBottom: '48px',
+    opacity: 0.8
   },
   filesDropArea: {
     width: '100%',
-    maxWidth: '400px',
-    padding: '32px',
-    border: '2px dashed rgba(139, 92, 246, 0.3)',
-    borderRadius: '16px',
-    background: 'rgba(139, 92, 246, 0.05)',
+    maxWidth: '700px',
+    padding: '52px 70px',
+    border: '2px dashed rgba(139, 92, 246, 0.25)',
+    borderRadius: '20px',
+    background: 'rgba(139, 92, 246, 0.04)',
     textAlign: 'center',
     cursor: 'pointer',
     transition: 'all 0.3s ease'
   },
   filesDropIcon: {
-    marginBottom: '12px'
+    marginBottom: '16px'
   },
   filesDropText: {
-    fontSize: '16px',
+    fontSize: '18px',
     fontWeight: 600,
     color: darkTheme.textPrimary,
-    marginBottom: '4px'
+    marginBottom: '8px'
   },
   filesDropHint: {
     fontSize: '13px',
     color: darkTheme.textMuted
+  },
+  guestFileTransferZone: {
+    position: 'fixed',
+    right: '48px',
+    bottom: '48px',
+    width: '72px',
+    height: '72px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 8px 32px rgba(99,102,241,0.25)',
+    cursor: 'pointer',
+    zIndex: 1000,
+    transition: 'transform 0.2s ease',
+    border: '3px solid rgba(139, 92, 246, 0.2)'
+  },
+  guestFileTransferZoneIcon: {
+    color: 'white',
+    fontSize: '28px'
   },
   filesInfoPanel: {
     display: 'flex',
@@ -1184,6 +1211,7 @@ function LandingPage() {
   const [savingAccount, setSavingAccount] = useState(false);
   const clientRef = useRef(null);
   const usernameTimeoutRef = useRef(null);
+  const fileInputRef = useRef(null);
   
   const darkTheme = getTheme(darkMode);
   const styles = getStyles(darkTheme);
@@ -1785,7 +1813,7 @@ function LandingPage() {
 
           {/* Friends View */}
           {activeView === 'friends' && (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px', overflow: 'auto' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px', overflow: 'auto', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
               <div style={styles.addFriendCard}>
                 <div style={styles.addFriendHeader}>
                   {Icons.userPlus}
@@ -1839,7 +1867,7 @@ function LandingPage() {
 
           {/* Messages View */}
           {activeView === 'messages' && (
-            <div style={{ ...styles.messagesContainer, flex: 1, margin: '20px' }}>
+            <div style={{ ...styles.messagesContainer, flex: 1, margin: '24px', maxWidth: '1600px', marginLeft: 'auto', marginRight: 'auto', width: 'calc(100% - 48px)' }}>
               <div style={styles.conversationsPanel}>
                 <div style={styles.conversationsHeader}>
                   <span>CONVERSATIONS</span>
@@ -1864,37 +1892,40 @@ function LandingPage() {
 
           {/* File Transfer View */}
           {activeView === 'files' && (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-              <div style={{ display: 'flex', gap: '24px', width: '100%', maxWidth: '1400px' }}>
-                <div style={{ ...styles.filesMainCard, flex: 1, maxWidth: '800px' }}>
-                  <div style={styles.filesVisual}>
-                    <div style={styles.filesVisualIcon}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="50" height="50">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <path d="M12 18v-6" />
-                        <path d="M9 15l3 3 3-3" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div style={styles.filesStatusTitle}>File Transfer</div>
-                  <div style={styles.filesStatusSubtitle}>Connect to a session to send or receive files</div>
-
-                  <div style={styles.filesDropArea}>
-                    <div style={styles.filesDropIcon}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
-                    </div>
-                    <div style={styles.filesDropText}>Drag & drop files here</div>
-                    <div style={styles.filesDropHint}>or click to browse</div>
+            <div style={{ flex: 1, display: 'flex', gap: '24px', padding: '24px', overflow: 'hidden', maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
+              <div style={styles.filesMainCard}>
+                <div style={styles.filesVisual}>
+                  <div style={styles.filesVisualIcon}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="64" height="64">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <path d="M12 18v-6" />
+                      <path d="M9 15l3 3 3-3" />
+                    </svg>
                   </div>
                 </div>
 
-              <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={styles.filesStatusTitle}>File Transfer</div>
+                <div style={styles.filesStatusSubtitle}>Connect to a session to send or receive files</div>
+
+                <div style={styles.filesDropArea} onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                  <div style={styles.filesDropIcon}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="36" height="36" style={{ color: 'rgba(139, 92, 246, 0.6)' }}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                  </div>
+                  <div style={styles.filesDropText}>Drag & drop files here</div>
+                  <div style={styles.filesDropHint}>or click to browse</div>
+                </div>
+
+                <input ref={fileInputRef} type="file" style={{ display: 'none' }} multiple onChange={(e) => { console.log('Selected files', e.target.files); }} />
+
+                {/* Floating file button - bottom right of the entire view */}
+              </div>
+
+              <div style={{ width: '280px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={styles.infoCard}>
                     <div style={styles.infoCardIcon}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
@@ -1933,7 +1964,17 @@ function LandingPage() {
                     <div style={styles.infoCardText}>No recent transfers</div>
                   </div>
                 </div>
-              </div>
+
+              {/* Floating file transfer button */}
+              {activeView === 'files' && (
+                <div 
+                  style={styles.guestFileTransferZone} 
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()} 
+                  title="Browse files"
+                >
+                  <div style={styles.guestFileTransferZoneIcon}>📁</div>
+                </div>
+              )}
             </div>
           )}
         </div>
