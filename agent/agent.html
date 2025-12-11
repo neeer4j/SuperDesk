@@ -788,6 +788,38 @@
             display: none;
         }
 
+        /* Window Control Buttons */
+        .window-controls {
+            display: flex;
+            gap: 4px;
+            margin-left: 16px;
+            -webkit-app-region: no-drag;
+        }
+
+        .window-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .window-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-primary);
+        }
+
+        .window-btn-close:hover {
+            background: #ef4444;
+            color: white;
+        }
+
         .settings-btn {
             margin-top: auto;
         }
@@ -5197,6 +5229,23 @@
                         </div>
                         <div class="toggle-switch" id="toggle-darkmode" onclick="toggleDarkMode()"></div>
                     </div>
+
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path
+                                        d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                                </svg></div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Fullscreen Mode</div>
+                                <div class="settings-item-desc">Toggle fullscreen view (F11)</div>
+                            </div>
+                        </div>
+                        <button class="settings-action-btn" id="btn-toggle-fullscreen" onclick="toggleFullscreen()">
+                            <span id="fullscreen-btn-text">Enter Fullscreen</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Preferences Section -->
@@ -6818,6 +6867,18 @@
                 window.socket.once('session-joined', async () => {
                     console.log('✅ Successfully joined session:', sessionId);
 
+                    // UPDATE JOIN BUTTON STATE TO CONNECTED
+                    const joinBtn = document.getElementById('connect-session-btn');
+                    if (joinBtn) {
+                        joinBtn.textContent = '✓ Connected';
+                        joinBtn.style.background = '#10b981';
+                        joinBtn.disabled = true;
+                        joinBtn.style.opacity = '0.8';
+                    }
+
+                    // Mark guest as connected for file transfer
+                    window.superdeskState.guestConnected = true;
+
                     // Show join view
                     const hostView = document.getElementById('host-view');
                     const joinView = document.getElementById('join-view');
@@ -6833,6 +6894,17 @@
                         console.log('✅ WebRTC receiver setup complete');
                         console.log('✅ Remote control ready - sessionId:', window.superdeskState.sessionId);
                         console.log('✅ Socket status:', window.superdeskState.socket?.connected ? 'connected' : 'disconnected');
+
+                        // Setup file-only connection receiver (for file transfer without screen share)
+                        if (window.superdeskWebRTC.setupFileOnlyReceiver) {
+                            console.log('📁 Setting up file-only receiver for guest...');
+                            await window.superdeskWebRTC.setupFileOnlyReceiver(window.socket, sessionId);
+                        }
+
+                        // Show file transfer UI if file transfer module is loaded
+                        if (window.fileTransfer) {
+                            console.log('📁 File transfer ready for guest');
+                        }
                     } else {
                         console.error('❌ superdeskWebRTC.setupWebRTCReceiver not found!');
                         window.superdeskModal.error('WebRTC receiver setup failed. Please reload the page.', 'Setup Error');
@@ -10137,6 +10209,57 @@
         window.sendSessionInvite = sendSessionInvite;
         window.joinSessionFromInvite = joinSessionFromInvite;
         window.closeChat = closeChat;
+
+        // ==================== FULLSCREEN FUNCTIONS ====================
+        let isFullscreen = false;
+
+        async function toggleFullscreen() {
+            if (window.appControls && window.appControls.toggleFullscreen) {
+                window.appControls.toggleFullscreen();
+            } else {
+                // Fallback to document fullscreen API
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                    isFullscreen = true;
+                } else {
+                    document.exitFullscreen();
+                    isFullscreen = false;
+                }
+                updateFullscreenButtonText(isFullscreen);
+            }
+        }
+
+        function updateFullscreenButtonText(fullscreen) {
+            // Update settings button text
+            const btnText = document.getElementById('fullscreen-btn-text');
+            if (btnText) {
+                btnText.textContent = fullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
+            }
+
+            // Toggle header button icons
+            const expandIcon = document.getElementById('fullscreen-icon-expand');
+            const collapseIcon = document.getElementById('fullscreen-icon-collapse');
+            if (expandIcon && collapseIcon) {
+                expandIcon.style.display = fullscreen ? 'none' : 'block';
+                collapseIcon.style.display = fullscreen ? 'block' : 'none';
+            }
+        }
+
+        // Listen for fullscreen changes from main process
+        if (window.appControls && window.appControls.onFullscreenChange) {
+            window.appControls.onFullscreenChange((fullscreen) => {
+                isFullscreen = fullscreen;
+                updateFullscreenButtonText(fullscreen);
+            });
+        }
+
+        // Also listen for native fullscreen changes (F11 key)
+        document.addEventListener('fullscreenchange', () => {
+            isFullscreen = !!document.fullscreenElement;
+            updateFullscreenButtonText(isFullscreen);
+        });
+
+        window.toggleFullscreen = toggleFullscreen;
     </script>
 </body>
 
