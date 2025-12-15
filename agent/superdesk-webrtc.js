@@ -976,6 +976,14 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 if (typeof window.showRemoteDesktopPopup === 'function') {
                     window.showRemoteDesktopPopup();
                     console.log('✅ Remote desktop popup opened (muted:', videoTrackMuted, ')');
+
+                    // Auto-enable remote control when viewing host screen
+                    setTimeout(() => {
+                        if (typeof enableRemoteControl === 'function') {
+                            console.log('🎮 Auto-enabling remote control for mobile host view...');
+                            enableRemoteControl();
+                        }
+                    }, 500); // Small delay to ensure UI is ready
                 }
             } else {
                 console.warn('⚠️ Received stream but no active video tracks - not opening popup');
@@ -1235,9 +1243,9 @@ async function setupWebRTCReceiver(socket, sessionId) {
         }
     };
 
-    // Listen for offer from host
-    console.log('👂 Setting up offer listener...');
-    socket.once('offer', async (data) => {
+    // Listen for offer from host - use .on() to handle renegotiation offers
+    console.log('👂 Setting up offer listener (supports renegotiation)...');
+    socket.on('offer', async (data) => {
         console.log('📨 ========== GUEST RECEIVED OFFER ==========');
         console.log('📨 Offer type:', data.offer?.type);
         console.log('📨 Offer SDP length:', data.offer?.sdp?.length || 0);
@@ -1246,6 +1254,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
         console.log('📨 Current signaling state:', peerConnection.signalingState);
         updateDebugStatus('offer', 'received');
 
+        // Accept offers in stable state, or handle renegotiation (have-local-offer)
         if (peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer') {
             try {
                 console.log('📨 Setting remote description with offer...');
