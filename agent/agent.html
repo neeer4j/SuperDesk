@@ -13,6 +13,40 @@
     <script src="superdesk-webrtc.js"></script>
     <!-- File Transfer Module -->
     <script src="modules/file-transfer.js"></script>
+    <script>
+        // Inject IPC logging
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.appControls) {
+                const sendLog = (level, args) => {
+                    try {
+                        const message = args.map(arg =>
+                            typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+                        ).join(' ');
+                        window.appControls.ipcSend('renderer-log', level, message);
+                    } catch (e) {
+                        // ignore
+                    }
+                };
+
+                const originalLog = console.log;
+                console.log = (...args) => {
+                    originalLog.apply(console, args);
+                    sendLog('log', args);
+                };
+
+                const originalError = console.error;
+                console.error = (...args) => {
+                    originalError.apply(console, args);
+                    sendLog('error', args);
+                };
+
+                window.onerror = (message, source, lineno, colno, error) => {
+                    sendLog('error', [`Uncaught: ${message} at ${source}:${lineno}:${colno}`]);
+                };
+                console.log('✅ Renderer logging initialized');
+            }
+        });
+    </script>
     <style>
         /* Theme Variables - Professional Sleek Design */
         :root {
@@ -1322,9 +1356,11 @@
             -ms-overflow-style: none;
             flex-direction: column;
         }
+
         #popup-controls::-webkit-scrollbar {
             display: none;
         }
+
         #popup-controls button {
             flex-shrink: 0;
         }
@@ -5243,22 +5279,7 @@
                         <div class="toggle-switch" id="toggle-darkmode" onclick="toggleDarkMode()"></div>
                     </div>
 
-                    <div class="settings-item">
-                        <div class="settings-item-left">
-                            <div class="settings-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path
-                                        d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-                                </svg></div>
-                            <div class="settings-item-text">
-                                <div class="settings-item-label">Fullscreen Mode</div>
-                                <div class="settings-item-desc">Toggle fullscreen view (F11)</div>
-                            </div>
-                        </div>
-                        <button class="settings-action-btn" id="btn-toggle-fullscreen" onclick="toggleFullscreen()">
-                            <span id="fullscreen-btn-text">Enter Fullscreen</span>
-                        </button>
-                    </div>
+
                 </div>
 
                 <!-- Preferences Section -->
@@ -5967,7 +5988,7 @@
         // Supabase client initialization
         const SUPABASE_URL = 'https://srwrsgkfkzstdsiqonzi.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyd3JzZ2tma3pzdGRzaXFvbnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyODM2MzUsImV4cCI6MjA3ODg1OTYzNX0.URa75VP24G6anG_9Pyo2PqNrgNZ20DmEalcLAKezkSM';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
         let currentView = 'share';
@@ -5990,65 +6011,86 @@
         }
 
         async function init() {
-            // Load saved theme first
-            loadSavedTheme();
+            try {
+                // Load saved theme first
+                loadSavedTheme();
 
-            // Track if this is a fresh login (not app startup)
-            let isFreshLogin = false;
+                // Track if this is a fresh login (not app startup)
+                let isFreshLogin = false;
 
-            // Check for existing session
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                currentUser = session.user;
-                // Load user profile first so avatar/username are available on landing page
-                await loadUserProfile();
-
-                // Check if user was in dashboard before reload
-                const savedAppState = getSavedAppState();
-                if (savedAppState && savedAppState.inDashboard) {
-                    // Restore to dashboard with the same view they were on
-                    showDashboard();
-                    if (savedAppState.currentView) {
-                        switchView(savedAppState.currentView);
-                    }
-                } else {
-                    // Show landing page with "Welcome Back"
-                    goToLandingPage();
+                // Check for existing session WITH TIMEOUT to prevent hanging
+                let session = null;
+                try {
+                    const sessionPromise = supabaseClient.auth.getSession();
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Auth timeout')), 3000)
+                    );
+                    const result = await Promise.race([sessionPromise, timeoutPromise]);
+                    session = result?.data?.session;
+                    console.log('✅ Auth session check completed');
+                } catch (e) {
+                    console.warn('⚠️ Auth session check timed out or failed:', e.message);
+                    // Proceed without session
                 }
-            } else {
-                // No session - show auth screen (email step)
-                clearSavedAppState();
-                showAuth();
-            }
 
-            // Listen for auth changes
-            supabase.auth.onAuthStateChange(async (_event, session) => {
                 if (session) {
                     currentUser = session.user;
-                    // Load profile for fresh logins too
-                    await loadUserProfile();
-                    // Only auto-redirect to dashboard on fresh login (OTP verified)
-                    // On app startup, user sees "Welcome Back" and clicks "Continue to Dashboard"
-                    if (isFreshLogin) {
+                    // Load user profile first so avatar/username are available on landing page
+                    try {
+                        await loadUserProfile();
+                    } catch (e) {
+                        console.warn('⚠️ Failed to load user profile:', e);
+                    }
+
+                    // Check if user was in dashboard before reload
+                    const savedAppState = getSavedAppState();
+                    if (savedAppState && savedAppState.inDashboard) {
+                        // Restore to dashboard with the same view they were on
                         showDashboard();
-                        isFreshLogin = false;
+                        if (savedAppState.currentView) {
+                            switchView(savedAppState.currentView);
+                        }
+                    } else {
+                        // Show landing page with "Welcome Back"
+                        goToLandingPage();
                     }
                 } else {
-                    currentUser = null;
-                    currentUserProfile = null;
+                    // No session - show auth screen (email step)
+                    clearSavedAppState();
                     showAuth();
                 }
-            });
 
-            // Mark subsequent logins as fresh (after initial session check)
-            setTimeout(() => { isFreshLogin = true; }, 500);
+                // Listen for auth changes
+                supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+                    if (session) {
+                        currentUser = session.user;
+                        // Load profile for fresh logins too
+                        try { await loadUserProfile(); } catch (e) { }
+                        // Only auto-redirect to dashboard on fresh login (OTP verified)
+                        // On app startup, user sees "Welcome Back" and clicks "Continue to Dashboard"
+                        if (isFreshLogin) {
+                            showDashboard();
+                            isFreshLogin = false;
+                        }
+                    } else {
+                        currentUser = null;
+                        currentUserProfile = null;
+                        showAuth();
+                    }
+                });
 
-            // Generate session ID
-            generateSessionId();
-            setupEventListeners();
+                // Mark subsequent logins as fresh (after initial session check)
+                setTimeout(() => { isFreshLogin = true; }, 500);
 
-            // Hide loading overlay now that app is ready
-            hideLoadingOverlay();
+            } catch (e) {
+                console.error('❌ init() failed:', e);
+            } finally {
+                // CRITICAL: ALWAYS run these regardless of any errors above
+                console.log('🔧 Running setupEventListeners and hideLoadingOverlay (finally block)');
+                try { generateSessionId(); } catch (e) { console.error('generateSessionId failed:', e); }
+                try { setupEventListeners(); } catch (e) { console.error('setupEventListeners failed:', e); }
+                hideLoadingOverlay();
+            }
         }
 
         function hideLoadingOverlay() {
@@ -6330,7 +6372,7 @@
             btn.textContent = 'Sending...';
 
             try {
-                const { error } = await supabase.auth.signInWithOtp({
+                const { error } = await supabaseClient.auth.signInWithOtp({
                     email,
                     options: {
                         shouldCreateUser: true,
@@ -6364,7 +6406,7 @@
             btn.textContent = 'Verifying...';
 
             try {
-                const { error } = await supabase.auth.verifyOtp({
+                const { error } = await supabaseClient.auth.verifyOtp({
                     email,
                     token: otp,
                     type: 'email'
@@ -6392,7 +6434,7 @@
         }
 
         async function signOut() {
-            await supabase.auth.signOut();
+            await supabaseClient.auth.signOut();
             currentUser = null;
             showAuth();
         }
@@ -6978,14 +7020,8 @@
             const controls = document.getElementById('popup-controls');
             if (controls) {
                 controls.style.opacity = '1';
-
-                // Clear existing timer
-                if (controlBarHideTimer) clearTimeout(controlBarHideTimer);
-
-                // Auto-hide after 3 seconds
-                controlBarHideTimer = setTimeout(() => {
-                    controls.style.opacity = '0';
-                }, 3000);
+                // DISABLED: Auto-hide is removed - toolbar stays visible always
+                // Users requested persistent toolbar visibility during Android control
             }
         }
 
@@ -7433,7 +7469,7 @@
         style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; flex-direction: column;">
         <!-- VERTICAL control bar on LEFT SIDE - always accessible without blocking video -->
         <div id="popup-controls"
-            style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.9); padding: 12px 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; z-index: 1000001; pointer-events: auto; transition: opacity 0.3s; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); max-height: calc(100vh - 40px); overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: none; -ms-overflow-style: none;">
+            style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.9); padding: 12px 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; z-index: 1000001; pointer-events: auto; opacity: 1; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); max-height: calc(100vh - 40px); overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: none; -ms-overflow-style: none;">
             <span id="status-indicator"
                 style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
             <button id="control-toggle-btn"

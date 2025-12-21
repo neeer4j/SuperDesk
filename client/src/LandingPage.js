@@ -46,10 +46,10 @@ const Icons = {
   ),
   userPlus: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-      <circle cx="8.5" cy="7" r="4"/>
-      <line x1="20" y1="8" x2="20" y2="14"/>
-      <line x1="23" y1="11" x2="17" y2="11"/>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="8.5" cy="7" r="4" />
+      <line x1="20" y1="8" x2="20" y2="14" />
+      <line x1="23" y1="11" x2="17" y2="11" />
     </svg>
   ),
   settings: (
@@ -85,9 +85,9 @@ const Icons = {
   ),
   upload: (
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="17 8 12 3 7 8"/>
-      <line x1="12" y1="3" x2="12" y2="15"/>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
     </svg>
   ),
   send: (
@@ -1209,10 +1209,11 @@ function LandingPage() {
   const [usernameError, setUsernameError] = useState('');
   const [usernameSuccess, setUsernameSuccess] = useState('');
   const [savingAccount, setSavingAccount] = useState(false);
+  const [hostPlatform, setHostPlatform] = useState(null); // 'android', 'electron', or null
   const clientRef = useRef(null);
   const usernameTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
-  
+
   const darkTheme = getTheme(darkMode);
   const styles = getStyles(darkTheme);
 
@@ -1277,11 +1278,11 @@ function LandingPage() {
     }
 
     setConnecting(true);
-    
+
     try {
       if (!clientRef.current) {
         clientRef.current = new SuperDeskClient();
-        
+
         clientRef.current.on('sessionJoined', () => {
           console.log('Successfully joined session');
           setSessionId(sid);
@@ -1300,6 +1301,11 @@ function LandingPage() {
           console.error('Session error:', error);
           alert(`Error: ${error.message || 'Failed to join session'}`);
           setConnecting(false);
+        });
+
+        clientRef.current.on('hostInfo', (info) => {
+          console.log('Received host platform info:', info);
+          setHostPlatform(info.platform || null);
         });
       }
 
@@ -1409,9 +1415,9 @@ function LandingPage() {
 
   const handleSaveAccount = async () => {
     if (usernameError) return;
-    
+
     setSavingAccount(true);
-    
+
     // Simulate save
     setTimeout(() => {
       alert('Profile updated successfully!');
@@ -1442,7 +1448,7 @@ function LandingPage() {
       }
     };
     checkSession();
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setUser(session.user);
@@ -1450,7 +1456,7 @@ function LandingPage() {
         setUser(null);
       }
     });
-    
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -1500,7 +1506,7 @@ function LandingPage() {
                 {otpSent ? 'Verify OTP' : 'Welcome Back!'}
               </h1>
               <p style={styles.authSubtitle}>
-                {otpSent 
+                {otpSent
                   ? 'Enter the code sent to your email'
                   : 'Sign in to access your remote desktop'
                 }
@@ -1583,9 +1589,11 @@ function LandingPage() {
       <RemoteDesktopView
         client={clientRef.current}
         sessionId={sessionId}
+        hostPlatform={hostPlatform}
         onClose={() => {
           setInSession(false);
           setSessionId('');
+          setHostPlatform(null);
           clientRef.current = null;
         }}
       />
@@ -1733,7 +1741,7 @@ function LandingPage() {
 
                 <div style={styles.sessionIdDisplay}>
                   <div style={styles.joinIdLabel}>SESSION CODE</div>
-                  
+
                   <input
                     type="text"
                     placeholder="ddem5239"
@@ -1742,7 +1750,7 @@ function LandingPage() {
                     maxLength={8}
                     style={styles.joinInput}
                   />
-                  
+
                   <div style={styles.sessionIdActions}>
                     <button
                       onClick={() => {
@@ -1926,50 +1934,50 @@ function LandingPage() {
               </div>
 
               <div style={{ width: '280px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <div style={styles.infoCard}>
-                    <div style={styles.infoCardIcon}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
-                      </svg>
-                    </div>
-                    <div style={styles.infoCardTitle}>How it works</div>
-                    <div style={styles.infoCardText}>
-                      Files are transferred directly peer-to-peer. Start or join a session first, then use this page to send files.
-                    </div>
+                <div style={styles.infoCard}>
+                  <div style={styles.infoCardIcon}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
                   </div>
-
-                  <div style={styles.infoCard}>
-                    <div style={styles.infoCardIcon}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
-                    </div>
-                    <div style={styles.infoCardTitle}>Secure Transfer</div>
-                    <div style={styles.infoCardText}>
-                      All files are encrypted end-to-end and transferred directly between devices.
-                    </div>
-                  </div>
-
-                  <div style={styles.infoCard}>
-                    <div style={styles.infoCardIcon}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                    </div>
-                    <div style={styles.infoCardTitle}>Recent Transfers</div>
-                    <div style={styles.infoCardText}>No recent transfers</div>
+                  <div style={styles.infoCardTitle}>How it works</div>
+                  <div style={styles.infoCardText}>
+                    Files are transferred directly peer-to-peer. Start or join a session first, then use this page to send files.
                   </div>
                 </div>
 
+                <div style={styles.infoCard}>
+                  <div style={styles.infoCardIcon}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </div>
+                  <div style={styles.infoCardTitle}>Secure Transfer</div>
+                  <div style={styles.infoCardText}>
+                    All files are encrypted end-to-end and transferred directly between devices.
+                  </div>
+                </div>
+
+                <div style={styles.infoCard}>
+                  <div style={styles.infoCardIcon}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </div>
+                  <div style={styles.infoCardTitle}>Recent Transfers</div>
+                  <div style={styles.infoCardText}>No recent transfers</div>
+                </div>
+              </div>
+
               {/* Floating file transfer button */}
               {activeView === 'files' && (
-                <div 
-                  style={styles.guestFileTransferZone} 
-                  onClick={() => fileInputRef.current && fileInputRef.current.click()} 
+                <div
+                  style={styles.guestFileTransferZone}
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
                   title="Browse files"
                 >
                   <div style={styles.guestFileTransferZoneIcon}>📁</div>
@@ -2051,7 +2059,7 @@ function LandingPage() {
           {/* Preferences Section */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsSectionTitle}>Preferences</div>
-            
+
             <div style={styles.settingsItem}>
               <div style={styles.settingsItemLeft}>
                 <div style={styles.settingsItemIcon}>
@@ -2119,7 +2127,7 @@ function LandingPage() {
           {/* Connection Section */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsSectionTitle}>Connection</div>
-            
+
             <div style={styles.settingsItem}>
               <div style={styles.settingsItemLeft}>
                 <div style={styles.settingsItemIcon}>
@@ -2171,7 +2179,7 @@ function LandingPage() {
           {/* Privacy Section */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsSectionTitle}>Privacy & Security</div>
-            
+
             <div style={styles.settingsItem}>
               <div style={styles.settingsItemLeft}>
                 <div style={styles.settingsItemIcon}>

@@ -271,6 +271,16 @@ ipcMain.on('robot-release-keys', () => {
   releaseActiveKeys();
 });
 
+// IPC handler for renderer logs
+ipcMain.on('renderer-log', (_event, level, message) => {
+  const prefix = `[RENDERER-${level.toUpperCase()}]`;
+  if (level === 'error') {
+    console.error(prefix, message);
+  } else {
+    console.log(prefix, message);
+  }
+});
+
 ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
   if (!remoteControlEnabled) {
     console.log('[robot] mouse event ignored - remote control not enabled');
@@ -523,6 +533,7 @@ function snapToEdge(screenX, screenY) {
 }
 
 function createWindow() {
+  console.log('🚀 [STARTUP] createWindow called');
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -551,10 +562,14 @@ function createWindow() {
   });
 
   // Load the agent interface
-  mainWindow.loadFile('agent.html');
+  console.log('🚀 [STARTUP] Loading agent.html...');
+  mainWindow.loadFile('agent.html')
+    .then(() => console.log('🚀 [STARTUP] agent.html loaded successfully'))
+    .catch(err => console.error('❌ [STARTUP] Failed to load agent.html:', err));
 
   // Maximize and show window when ready
   mainWindow.once('ready-to-show', () => {
+    console.log('🚀 [STARTUP] Window ready to show, maximizing and showing...');
     mainWindow.maximize();
     mainWindow.show();
   });
@@ -572,6 +587,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  console.log('🚀 [STARTUP] App is ready, initializing...');
+
   // Handle 'get-sources' request from the renderer process
   // Now supports optional sourceTypes parameter (default: ['screen'])
   ipcMain.handle('get-sources', async (event, sourceTypes = ['screen']) => {
@@ -592,6 +609,7 @@ app.whenReady().then(() => {
     }
   });
 
+  console.log('🚀 [STARTUP] Calling createWindow()...');
   createWindow();
 
   // Handle toolbar window control
