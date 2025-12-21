@@ -13,6 +13,78 @@ window.superdeskState = {
     serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://superdesk-7m7f.onrender.com'
 };
 
+// Test TURN connectivity - can be called from console for debugging
+window.testTurnConnectivity = async function() {
+    console.log('🧪 ========== TESTING TURN CONNECTIVITY ==========');
+    try {
+        const iceServers = await fetchWebRTCConfig();
+        console.log('📋 ICE Servers received:', iceServers.length);
+        
+        // Log each server
+        iceServers.forEach((server, i) => {
+            const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+            console.log(`   Server #${i+1}:`, urls.join(', '), server.username ? '(with creds)' : '');
+        });
+        
+        // Create test peer connection
+        const pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: 'relay' }); // Force relay only
+        
+        // Create a data channel to trigger ICE gathering
+        pc.createDataChannel('test');
+        
+        const candidates = { host: 0, srflx: 0, relay: 0 };
+        let gatheringComplete = false;
+        
+        pc.onicecandidate = (e) => {
+            if (e.candidate) {
+                candidates[e.candidate.type] = (candidates[e.candidate.type] || 0) + 1;
+                console.log(`🧊 Test candidate: ${e.candidate.type} - ${e.candidate.address}:${e.candidate.port}`);
+                if (e.candidate.type === 'relay') {
+                    console.log('✅ TURN RELAY WORKING! Server:', e.candidate.relatedAddress);
+                }
+            } else {
+                gatheringComplete = true;
+            }
+        };
+        
+        // Create offer to start ICE gathering
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        
+        // Wait for gathering with timeout
+        await new Promise((resolve) => {
+            const check = setInterval(() => {
+                if (gatheringComplete || pc.iceGatheringState === 'complete') {
+                    clearInterval(check);
+                    resolve();
+                }
+            }, 100);
+            setTimeout(() => { clearInterval(check); resolve(); }, 10000); // 10s timeout
+        });
+        
+        console.log('📊 TURN Test Results:');
+        console.log('   - host (local):', candidates.host);
+        console.log('   - srflx (STUN):', candidates.srflx);
+        console.log('   - relay (TURN):', candidates.relay);
+        
+        if (candidates.relay === 0) {
+            console.error('❌ TURN RELAY NOT WORKING!');
+            console.error('💡 Possible issues:');
+            console.error('   1. TURN server credentials expired or invalid');
+            console.error('   2. Firewall blocking TURN ports (3478, 443)');
+            console.error('   3. TURN server is down');
+        } else {
+            console.log('✅ TURN relay is working - cross-network connections should work');
+        }
+        
+        pc.close();
+        return candidates;
+    } catch (error) {
+        console.error('❌ TURN test failed:', error);
+        return null;
+    }
+};
+
 // Fetch TURN/STUN configuration from server
 async function fetchWebRTCConfig() {
     try {
@@ -818,6 +890,13 @@ async function setupWebRTCReceiver(socket, sessionId) {
     const iceServers = await fetchWebRTCConfig();
 
     console.log('🔧 Configuring RTCPeerConnection with', iceServers.length, 'ICE servers');
+    // Log each ICE server for debugging
+    iceServers.forEach((server, index) => {
+        const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+        const hasCreds = Boolean(server.username && server.credential);
+        console.log(`🔧 ICE Server #${index + 1}:`, urls.join(', '), hasCreds ? '(with credentials)' : '(STUN only)');
+    });
+
     const peerConnection = new RTCPeerConnection({
         iceServers: iceServers,
         iceTransportPolicy: 'all',
@@ -826,7 +905,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
         rtcpMuxPolicy: 'require'
     });
 
-    console.log('✅ GUEST ICE configuration complete with Cloudflare TURN servers');
+    console.log('✅ GUEST ICE configuration complete');
 
     // Setup file transfer DataChannel receiver (GUEST receives DataChannel created by HOST)
     if (window.fileTransfer && typeof window.fileTransfer.setupReceiver === 'function') {
@@ -1252,6 +1331,25 @@ async function setupWebRTCReceiver(socket, sessionId) {
         console.log('📨 From host:', data.from);
         console.log('📨 Session ID:', data.sessionId);
         console.log('📨 Current signaling state:', peerConnection.signalingState);
+        
+        // Parse SDP to check for media tracks
+        if (data.offer?.sdp) {
+            const sdp = data.offer.sdp;
+            const videoLines = (sdp.match(/m=video/g) || []).length;
+            const audioLines = (sdp.match(/m=audio/g) || []).length;
+            const sendrecv = (sdp.match(/a=sendrecv/g) || []).length;
+            const sendonly = (sdp.match(/a=sendonly/g) || []).length;
+            const recvonly = (sdp.match(/a=recvonly/g) || []).length;
+            const inactive = (sdp.match(/a=inactive/g) || []).length;
+            console.log('📊 SDP Media Analysis:');
+            console.log('   - video lines:', videoLines);
+            console.log('   - audio lines:', audioLines);
+            console.log('   - sendrecv:', sendrecv, 'sendonly:', sendonly, 'recvonly:', recvonly, 'inactive:', inactive);
+            if (videoLines === 0 && audioLines === 0) {
+                console.error('❌ OFFER HAS NO MEDIA TRACKS! Host may not be sharing screen.');
+            }
+        }
+        
         updateDebugStatus('offer', 'received');
 
         // Accept offers in stable state, or handle renegotiation (have-local-offer)
@@ -1626,7 +1724,12 @@ function enableRemoteControl() {
         video.addEventListener('mousedown', handleMouseDown, { capture: true });
         video.addEventListener('mouseup', handleMouseUp, { capture: true });
         video.addEventListener('wheel', handleMouseWheel, { capture: true, passive: false });
-        console.log('  ✅ Event listeners attached to remote-video (capture)');
+        // Touch events for mobile/tablet support
+        video.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
+        video.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
+        video.addEventListener('touchend', handleTouchEnd, { capture: true, passive: false });
+        video.addEventListener('touchcancel', handleTouchCancel, { capture: true, passive: false });
+        console.log('  ✅ Event listeners attached to remote-video (capture + touch)');
     }
 
     if (joinVideo) {
@@ -1634,7 +1737,12 @@ function enableRemoteControl() {
         joinVideo.addEventListener('mousedown', handleMouseDown, { capture: true });
         joinVideo.addEventListener('mouseup', handleMouseUp, { capture: true });
         joinVideo.addEventListener('wheel', handleMouseWheel, { capture: true, passive: false });
-        console.log('  ✅ Event listeners attached to join-remote-video (capture)');
+        // Touch events for mobile/tablet support
+        joinVideo.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
+        joinVideo.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
+        joinVideo.addEventListener('touchend', handleTouchEnd, { capture: true, passive: false });
+        joinVideo.addEventListener('touchcancel', handleTouchCancel, { capture: true, passive: false });
+        console.log('  ✅ Event listeners attached to join-remote-video (capture + touch)');
     }
 
     // Use capture so key events are captured regardless of focus inside the UI
@@ -1671,6 +1779,11 @@ function disableRemoteControl() {
         video.removeEventListener('mousedown', handleMouseDown, { capture: true });
         video.removeEventListener('mouseup', handleMouseUp, { capture: true });
         video.removeEventListener('wheel', handleMouseWheel, { capture: true });
+        // Remove touch events
+        video.removeEventListener('touchstart', handleTouchStart, { capture: true });
+        video.removeEventListener('touchmove', handleTouchMove, { capture: true });
+        video.removeEventListener('touchend', handleTouchEnd, { capture: true });
+        video.removeEventListener('touchcancel', handleTouchCancel, { capture: true });
     }
 
     if (joinVideo) {
@@ -1678,6 +1791,11 @@ function disableRemoteControl() {
         joinVideo.removeEventListener('mousedown', handleMouseDown, { capture: true });
         joinVideo.removeEventListener('mouseup', handleMouseUp, { capture: true });
         joinVideo.removeEventListener('wheel', handleMouseWheel, { capture: true });
+        // Remove touch events
+        joinVideo.removeEventListener('touchstart', handleTouchStart, { capture: true });
+        joinVideo.removeEventListener('touchmove', handleTouchMove, { capture: true });
+        joinVideo.removeEventListener('touchend', handleTouchEnd, { capture: true });
+        joinVideo.removeEventListener('touchcancel', handleTouchCancel, { capture: true });
         // Restore guest cursor visibility
         try {
             joinVideo.classList.remove('control-active');
@@ -1996,6 +2114,327 @@ function handleMobileKeyboardEvent(inputEvent) {
     } else {
         console.error('🎮 ❌ No appControls.ipcSend available!');
     }
+}
+
+// ==================== TOUCH EVENT HANDLERS ====================
+// Touch state for gesture recognition
+let touchState = {
+    startX: 0,
+    startY: 0,
+    startTime: 0,
+    lastX: 0,
+    lastY: 0,
+    isSwiping: false,
+    isScrolling: false,
+    hasMoved: false,  // Track if any significant movement occurred - prevents swipe from triggering click
+    touchId: null,
+    tapTimeout: null,
+    lastTapTime: 0,
+    scrollAccumulator: { x: 0, y: 0 }
+};
+
+const TOUCH_CONFIG = {
+    TAP_THRESHOLD: 15,           // Max movement for a tap (px) - increased to reduce false swipes
+    TAP_DURATION: 250,           // Max duration for a tap (ms) - reduced for snappier taps
+    DOUBLE_TAP_DELAY: 250,       // Max delay between double taps (ms)
+    SWIPE_THRESHOLD: 20,         // Min distance for a swipe (px) - detect swipe earlier
+    SCROLL_SENSITIVITY: 2,       // Scroll multiplier - reduced for smoother scrolling
+    LONG_PRESS_DURATION: 400,    // Long press for right-click (ms)
+    MOVE_THROTTLE_MS: 16         // Throttle move events to ~60fps for low latency
+};
+
+// RAF-based throttling for smooth low-latency touch handling
+let lastMoveTime = 0;
+let pendingMoveFrame = null;
+
+// Get normalized touch coordinates
+function getNormalizedTouchCoordinates(touch, videoElement) {
+    if (!videoElement) return null;
+
+    const rect = videoElement.getBoundingClientRect();
+
+    // If video dimensions aren't available yet, fallback to simple mapping
+    if (!videoElement.videoWidth || !videoElement.videoHeight) {
+        return {
+            x: (touch.clientX - rect.left) / rect.width,
+            y: (touch.clientY - rect.top) / rect.height
+        };
+    }
+
+    // Calculate aspect ratios for letterboxing
+    const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
+    const elementRatio = rect.width / rect.height;
+
+    let displayWidth = rect.width;
+    let displayHeight = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (elementRatio > videoRatio) {
+        displayWidth = rect.height * videoRatio;
+        offsetX = (rect.width - displayWidth) / 2;
+    } else {
+        displayHeight = rect.width / videoRatio;
+        offsetY = (rect.height - displayHeight) / 2;
+    }
+
+    const touchX = touch.clientX - rect.left - offsetX;
+    const touchY = touch.clientY - rect.top - offsetY;
+
+    // Check if touch is inside the actual video area
+    if (touchX < 0 || touchX > displayWidth || touchY < 0 || touchY > displayHeight) {
+        return null;
+    }
+
+    return {
+        x: touchX / displayWidth,
+        y: touchY / displayHeight
+    };
+}
+
+function handleTouchStart(e) {
+    if (!window.superdeskState.remoteControlEnabled) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const touch = e.touches[0];
+    const video = e.target;
+    const coords = getNormalizedTouchCoordinates(touch, video);
+
+    if (!coords) return;
+
+    touchState.startX = touch.clientX;
+    touchState.startY = touch.clientY;
+    touchState.lastX = touch.clientX;
+    touchState.lastY = touch.clientY;
+    touchState.startTime = Date.now();
+    touchState.touchId = touch.identifier;
+    touchState.isSwiping = false;
+    touchState.isScrolling = false;
+    touchState.hasMoved = false;  // Track if any significant movement occurred
+    touchState.scrollAccumulator = { x: 0, y: 0 };
+
+    // Cancel any pending animation frame
+    if (pendingMoveFrame) {
+        cancelAnimationFrame(pendingMoveFrame);
+        pendingMoveFrame = null;
+    }
+
+    // Clear any pending tap timeout
+    if (touchState.tapTimeout) {
+        clearTimeout(touchState.tapTimeout);
+        touchState.tapTimeout = null;
+    }
+
+    // Send mouse move to starting position immediately
+    if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+        window.superdeskState.socket.emit('mouse-event', {
+            sessionId: window.superdeskState.sessionId,
+            type: 'move',
+            x: coords.x,
+            y: coords.y
+        });
+    }
+}
+
+function handleTouchMove(e) {
+    if (!window.superdeskState.remoteControlEnabled) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const touch = Array.from(e.touches).find(t => t.identifier === touchState.touchId);
+    if (!touch) return;
+
+    const video = e.target;
+    const now = performance.now();
+    
+    // Calculate distance early to detect swipe
+    const totalDeltaX = touch.clientX - touchState.startX;
+    const totalDeltaY = touch.clientY - touchState.startY;
+    const distance = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
+
+    // Mark as moved if beyond tap threshold - CRITICAL for preventing false clicks
+    if (distance > TOUCH_CONFIG.TAP_THRESHOLD) {
+        touchState.hasMoved = true;
+        touchState.isSwiping = true;
+    }
+
+    // Determine if this is a scroll gesture (two-finger)
+    if (e.touches.length >= 2) {
+        touchState.isScrolling = true;
+        touchState.hasMoved = true;
+    }
+
+    // Throttle move events using RAF for smooth 60fps updates
+    if (pendingMoveFrame) return; // Skip if we already have a pending frame
+    
+    pendingMoveFrame = requestAnimationFrame(() => {
+        pendingMoveFrame = null;
+        
+        const coords = getNormalizedTouchCoordinates(touch, video);
+        if (!coords) return;
+
+        const deltaX = touch.clientX - touchState.lastX;
+        const deltaY = touch.clientY - touchState.lastY;
+
+        if (touchState.isScrolling) {
+            // Two-finger scroll gesture - translate to scroll events
+            touchState.scrollAccumulator.x += deltaX;
+            touchState.scrollAccumulator.y += deltaY;
+
+            // Emit scroll events when accumulated enough
+            const scrollThreshold = 8;
+            if (Math.abs(touchState.scrollAccumulator.y) > scrollThreshold) {
+                const scrollDelta = touchState.scrollAccumulator.y * TOUCH_CONFIG.SCROLL_SENSITIVITY;
+                
+                if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+                    window.superdeskState.socket.emit('mouse-event', {
+                        sessionId: window.superdeskState.sessionId,
+                        type: 'scroll',
+                        deltaX: 0,
+                        deltaY: -scrollDelta,
+                        x: coords.x,
+                        y: coords.y
+                    });
+                }
+                touchState.scrollAccumulator.y = 0;
+            }
+
+            if (Math.abs(touchState.scrollAccumulator.x) > scrollThreshold) {
+                const scrollDelta = touchState.scrollAccumulator.x * TOUCH_CONFIG.SCROLL_SENSITIVITY;
+                
+                if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+                    window.superdeskState.socket.emit('mouse-event', {
+                        sessionId: window.superdeskState.sessionId,
+                        type: 'scroll',
+                        deltaX: -scrollDelta,
+                        deltaY: 0,
+                        x: coords.x,
+                        y: coords.y
+                    });
+                }
+                touchState.scrollAccumulator.x = 0;
+            }
+        } else {
+            // Single finger drag - move mouse pointer
+            if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+                window.superdeskState.socket.emit('mouse-event', {
+                    sessionId: window.superdeskState.sessionId,
+                    type: 'move',
+                    x: coords.x,
+                    y: coords.y
+                });
+            }
+        }
+
+        touchState.lastX = touch.clientX;
+        touchState.lastY = touch.clientY;
+    });
+}
+
+function handleTouchEnd(e) {
+    if (!window.superdeskState.remoteControlEnabled) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const duration = Date.now() - touchState.startTime;
+    const totalDeltaX = touchState.lastX - touchState.startX;
+    const totalDeltaY = touchState.lastY - touchState.startY;
+    const distance = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
+
+    // Get video element for coords
+    const video = e.target;
+    // Use the last known position for the end event
+    const fakeTouch = { clientX: touchState.lastX, clientY: touchState.lastY };
+    const coords = getNormalizedTouchCoordinates(fakeTouch, video);
+
+    if (!coords) return;
+
+    // CRITICAL: Only process tap if NO movement occurred (prevents swipe from triggering click)
+    const wasTap = duration < TOUCH_CONFIG.TAP_DURATION && 
+                   distance < TOUCH_CONFIG.TAP_THRESHOLD && 
+                   !touchState.isScrolling && 
+                   !touchState.hasMoved && 
+                   !touchState.isSwiping;
+
+    if (wasTap) {
+        const now = Date.now();
+        const timeSinceLastTap = now - touchState.lastTapTime;
+
+        if (timeSinceLastTap < TOUCH_CONFIG.DOUBLE_TAP_DELAY) {
+            // Double tap - double click
+            console.log('👆👆 Double tap detected - sending double click');
+            if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+                // Send two clicks rapidly
+                window.superdeskState.socket.emit('mouse-event', {
+                    sessionId: window.superdeskState.sessionId,
+                    type: 'click',
+                    button: 0,
+                    x: coords.x,
+                    y: coords.y
+                });
+                setTimeout(() => {
+                    window.superdeskState.socket.emit('mouse-event', {
+                        sessionId: window.superdeskState.sessionId,
+                        type: 'click',
+                        button: 0,
+                        x: coords.x,
+                        y: coords.y
+                    });
+                }, 50);
+            }
+            touchState.lastTapTime = 0;
+        } else {
+            // Single tap - send click after a short delay to check for double tap
+            touchState.lastTapTime = now;
+            touchState.tapTimeout = setTimeout(() => {
+                console.log('👆 Single tap detected - sending click');
+                if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+                    window.superdeskState.socket.emit('mouse-event', {
+                        sessionId: window.superdeskState.sessionId,
+                        type: 'click',
+                        button: 0,
+                        x: coords.x,
+                        y: coords.y
+                    });
+                }
+            }, TOUCH_CONFIG.DOUBLE_TAP_DELAY);
+        }
+    } else if (duration > TOUCH_CONFIG.LONG_PRESS_DURATION && distance < TOUCH_CONFIG.TAP_THRESHOLD && !touchState.isScrolling && !touchState.hasMoved) {
+        // Long press - right click (only if no movement)
+        console.log('👆⏱️ Long press detected - sending right click');
+        if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+            window.superdeskState.socket.emit('mouse-event', {
+                sessionId: window.superdeskState.sessionId,
+                type: 'click',
+                button: 2, // Right click
+                x: coords.x,
+                y: coords.y
+            });
+        }
+    }
+
+    // Cancel any pending move frame
+    if (pendingMoveFrame) {
+        cancelAnimationFrame(pendingMoveFrame);
+        pendingMoveFrame = null;
+    }
+
+    // Reset touch state
+    touchState.touchId = null;
+    touchState.isSwiping = false;
+    touchState.isScrolling = false;
+    touchState.hasMoved = false;
+
+    console.log('👆 Touch end - duration:', duration, 'distance:', distance.toFixed(1));
+}
+
+function handleTouchCancel(e) {
+    // Treat cancel as end
+    handleTouchEnd(e);
 }
 
 // Stop screen sharing
