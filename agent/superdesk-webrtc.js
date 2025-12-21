@@ -14,27 +14,27 @@ window.superdeskState = {
 };
 
 // Test TURN connectivity - can be called from console for debugging
-window.testTurnConnectivity = async function() {
+window.testTurnConnectivity = async function () {
     console.log('🧪 ========== TESTING TURN CONNECTIVITY ==========');
     try {
         const iceServers = await fetchWebRTCConfig();
         console.log('📋 ICE Servers received:', iceServers.length);
-        
+
         // Log each server
         iceServers.forEach((server, i) => {
             const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-            console.log(`   Server #${i+1}:`, urls.join(', '), server.username ? '(with creds)' : '');
+            console.log(`   Server #${i + 1}:`, urls.join(', '), server.username ? '(with creds)' : '');
         });
-        
+
         // Create test peer connection
         const pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: 'relay' }); // Force relay only
-        
+
         // Create a data channel to trigger ICE gathering
         pc.createDataChannel('test');
-        
+
         const candidates = { host: 0, srflx: 0, relay: 0 };
         let gatheringComplete = false;
-        
+
         pc.onicecandidate = (e) => {
             if (e.candidate) {
                 candidates[e.candidate.type] = (candidates[e.candidate.type] || 0) + 1;
@@ -46,11 +46,11 @@ window.testTurnConnectivity = async function() {
                 gatheringComplete = true;
             }
         };
-        
+
         // Create offer to start ICE gathering
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        
+
         // Wait for gathering with timeout
         await new Promise((resolve) => {
             const check = setInterval(() => {
@@ -61,12 +61,12 @@ window.testTurnConnectivity = async function() {
             }, 100);
             setTimeout(() => { clearInterval(check); resolve(); }, 10000); // 10s timeout
         });
-        
+
         console.log('📊 TURN Test Results:');
         console.log('   - host (local):', candidates.host);
         console.log('   - srflx (STUN):', candidates.srflx);
         console.log('   - relay (TURN):', candidates.relay);
-        
+
         if (candidates.relay === 0) {
             console.error('❌ TURN RELAY NOT WORKING!');
             console.error('💡 Possible issues:');
@@ -76,7 +76,7 @@ window.testTurnConnectivity = async function() {
         } else {
             console.log('✅ TURN relay is working - cross-network connections should work');
         }
-        
+
         pc.close();
         return candidates;
     } catch (error) {
@@ -913,6 +913,53 @@ async function setupWebRTCReceiver(socket, sessionId) {
         window.fileTransfer.setupReceiver(peerConnection);
     }
 
+    // Listen for data channels (includes 'input' channel with handshake from Android)
+    peerConnection.ondatachannel = (event) => {
+        console.log('📱 GUEST: Data channel received:', event.channel.label);
+
+        if (event.channel.label === 'input') {
+            const inputChannel = event.channel;
+
+            inputChannel.onopen = () => {
+                console.log('📱 GUEST: Input data channel opened');
+            };
+
+            inputChannel.onmessage = (msgEvent) => {
+                try {
+                    const msg = JSON.parse(msgEvent.data);
+
+                    // Handle Android handshake - set hostIsMobile IMMEDIATELY
+                    if (msg.type === 'system' && msg.action === 'handshake') {
+                        console.log('📱 GUEST: Received host handshake:', msg.data);
+
+                        if (msg.data && msg.data.platform === 'android') {
+                            console.log('📱 GUEST: Host is ANDROID - setting hostIsMobile = true');
+                            window.superdeskState.hostIsMobile = true;
+
+                            // Immediately reposition toolbar to left side
+                            const popupControls = document.getElementById('popup-controls');
+                            if (popupControls) {
+                                popupControls.classList.add('popup-controls-side');
+                                console.log('📍 Toolbar moved to LEFT SIDE via handshake');
+                            }
+
+                            // Show control bar with new position
+                            if (typeof window.showControlBar === 'function') {
+                                window.showControlBar();
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Not JSON or not a system message - ignore
+                }
+            };
+
+            inputChannel.onclose = () => {
+                console.log('📱 GUEST: Input data channel closed');
+            };
+        }
+    };
+
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
         console.log('🔌 GUEST Connection state:', peerConnection.connectionState);
@@ -1095,11 +1142,33 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 updateDebugStatus('metadata', `${video.videoWidth}x${video.videoHeight}`);
 
                 // Detect if host is mobile based on portrait aspect ratio (height > width)
+                // BUT: If handshake already set hostIsMobile = true, don't override it!
                 if (video.videoWidth > 0 && video.videoHeight > 0) {
                     const isPortrait = video.videoHeight > video.videoWidth;
-                    window.superdeskState.hostIsMobile = isPortrait;
-                    console.log('📱 Host device detected as:', isPortrait ? 'MOBILE (portrait)' : 'DESKTOP (landscape)');
-                    console.log('🖱️ Cursor will be:', isPortrait ? 'VISIBLE (mobile host has no cursor)' : 'HIDDEN when control enabled');
+
+                    // If handshake already detected Android, keep that - don't override with aspect ratio
+                    // This is important because Android may send landscape video even though it's mobile
+                    if (!window.superdeskState.hostIsMobile) {
+                        window.superdeskState.hostIsMobile = isPortrait;
+                        console.log('📱 Host device detected via aspect ratio:', isPortrait ? 'MOBILE (portrait)' : 'DESKTOP (landscape)');
+                    } else {
+                        console.log('📱 Host already detected as MOBILE via handshake - keeping left toolbar');
+                    }
+
+                    console.log('🖱️ Cursor will be:', window.superdeskState.hostIsMobile ? 'VISIBLE (mobile host has no cursor)' : 'HIDDEN when control enabled');
+
+                    // NOTE: Mobile toolbar moving to side is DISABLED as per user request
+                    // Toolbar will stay at TOP CENTER
+                    console.log('📍 Toolbar kept at TOP CENTER (default)');
+
+                    // Re-show control bar
+                    if (typeof window.showControlBar === 'function') {
+                        window.showControlBar();
+                    } else {
+                        // Fallback: directly set opacity
+                        const popupControls = document.getElementById('popup-controls');
+                        if (popupControls) popupControls.style.opacity = '1';
+                    }
                 }
 
                 // Check if dimensions are 0x0 (black screen indicator)
@@ -1164,6 +1233,56 @@ async function setupWebRTCReceiver(socket, sessionId) {
                         await video.play();
                         console.log('✅ Video playing!');
                         console.log('📺 Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+
+                        // Helper to show popup only when video has dimensions
+                        const showPopupWhenReady = () => {
+                            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                                console.log('📺 Video has dimensions:', video.videoWidth, 'x', video.videoHeight);
+                                if (typeof window.showRemoteDesktopPopup === 'function') {
+                                    const popup = document.getElementById('remote-desktop-popup');
+                                    if (!popup || popup.style.display === 'none' || popup.style.display === '') {
+                                        window.showRemoteDesktopPopup();
+                                        console.log('✅ Remote desktop popup opened (video ready)');
+
+                                        // Auto-enable remote control
+                                        setTimeout(() => {
+                                            if (typeof enableRemoteControl === 'function') {
+                                                console.log('🎮 Auto-enabling remote control...');
+                                                enableRemoteControl();
+                                            }
+                                        }, 500);
+                                    }
+                                }
+                                return true;
+                            }
+                            console.log('📺 Video has 0 dimensions, waiting...');
+                            return false;
+                        };
+
+
+                        // Show the remote desktop popup if not already visible
+                        if (typeof window.showRemoteDesktopPopup === 'function') {
+                            const popup = document.getElementById('remote-desktop-popup');
+                            if (!popup || popup.style.display === 'none' || popup.style.display === '') {
+                                window.showRemoteDesktopPopup();
+                                console.log('✅ Remote desktop popup opened after video start');
+
+                                // Auto-enable remote control when viewing host screen
+                                setTimeout(() => {
+                                    if (typeof enableRemoteControl === 'function') {
+                                        console.log('🎮 Auto-enabling remote control...');
+                                        enableRemoteControl();
+                                    }
+                                }, 500);
+                            }
+                        }
+
+                        // IMPORTANT: Force toolbar visible after video plays!
+                        // This fixes the issue where toolbar disappears when video starts
+                        if (typeof window.showControlBar === 'function') {
+                            window.showControlBar();
+                            console.log('📍 Forced showControlBar after video.play()');
+                        }
                     } catch (e) {
                         console.log('⚠️ Play attempt:', e.message);
                         // If interrupted, wait a bit and retry once
@@ -1173,6 +1292,10 @@ async function setupWebRTCReceiver(socket, sessionId) {
                                 try {
                                     await video.play();
                                     console.log('✅ Video playing on retry!');
+                                    // Force toolbar visible on retry too
+                                    if (typeof window.showControlBar === 'function') {
+                                        window.showControlBar();
+                                    }
                                 } catch (e2) {
                                     console.error('❌ Retry play failed:', e2.message);
                                 }
@@ -1331,7 +1454,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
         console.log('📨 From host:', data.from);
         console.log('📨 Session ID:', data.sessionId);
         console.log('📨 Current signaling state:', peerConnection.signalingState);
-        
+
         // Parse SDP to check for media tracks
         if (data.offer?.sdp) {
             const sdp = data.offer.sdp;
@@ -1349,7 +1472,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 console.error('❌ OFFER HAS NO MEDIA TRACKS! Host may not be sharing screen.');
             }
         }
-        
+
         updateDebugStatus('offer', 'received');
 
         // Accept offers in stable state, or handle renegotiation (have-local-offer)
@@ -1859,15 +1982,15 @@ function getNormalizedCoordinates(e, videoElement) {
     const mouseX = e.clientX - rect.left - offsetX;
     const mouseY = e.clientY - rect.top - offsetY;
 
-    // Check if click is inside the actual video area
-    if (mouseX < 0 || mouseX > displayWidth || mouseY < 0 || mouseY > displayHeight) {
-        return null; // Click was in the black bars
-    }
+    // CHANGED: Instead of returning null for black bar clicks, clamp to edge
+    // This ensures all clicks are transmitted to the Android device
+    const clampedX = Math.max(0, Math.min(mouseX, displayWidth));
+    const clampedY = Math.max(0, Math.min(mouseY, displayHeight));
 
     // Return normalized coordinates (0.0 - 1.0)
     return {
-        x: mouseX / displayWidth,
-        y: mouseY / displayHeight
+        x: clampedX / displayWidth,
+        y: clampedY / displayHeight
     };
 }
 
@@ -2249,7 +2372,7 @@ function handleTouchMove(e) {
 
     const video = e.target;
     const now = performance.now();
-    
+
     // Calculate distance early to detect swipe
     const totalDeltaX = touch.clientX - touchState.startX;
     const totalDeltaY = touch.clientY - touchState.startY;
@@ -2269,10 +2392,10 @@ function handleTouchMove(e) {
 
     // Throttle move events using RAF for smooth 60fps updates
     if (pendingMoveFrame) return; // Skip if we already have a pending frame
-    
+
     pendingMoveFrame = requestAnimationFrame(() => {
         pendingMoveFrame = null;
-        
+
         const coords = getNormalizedTouchCoordinates(touch, video);
         if (!coords) return;
 
@@ -2288,7 +2411,7 @@ function handleTouchMove(e) {
             const scrollThreshold = 8;
             if (Math.abs(touchState.scrollAccumulator.y) > scrollThreshold) {
                 const scrollDelta = touchState.scrollAccumulator.y * TOUCH_CONFIG.SCROLL_SENSITIVITY;
-                
+
                 if (window.superdeskState.socket && window.superdeskState.socket.connected) {
                     window.superdeskState.socket.emit('mouse-event', {
                         sessionId: window.superdeskState.sessionId,
@@ -2304,7 +2427,7 @@ function handleTouchMove(e) {
 
             if (Math.abs(touchState.scrollAccumulator.x) > scrollThreshold) {
                 const scrollDelta = touchState.scrollAccumulator.x * TOUCH_CONFIG.SCROLL_SENSITIVITY;
-                
+
                 if (window.superdeskState.socket && window.superdeskState.socket.connected) {
                     window.superdeskState.socket.emit('mouse-event', {
                         sessionId: window.superdeskState.sessionId,
@@ -2354,11 +2477,11 @@ function handleTouchEnd(e) {
     if (!coords) return;
 
     // CRITICAL: Only process tap if NO movement occurred (prevents swipe from triggering click)
-    const wasTap = duration < TOUCH_CONFIG.TAP_DURATION && 
-                   distance < TOUCH_CONFIG.TAP_THRESHOLD && 
-                   !touchState.isScrolling && 
-                   !touchState.hasMoved && 
-                   !touchState.isSwiping;
+    const wasTap = duration < TOUCH_CONFIG.TAP_DURATION &&
+        distance < TOUCH_CONFIG.TAP_THRESHOLD &&
+        !touchState.isScrolling &&
+        !touchState.hasMoved &&
+        !touchState.isSwiping;
 
     if (wasTap) {
         const now = Date.now();

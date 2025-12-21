@@ -10,10 +10,10 @@ class SuperDeskClient {
     this.remoteStream = null;
     this.localStream = null;
     this.remoteControlEnabled = false;
-    this.serverUrl = window.location.hostname === 'localhost' 
-      ? 'http://localhost:3001' 
+    this.serverUrl = window.location.hostname === 'localhost'
+      ? 'http://localhost:3001'
       : 'https://superdesk-7m7f.onrender.com';
-    
+
     this.callbacks = {
       onSessionCreated: null,
       onGuestJoined: null,
@@ -21,8 +21,12 @@ class SuperDeskClient {
       onRemoteStream: null,
       onConnectionStateChange: null,
       onSessionEnded: null,
-      onError: null
+      onError: null,
+      onHostInfo: null,
+      onDataChannelOpen: null
     };
+
+    this.dataChannel = null;
   }
 
   async initialize() {
@@ -155,6 +159,32 @@ class SuperDeskClient {
       const state = this.peerConnection.connectionState;
       console.log('Connection state:', state);
       this.callbacks.onConnectionStateChange?.(state);
+    };
+
+    // Handle data channel for receiving handshake and input
+    this.peerConnection.ondatachannel = (event) => {
+      console.log('📱 Data channel received:', event.channel.label);
+      if (event.channel.label === 'input') {
+        this.dataChannel = event.channel;
+        this.dataChannel.onopen = () => {
+          console.log('📱 Data channel opened');
+          this.callbacks.onDataChannelOpen?.();
+        };
+        this.dataChannel.onmessage = (msgEvent) => {
+          try {
+            const msg = JSON.parse(msgEvent.data);
+            if (msg.type === 'system' && msg.action === 'handshake') {
+              console.log('📱 Received host info:', msg.data);
+              this.callbacks.onHostInfo?.(msg.data);
+            }
+          } catch (e) {
+            console.warn('Failed to parse data channel message:', e);
+          }
+        };
+        this.dataChannel.onclose = () => {
+          console.log('📱 Data channel closed');
+        };
+      }
     };
   }
 
