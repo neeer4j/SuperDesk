@@ -1316,6 +1316,19 @@
             line-height: 1.5;
         }
 
+        /* Guest Popup Controls - Vertical Left Side Toolbar */
+        #popup-controls {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            flex-direction: column;
+        }
+        #popup-controls::-webkit-scrollbar {
+            display: none;
+        }
+        #popup-controls button {
+            flex-shrink: 0;
+        }
+
         /* File Transfer Section */
         .file-transfer-section {
             margin-top: 24px;
@@ -7014,6 +7027,37 @@
                     });
                     video.dataset.moveListenerAttached = 'true';
                 }
+
+                // Make toolbar visible on touch near left edge
+                if (video && !video.dataset.touchListenerAttached) {
+                    video.addEventListener('touchstart', (e) => {
+                        const touch = e.touches[0];
+                        // Show toolbar when touching near the left edge
+                        if (touch && touch.clientX < 80) {
+                            showControlBar();
+                        }
+                    }, { passive: true });
+                    video.dataset.touchListenerAttached = 'true';
+                }
+
+                // Prevent touch events on toolbar from propagating to video
+                const controls = document.getElementById('popup-controls');
+                if (controls && !controls.dataset.touchHandlerAttached) {
+                    controls.addEventListener('touchstart', (e) => {
+                        e.stopPropagation();
+                        showControlBar(); // Keep visible while interacting
+                    }, { passive: true });
+                    controls.addEventListener('touchmove', (e) => {
+                        e.stopPropagation();
+                        // Allow vertical scroll on toolbar
+                    }, { passive: true });
+                    controls.addEventListener('touchend', (e) => {
+                        e.stopPropagation();
+                    }, { passive: true });
+                    controls.dataset.touchHandlerAttached = 'true';
+                    console.log('✅ Touch handlers attached to popup controls for vertical scroll');
+                }
+                // Toolbar is now always positioned on the left side - no repositioning needed
             }
 
             if (waitingMsg) {
@@ -7054,7 +7098,8 @@
                 if (typeof window.disableRemoteControl === 'function') {
                     window.disableRemoteControl();
                 }
-                btn.textContent = '🖱️ Enable Control';
+                btn.textContent = '🖱️';
+                btn.title = 'Enable Control';
                 btn.style.background = 'rgba(255,255,255,0.15)';
                 if (indicator) indicator.style.display = 'none';
                 console.log('✅ Remote control disabled');
@@ -7063,7 +7108,8 @@
                 if (typeof window.enableRemoteControl === 'function') {
                     window.enableRemoteControl();
                 }
-                btn.textContent = '🖱️ Active';
+                btn.textContent = '🖱️';
+                btn.title = 'Control Active';
                 btn.style.background = '#10b981';
                 if (indicator) indicator.style.display = 'block';
                 console.log('✅ Remote control enabled');
@@ -7385,33 +7431,31 @@
     <!-- Remote Desktop Popup Viewer (for guests joining sessions) -->
     <div id="remote-desktop-popup"
         style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; flex-direction: column;">
-        <!-- Centered control bar at top (auto-hide after 3s) -->
+        <!-- VERTICAL control bar on LEFT SIDE - always accessible without blocking video -->
         <div id="popup-controls"
-            style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); padding: 8px 16px; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 1000001; pointer-events: auto; transition: opacity 0.3s; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px);">
+            style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.9); padding: 12px 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; z-index: 1000001; pointer-events: auto; transition: opacity 0.3s; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); max-height: calc(100vh - 40px); overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: none; -ms-overflow-style: none;">
             <span id="status-indicator"
                 style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
             <button id="control-toggle-btn"
-                style="padding: 8px 16px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;">
-                🖱️ Enable Control
+                style="padding: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+                title="Enable Control">
+                🖱️
             </button>
             <button id="fullscreen-toggle-btn"
-                style="padding: 8px 16px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;">
-                ⛶ Fullscreen
+                style="padding: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+                title="Fullscreen">
+                ⛶
             </button>
             <button id="end-session-btn"
-                style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;">
-                ✕ Close
+                style="padding: 10px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+                title="Close">
+                ✕
             </button>
-            <!-- File Transfer Toggle Button (Guest) - Styled with gradient -->
+            <!-- File Transfer Toggle Button (Guest) -->
             <button id="file-transfer-toggle-btn"
-                style="padding: 8px 16px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);"
-                onclick="toggleFileTransferUI()">
-                <span style="display: flex; align-items: center; gap: 6px;"><svg width="16" height="16"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg> Files</span>
+                style="padding: 10px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+                onclick="toggleFileTransferUI()" title="Files">
+                📁
             </button>
         </div>
 
