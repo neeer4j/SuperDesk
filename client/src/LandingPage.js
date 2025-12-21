@@ -172,7 +172,7 @@ const getStyles = (darkTheme) => ({
   authLeft: {
     width: '44%',
     minWidth: '340px',
-    background: '#ffffff',
+    background: darkTheme.authLeftBg,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -199,7 +199,7 @@ const getStyles = (darkTheme) => ({
   brandText: {
     fontSize: '18px',
     fontWeight: 400,
-    color: '#613da9',
+    color: '#ffffff',
     lineHeight: 1.6,
     textAlign: 'center'
   },
@@ -1476,24 +1476,12 @@ function LandingPage() {
     return (
       <div style={styles.authContainer}>
         <div style={styles.authLeft}>
-          {/* Light mode logo */}
-          {!darkMode && (
-            <img
-              src={superdeskLogoLarge}
-              alt="SuperDesk"
-              style={styles.logoLarge}
-              onError={(e) => { e.target.src = superdeskLogo; }}
-            />
-          )}
-          {/* Dark mode logo */}
-          {darkMode && (
-            <img
-              src={superdeskLogoWhiteLarge}
-              alt="SuperDesk"
-              style={styles.logoLarge}
-              onError={(e) => { e.target.src = superdeskLogoWhite; }}
-            />
-          )}
+          <img
+            src={superdeskLogoWhiteLarge}
+            alt="SuperDesk"
+            style={styles.logoLarge}
+            onError={(e) => { e.target.src = superdeskLogoWhite; }}
+          />
           <div style={styles.brandText}>
             Secure remote desktop sharing<br />for modern teams
           </div>
@@ -1624,10 +1612,10 @@ function LandingPage() {
       {/* Left Sidebar - Icon Rail (Share Screen removed) */}
       <div style={styles.dashboardSidebar}>
         <img
-          src={superdeskLogo}
+          src={darkMode ? superdeskLogoWhite : superdeskLogo}
           alt="SuperDesk"
           style={styles.sidebarLogo}
-          onError={(e) => { e.target.src = superdeskLogo; }}
+          onError={(e) => { e.target.src = darkMode ? superdeskLogoWhite : superdeskLogo; }}
         />
 
         <nav style={styles.navMenu}>
