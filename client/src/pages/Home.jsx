@@ -173,7 +173,7 @@ export default function Home() {
                             maxWidth: '700px',
                             margin: '0 auto 40px',
                         }}>
-                            Secure screen sharing, remote control, and file transfer for modern teams. No installation required.
+                            Secure screen sharing, remote control, and file transfer for modern teams.
                         </p>
                     </motion.div>
 
@@ -525,6 +525,7 @@ export default function Home() {
                             fontSize: '17px',
                             lineHeight: '1.8',
                             color: darkMode ? 'rgba(255,255,255,0.75)' : '#555',
+                            textAlign: 'center',
                         }}>
                             <p style={{ marginBottom: '24px' }}>
                                 SuperDesk is an indie remote desktop solution created out of a passion for building tools that make work easier, faster, and more secure. Developed under real-world limitations, it proves that thoughtful design and dedication can create powerful software without the resources of a large organization. Every feature is crafted to solve real problems, keeping simplicity, reliability, and usability at the heart of the experience.
@@ -567,7 +568,7 @@ export default function Home() {
                             color: darkMode ? 'rgba(255,255,255,0.8)' : '#555',
                             marginBottom: '40px',
                         }}>
-                            No download required. Launch the web app and start sharing in seconds.
+                            Launch the web app and start viewing desktops.
                         </p>
                         <Link
                             to="/app"
@@ -584,7 +585,7 @@ export default function Home() {
                                 transition: 'all 0.2s',
                             }}
                         >
-                            Launch SuperDesk →
+                            Launch SuperDesk Web App →
                         </Link>
                     </motion.div>
                 </div>

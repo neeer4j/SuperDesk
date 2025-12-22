@@ -1197,7 +1197,7 @@ function LandingPage() {
   const [connecting, setConnecting] = useState(false);
   const [friendEmail, setFriendEmail] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [settings, setSettings] = useState({
     notifications: true,
     sounds: true,
@@ -1510,6 +1510,33 @@ function LandingPage() {
   if (!user) {
     return (
       <div style={styles.authContainer}>
+        {/* Back to Portfolio Button */}
+        <a
+          href="/"
+          title="Back to Portfolio"
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            background: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(97, 61, 169, 0.15)',
+            border: darkMode ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(97, 61, 169, 0.3)',
+            color: darkMode ? 'rgba(255, 255, 255, 0.9)' : '#613da9',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            textDecoration: 'none',
+            transition: 'all 0.2s ease',
+            zIndex: 10
+          }}
+        >
+          ← Back
+        </a>
+
         {/* Help Button */}
         <button
           onClick={() => setHelpModalOpen(true)}

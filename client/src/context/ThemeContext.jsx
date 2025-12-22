@@ -7,8 +7,8 @@ export function ThemeProvider({ children }) {
         // Check localStorage first
         const saved = localStorage.getItem('portfolioTheme');
         if (saved) return saved === 'dark';
-        // Default to system preference
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Default to dark mode
+        return true;
     });
 
     useEffect(() => {
