@@ -107,27 +107,7 @@ export default function Navbar() {
                                         minWidth: '200px',
                                     }}
                                 >
-                                    <a
-                                        href="https://ko-fi.com/idkcoding"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={() => setSupportOpen(false)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            padding: '12px 16px',
-                                            color: darkMode ? 'white' : '#333',
-                                            textDecoration: 'none',
-                                            fontSize: '14px',
-                                            backgroundColor: 'transparent',
-                                            transition: 'background-color 0.2s',
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                    >
-                                        ☕ Support on Ko-fi
-                                    </a>
+
                                     <a
                                         href="https://github.com/neeer4j/SuperDesk"
                                         target="_blank"
