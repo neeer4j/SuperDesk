@@ -132,7 +132,8 @@ const getTheme = (isDark) => {
       glassBg: 'rgba(255, 255, 255, 0.02)',
       glassBorder: 'rgba(255, 255, 255, 0.05)',
       accentGlow: 'rgba(139, 92, 246, 0.1)',
-      authLeftBg: '#16213e'
+      authLeftBg: '#16213e',
+      authLeftTextColor: 'rgba(255, 255, 255, 0.8)'
     };
   } else {
     // Light Mode (Purple Theme - Default)
@@ -155,7 +156,8 @@ const getTheme = (isDark) => {
       glassBg: 'rgba(80, 45, 140, 0.4)',
       glassBorder: 'rgba(255, 255, 255, 0.15)',
       accentGlow: 'rgba(255, 255, 255, 0.25)',
-      authLeftBg: '#613da9'
+      authLeftBg: '#f8f7fc',
+      authLeftTextColor: '#613da9'
     };
   }
 };
@@ -199,7 +201,7 @@ const getStyles = (darkTheme) => ({
   brandText: {
     fontSize: '18px',
     fontWeight: 400,
-    color: '#ffffff',
+    color: darkTheme.authLeftTextColor || '#ffffff',
     lineHeight: 1.6,
     textAlign: 'center'
   },
@@ -1477,10 +1479,10 @@ function LandingPage() {
       <div style={styles.authContainer}>
         <div style={styles.authLeft}>
           <img
-            src={superdeskLogoWhiteLarge}
+            src={darkMode ? superdeskLogoWhiteLarge : superdeskLogoLarge}
             alt="SuperDesk"
             style={styles.logoLarge}
-            onError={(e) => { e.target.src = superdeskLogoWhite; }}
+            onError={(e) => { e.target.src = darkMode ? superdeskLogoWhite : superdeskLogo; }}
           />
           <div style={styles.brandText}>
             Secure remote desktop sharing<br />for modern teams
