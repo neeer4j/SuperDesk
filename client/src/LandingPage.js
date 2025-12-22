@@ -1212,6 +1212,7 @@ function LandingPage() {
   const [usernameSuccess, setUsernameSuccess] = useState('');
   const [savingAccount, setSavingAccount] = useState(false);
   const [hostPlatform, setHostPlatform] = useState(null); // 'android', 'electron', or null
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
   const clientRef = useRef(null);
   const usernameTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -1477,6 +1478,127 @@ function LandingPage() {
   if (!user) {
     return (
       <div style={styles.authContainer}>
+        {/* Help Button */}
+        <button
+          onClick={() => setHelpModalOpen(true)}
+          title="How to use SuperDesk"
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.15)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: 'rgba(255, 255, 255, 0.9)',
+            fontSize: '18px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s ease',
+            zIndex: 10
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.25)';
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+            e.target.style.transform = 'scale(1.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.15)';
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            e.target.style.transform = 'scale(1)';
+          }}
+        >
+          ?
+        </button>
+
+        {/* Help Modal */}
+        {helpModalOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+            onClick={() => setHelpModalOpen(false)}
+          >
+            <div
+              style={{
+                background: darkMode ? 'linear-gradient(145deg, #1a1a2e 0%, #0d0d14 100%)' : 'linear-gradient(145deg, #7c4dbd 0%, #5a3498 100%)',
+                borderRadius: '16px',
+                width: '90%',
+                maxWidth: '500px',
+                maxHeight: '80vh',
+                overflow: 'auto',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: 'white' }}>📖 How to Use SuperDesk</div>
+                <button
+                  onClick={() => setHelpModalOpen(false)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '18px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              <div style={{ padding: '24px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: 'white', marginBottom: '12px' }}>🖥️ Share Your Screen (Host)</div>
+                  <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.6 }}>
+                    <div><strong>1.</strong> Sign in with your email and OTP code</div>
+                    <div><strong>2.</strong> Click <strong>"Share Screen"</strong> in the sidebar</div>
+                    <div><strong>3.</strong> Click <strong>"Start Sharing"</strong> and select a screen/window</div>
+                    <div><strong>4.</strong> Share the <strong>8-character Session ID</strong> with the person who wants to view/control your screen</div>
+                  </div>
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: 'white', marginBottom: '12px' }}>🔗 Join a Session (Guest)</div>
+                  <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.6 }}>
+                    <div><strong>1.</strong> Get the <strong>Session ID</strong> from the host</div>
+                    <div><strong>2.</strong> Click <strong>"Join Session"</strong> in the sidebar</div>
+                    <div><strong>3.</strong> Enter the Session ID and click <strong>"Connect"</strong></div>
+                    <div><strong>4.</strong> Use the control buttons to enable mouse/keyboard control or fullscreen</div>
+                  </div>
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: 'white', marginBottom: '12px' }}>📁 Transfer Files</div>
+                  <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.6 }}>
+                    <div><strong>Host:</strong> Drag & drop files into the File Transfer area while sharing</div>
+                    <div><strong>Guest:</strong> Accept incoming files via the popup prompt, then choose where to save</div>
+                  </div>
+                </div>
+                <div style={{ padding: '12px 16px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '8px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.9)' }}>
+                  💡 <strong>Tip:</strong> Both host and guest must be using the SuperDesk desktop app for file transfer to work. Remote control requires the host to enable it.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={styles.authLeft}>
           <img
             src={darkMode ? superdeskLogoWhiteLarge : superdeskLogoLarge}
