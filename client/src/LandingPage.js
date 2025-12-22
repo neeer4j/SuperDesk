@@ -1187,6 +1187,7 @@ function LandingPage() {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [otpSent, setOtpSent] = useState(false);
   const [user, setUser] = useState(null);
   const [activeView, setActiveView] = useState('join'); // Default to join (not share)
@@ -1449,6 +1450,7 @@ function LandingPage() {
       if (session) {
         setUser(session.user);
       }
+      setAuthLoading(false);
     };
     checkSession();
 
@@ -1458,6 +1460,7 @@ function LandingPage() {
       } else {
         setUser(null);
       }
+      setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -1473,6 +1476,35 @@ function LandingPage() {
   };
 
   const userInfo = getUserDisplay();
+
+  // Loading Screen
+  if (authLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: darkTheme.primaryBg,
+        color: 'white'
+      }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          border: '4px solid rgba(255, 255, 255, 0.1)',
+          borderTopColor: '#8b5cf6',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   // Authentication Screen
   if (!user) {
@@ -2367,102 +2399,104 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* Account Modal */}
-      <div
-        style={styles.accountModalOverlay(accountModalOpen)}
-        onClick={(e) => e.target === e.currentTarget && closeAccountModal()}
-      >
-        <div style={styles.accountModal(accountModalOpen)}>
-          <div style={styles.accountModalHeader}>
-            <div style={styles.accountModalTitle}>Edit Profile</div>
-            <button
-              onClick={closeAccountModal}
-              style={styles.accountModalClose}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-            >
-              ×
-            </button>
-          </div>
-
-          <div style={styles.accountModalBody}>
-            {/* Avatar Section */}
-            <div style={styles.accountAvatarSection}>
-              <div style={styles.accountAvatarPreview}>
-                {userInfo.initial}
-              </div>
+      {/* Account Modal - Conditionally Rendered to prevent flash */}
+      {accountModalOpen && (
+        <div
+          style={styles.accountModalOverlay(accountModalOpen)}
+          onClick={(e) => e.target === e.currentTarget && closeAccountModal()}
+        >
+          <div style={styles.accountModal(accountModalOpen)}>
+            <div style={styles.accountModalHeader}>
+              <div style={styles.accountModalTitle}>Edit Profile</div>
               <button
-                onClick={() => alert('Avatar upload coming soon!')}
-                style={styles.accountAvatarBtn}
+                onClick={closeAccountModal}
+                style={styles.accountModalClose}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
               >
-                📷 Change Photo
+                ×
               </button>
             </div>
 
-            {/* Email Field (Read-only) */}
-            <div style={styles.accountField}>
-              <div style={styles.accountFieldLabel}>Email</div>
-              <input
-                type="text"
-                value={userInfo.email}
-                disabled
-                style={styles.accountFieldInput(true)}
-              />
-              <div style={styles.accountFieldHint}>Your email cannot be changed</div>
-            </div>
+            <div style={styles.accountModalBody}>
+              {/* Avatar Section */}
+              <div style={styles.accountAvatarSection}>
+                <div style={styles.accountAvatarPreview}>
+                  {userInfo.initial}
+                </div>
+                <button
+                  onClick={() => alert('Avatar upload coming soon!')}
+                  style={styles.accountAvatarBtn}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                >
+                  📷 Change Photo
+                </button>
+              </div>
 
-            {/* Username Field */}
-            <div style={styles.accountField}>
-              <div style={styles.accountFieldLabel}>Username</div>
-              <div style={styles.accountFieldInputWrapper}>
-                <span style={styles.usernamePrefix}>@</span>
+              {/* Email Field (Read-only) */}
+              <div style={styles.accountField}>
+                <div style={styles.accountFieldLabel}>Email</div>
                 <input
                   type="text"
-                  value={username}
-                  onChange={handleUsernameChange}
-                  placeholder="username"
-                  maxLength={30}
-                  style={{
-                    ...styles.accountFieldInput(false),
-                    paddingLeft: '24px'
-                  }}
+                  value={userInfo.email}
+                  disabled
+                  style={styles.accountFieldInput(true)}
                 />
+                <div style={styles.accountFieldHint}>Your email cannot be changed</div>
               </div>
-              <div style={styles.accountFieldHint}>
-                Letters, numbers, underscores and periods. 3-30 characters.
+
+              {/* Username Field */}
+              <div style={styles.accountField}>
+                <div style={styles.accountFieldLabel}>Username</div>
+                <div style={styles.accountFieldInputWrapper}>
+                  <span style={styles.usernamePrefix}>@</span>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={handleUsernameChange}
+                    placeholder="username"
+                    maxLength={30}
+                    style={{
+                      ...styles.accountFieldInput(false),
+                      paddingLeft: '24px'
+                    }}
+                  />
+                </div>
+                <div style={styles.accountFieldHint}>
+                  Letters, numbers, underscores and periods. 3-30 characters.
+                </div>
+                {usernameError && (
+                  <div style={styles.accountFieldError}>{usernameError}</div>
+                )}
+                {usernameSuccess && (
+                  <div style={styles.accountFieldSuccess}>{usernameSuccess}</div>
+                )}
               </div>
-              {usernameError && (
-                <div style={styles.accountFieldError}>{usernameError}</div>
-              )}
-              {usernameSuccess && (
-                <div style={styles.accountFieldSuccess}>{usernameSuccess}</div>
-              )}
+            </div>
+
+            <div style={styles.accountModalFooter}>
+              <button
+                onClick={closeAccountModal}
+                style={styles.accountModalBtn('secondary', false)}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAccount}
+                disabled={savingAccount || !!usernameError}
+                style={styles.accountModalBtn('primary', savingAccount || !!usernameError)}
+                onMouseEnter={(e) => !savingAccount && !usernameError && (e.currentTarget.style.opacity = '0.9')}
+                onMouseLeave={(e) => !savingAccount && !usernameError && (e.currentTarget.style.opacity = '1')}
+              >
+                {savingAccount ? 'Saving...' : 'Save'}
+              </button>
             </div>
           </div>
-
-          <div style={styles.accountModalFooter}>
-            <button
-              onClick={closeAccountModal}
-              style={styles.accountModalBtn('secondary', false)}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveAccount}
-              disabled={savingAccount || !!usernameError}
-              style={styles.accountModalBtn('primary', savingAccount || !!usernameError)}
-              onMouseEnter={(e) => !savingAccount && !usernameError && (e.currentTarget.style.opacity = '0.9')}
-              onMouseLeave={(e) => !savingAccount && !usernameError && (e.currentTarget.style.opacity = '1')}
-            >
-              {savingAccount ? 'Saving...' : 'Save'}
-            </button>
-          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
