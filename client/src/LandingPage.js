@@ -1431,17 +1431,17 @@ function LandingPage() {
   };
 
   useEffect(() => {
-    // Initialize theme from localStorage (default to light mode)
+    // Initialize theme from localStorage (default to dark mode)
     const savedTheme = localStorage.getItem('superdeskTheme');
-    if (savedTheme === 'dark') {
-      setDarkMode(true);
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
+    if (savedTheme === 'light') {
       setDarkMode(false);
       document.documentElement.removeAttribute('data-theme');
-      // Ensure light mode is explicitly set
+    } else {
+      setDarkMode(true);
+      document.documentElement.setAttribute('data-theme', 'dark');
+      // Ensure dark mode is explicitly set for new users
       if (savedTheme === null) {
-        localStorage.setItem('superdeskTheme', 'light');
+        localStorage.setItem('superdeskTheme', 'dark');
       }
     }
 
@@ -2144,8 +2144,8 @@ function LandingPage() {
                 </div>
               </div>
 
-              {/* Floating file transfer button */}
-              {activeView === 'files' && (
+              {/* Floating file transfer button - only show during active sessions */}
+              {inSession && activeView === 'files' && (
                 <div
                   style={styles.guestFileTransferZone}
                   onClick={() => fileInputRef.current && fileInputRef.current.click()}
@@ -2214,8 +2214,8 @@ function LandingPage() {
                   </svg>
                 </div>
                 <div style={styles.settingsItemText}>
-                  <div style={styles.settingsItemLabel}>Dark Mode</div>
-                  <div style={styles.settingsItemDesc}>Switch to dark theme</div>
+                  <div style={styles.settingsItemLabel}>Theme</div>
+                  <div style={styles.settingsItemDesc}>{darkMode ? 'Switch to light theme' : 'Switch to dark theme'}</div>
                 </div>
               </div>
               <div

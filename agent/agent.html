@@ -5046,8 +5046,14 @@
         (function () {
             try {
                 const savedTheme = localStorage.getItem('superdeskTheme');
-                if (savedTheme === 'dark') {
+                // Default to dark mode for new users
+                if (savedTheme === 'light') {
+                    document.documentElement.removeAttribute('data-theme');
+                } else {
                     document.documentElement.setAttribute('data-theme', 'dark');
+                    if (savedTheme === null) {
+                        localStorage.setItem('superdeskTheme', 'dark');
+                    }
                 }
             } catch (e) { }
         })();
@@ -5272,8 +5278,8 @@
                                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                                 </svg></div>
                             <div class="settings-item-text">
-                                <div class="settings-item-label">Dark Mode</div>
-                                <div class="settings-item-desc">Switch to dark theme</div>
+                                <div class="settings-item-label">Theme</div>
+                                <div class="settings-item-desc" id="dark-mode-desc">Switch to dark theme</div>
                             </div>
                         </div>
                         <div class="toggle-switch" id="toggle-darkmode" onclick="toggleDarkMode()"></div>
@@ -6707,17 +6713,20 @@
         function toggleDarkMode() {
             const toggle = document.getElementById('toggle-darkmode');
             const html = document.documentElement;
+            const descElement = document.getElementById('dark-mode-desc');
             const isDark = html.getAttribute('data-theme') === 'dark';
 
             if (isDark) {
                 // Switch to light mode
                 html.removeAttribute('data-theme');
                 if (toggle) toggle.classList.remove('active');
+                if (descElement) descElement.textContent = 'Switch to dark theme';
                 updateLogoForTheme('light');
             } else {
                 // Switch to dark mode
                 html.setAttribute('data-theme', 'dark');
                 if (toggle) toggle.classList.add('active');
+                if (descElement) descElement.textContent = 'Switch to light theme';
                 updateLogoForTheme('dark');
             }
 
@@ -6741,15 +6750,19 @@
         function loadSavedTheme() {
             const savedTheme = localStorage.getItem('superdeskTheme');
             const toggle = document.getElementById('toggle-darkmode');
+            const descElement = document.getElementById('dark-mode-desc');
 
-            if (savedTheme === 'dark') {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                if (toggle) toggle.classList.add('active');
-                updateLogoForTheme('dark');
-            } else {
+            // Default to dark mode if no preference is saved
+            if (savedTheme === 'light') {
                 document.documentElement.removeAttribute('data-theme');
                 if (toggle) toggle.classList.remove('active');
+                if (descElement) descElement.textContent = 'Switch to dark theme';
                 updateLogoForTheme('light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                if (toggle) toggle.classList.add('active');
+                if (descElement) descElement.textContent = 'Switch to light theme';
+                updateLogoForTheme('dark');
             }
         }
 

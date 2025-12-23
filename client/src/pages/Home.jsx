@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
@@ -42,6 +42,21 @@ const features = [
 
 export default function Home() {
     const { darkMode } = useTheme();
+    const [displayedText, setDisplayedText] = useState('');
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const fullText = 'Remote Desktop Made Simple';
+
+    // Typing animation effect
+    useEffect(() => {
+        if (currentIndex < fullText.length) {
+            const timeout = setTimeout(() => {
+                setDisplayedText(prev => prev + fullText[currentIndex]);
+                setCurrentIndex(prev => prev + 1);
+            }, 80); // Typing speed in milliseconds
+
+            return () => clearTimeout(timeout);
+        }
+    }, [currentIndex, fullText]);
 
     return (
         <div className={`min-h-screen relative overflow-hidden ${darkMode ? 'bg-surface-dark' : 'bg-surface-light'}`}>
@@ -161,10 +176,37 @@ export default function Home() {
                             color: darkMode ? 'white' : '#1f1f1f',
                             marginBottom: '24px',
                             lineHeight: 1.1,
+                            minHeight: '2.2em',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            textAlign: 'center',
                         }}>
-                            Remote Desktop
-                            <br />
-                            <span style={{ color: darkMode ? 'rgba(255,255,255,0.9)' : '#613da9' }}>Made Simple</span>
+                            <div>
+                                {displayedText.substring(0, 15)}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <span style={{ color: darkMode ? 'rgba(255,255,255,0.9)' : '#613da9' }}>
+                                    {displayedText.substring(15)}
+                                </span>
+                                {displayedText.length >= 15 && (
+                                    <span style={{
+                                        display: 'inline-block',
+                                        width: '4px',
+                                        height: '1em',
+                                        backgroundColor: darkMode ? 'white' : '#613da9',
+                                        marginLeft: '4px',
+                                        animation: 'blink 1s infinite',
+                                    }} />
+                                )}
+                            </div>
+                            <style>{`
+                                @keyframes blink {
+                                    0%, 49% { opacity: 1; }
+                                    50%, 100% { opacity: 0; }
+                                }
+                            `}</style>
                         </h1>
                         <p style={{
                             fontSize: 'clamp(1.125rem, 3vw, 1.5rem)',
