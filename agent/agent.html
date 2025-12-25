@@ -2178,6 +2178,38 @@
             flex-shrink: 0;
         }
 
+        /* Reopen Viewer Button */
+        .reopen-viewer-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 14px 20px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            width: 100%;
+        }
+
+        .reopen-viewer-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .reopen-viewer-btn:active {
+            transform: translateY(0);
+        }
+
+        .reopen-viewer-btn svg {
+            stroke: white;
+        }
+
         @keyframes spin {
             to {
                 transform: rotate(360deg);
@@ -5742,6 +5774,19 @@
                                 </div>
                                 <div class="waiting-status-spinner"></div>
                             </div>
+
+                            <!-- Reopen Viewer Button (shown when user closed the viewer but stream is still active) -->
+                            <button id="reopen-viewer-btn" class="reopen-viewer-btn" style="display: none;"
+                                onclick="window.showRemoteDesktopPopup(true)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20"
+                                    height="20">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                                    <line x1="8" y1="21" x2="16" y2="21" />
+                                    <line x1="12" y1="17" x2="12" y2="21" />
+                                    <path d="M12 7v4l2 2" />
+                                </svg>
+                                <span>Reopen Viewer</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -6945,6 +6990,13 @@
                 window.superdeskState.isHost = false;
                 console.log('✅ Socket and sessionId saved to superdeskState');
 
+                // Reset viewer flags for new session (allow auto-open on first stream)
+                window.viewerWindowUserClosed = false;
+                window.viewerWindowOpen = false;
+                const reopenBtn = document.getElementById('reopen-viewer-btn');
+                if (reopenBtn) reopenBtn.style.display = 'none';
+
+
                 // Join the session
                 window.socket.emit('join-session', sessionId);
 
@@ -7139,11 +7191,18 @@
         // Show remote desktop - SEPARATE POPUP WINDOW
         // Uses window.open() to share stream via window.opener (MediaStream can't be IPC'd)
         window.viewerWindowOpen = false;
+        window.viewerWindowUserClosed = false; // Track if user manually closed the viewer
 
-        window.showRemoteDesktopPopup = function () {
+        window.showRemoteDesktopPopup = function (forceOpen = false) {
             // Prevent multiple windows
             if (window.viewerWindowOpen) {
                 console.log('📺 Viewer window already open - ignoring');
+                return;
+            }
+
+            // If user manually closed the viewer, don't auto-reopen (unless forced)
+            if (window.viewerWindowUserClosed && !forceOpen) {
+                console.log('📺 Viewer was closed by user - not auto-reopening (use Reopen button)');
                 return;
             }
 
@@ -7176,13 +7235,33 @@
 
             if (popup) {
                 console.log('✅ Viewer popup opened');
+                // Reset user closed flag since window is now open
+                window.viewerWindowUserClosed = false;
+                // Hide the reopen button since viewer is now open
+                const reopenBtn = document.getElementById('reopen-viewer-btn');
+                if (reopenBtn) reopenBtn.style.display = 'none';
+
                 // Reset flag when popup closes
                 const checkClosed = setInterval(() => {
                     if (popup.closed) {
                         window.viewerWindowOpen = false;
                         window.sharedStream = null;
-                        console.log('📺 Viewer popup closed');
+                        // Mark that user closed the viewer (to prevent auto-reopen)
+                        window.viewerWindowUserClosed = true;
+                        console.log('📺 Viewer popup closed by user - showing reopen button');
                         clearInterval(checkClosed);
+
+                        // Show the reopen button so user can manually reopen
+                        const reopenBtn = document.getElementById('reopen-viewer-btn');
+                        const video = document.getElementById('join-remote-video');
+                        const hasActiveStream = video && video.srcObject &&
+                            video.srcObject.getVideoTracks &&
+                            video.srcObject.getVideoTracks().length > 0 &&
+                            video.srcObject.getVideoTracks()[0].readyState !== 'ended';
+
+                        if (reopenBtn && hasActiveStream) {
+                            reopenBtn.style.display = 'flex';
+                        }
                     }
                 }, 1000);
             } else {
@@ -7207,6 +7286,7 @@
         window.hideRemoteDesktopPopup = function () {
             console.log('📺 Closing...');
             window.viewerWindowOpen = false;
+            window.viewerWindowUserClosed = false; // Reset for next session
             window.sharedStream = null;
 
             // Hide embedded fallback elements
@@ -7216,6 +7296,9 @@
             if (controls) controls.style.display = 'none';
             const waitingMsg = document.getElementById('waiting-message');
             if (waitingMsg) waitingMsg.style.display = 'block';
+            // Hide reopen button since session is ending
+            const reopenBtn = document.getElementById('reopen-viewer-btn');
+            if (reopenBtn) reopenBtn.style.display = 'none';
         };
 
 
@@ -7298,27 +7381,44 @@
             }
         };
 
-        // Toggle microphone (mute/unmute local audio capture if any)
-        window.toggleMicrophone = function () {
+        // Toggle microphone - ACTUALLY start/stop mic stream (not just cosmetic)
+        window.toggleMicrophone = async function () {
             console.log('🎤 toggleMicrophone called');
             const btn = document.getElementById('mic-toggle-btn');
             if (!btn) return;
 
-            // Toggle microphone state
             if (!window.superdeskState) window.superdeskState = {};
-            const isMuted = window.superdeskState.micMuted !== true;
-            window.superdeskState.micMuted = isMuted;
 
-            if (isMuted) {
+            // Check current state - if micStream exists, we're active
+            const isCurrentlyActive = !!window.superdeskState.micStream;
+
+            if (isCurrentlyActive) {
+                // STOP the mic
+                if (typeof window.stopMicStream === 'function') {
+                    window.stopMicStream();
+                }
                 btn.textContent = '🔇';
-                btn.style.background = '#ef4444';
-                btn.title = 'Microphone Muted';
-                console.log('🎤 Microphone muted');
-            } else {
-                btn.textContent = '🎤';
                 btn.style.background = 'rgba(255,255,255,0.15)';
-                btn.title = 'Toggle Microphone';
-                console.log('🎤 Microphone unmuted');
+                btn.title = 'Microphone Off (Click to enable)';
+                console.log('🎤 Microphone stopped');
+            } else {
+                // START the mic
+                if (typeof window.startMicStream === 'function') {
+                    const success = await window.startMicStream();
+                    if (success) {
+                        btn.textContent = '🎤';
+                        btn.style.background = '#10b981';
+                        btn.title = 'Microphone On (Click to disable)';
+                        console.log('🎤 Microphone started');
+                    } else {
+                        btn.textContent = '🔇';
+                        btn.style.background = '#ef4444';
+                        btn.title = 'Microphone Failed';
+                        console.error('🎤 Failed to start microphone');
+                    }
+                } else {
+                    console.warn('🎤 startMicStream not available');
+                }
             }
         };
 
