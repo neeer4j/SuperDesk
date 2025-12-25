@@ -1350,11 +1350,17 @@
             line-height: 1.5;
         }
 
-        /* Guest Popup Controls - Vertical Left Side Toolbar */
+        /* Guest Popup Controls - Vertical Left Side Toolbar - ALWAYS VISIBLE WHEN SHOWN */
         #popup-controls {
             scrollbar-width: none;
             -ms-overflow-style: none;
             flex-direction: column;
+            /* display is controlled by JS - don't force it here */
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 2147483647 !important;
+            position: fixed !important;
+            pointer-events: auto !important;
         }
 
         #popup-controls::-webkit-scrollbar {
@@ -1363,6 +1369,17 @@
 
         #popup-controls button {
             flex-shrink: 0;
+        }
+
+        /* Hide cursor on video when controlling a PC (desktop) host */
+        /* For Android/mobile hosts, cursor stays visible since there's no host cursor */
+        #join-remote-video.control-active {
+            cursor: none !important;
+        }
+
+        /* Keep cursor visible for all other cases */
+        #join-remote-video:not(.control-active) {
+            cursor: default !important;
         }
 
         /* File Transfer Section */
@@ -7030,105 +7047,184 @@
         let controlBarHideTimer = null;
 
         function showControlBar() {
-            const controls = document.getElementById('popup-controls');
-            if (controls) {
-                controls.style.opacity = '1';
-                // DISABLED: Auto-hide is removed - toolbar stays visible always
-                // Users requested persistent toolbar visibility during Android control
-            }
+            // DISABLED: We now use a separate viewer window with its own toolbar
+            // The embedded toolbar should stay hidden
+            return;
         }
 
-        // Show remote desktop popup
+
+        // Make toolbar draggable by user
+        function setupDraggableToolbar(controls) {
+            if (controls.dataset.draggableSetup) return; // Already set up
+
+            let isDragging = false;
+            let startX, startY, initialX, initialY;
+
+            // Add a drag handle (status indicator area)
+            const statusIndicator = document.getElementById('status-indicator');
+            if (statusIndicator) {
+                statusIndicator.style.cursor = 'grab';
+                statusIndicator.title = 'Drag to move toolbar';
+            }
+
+            // Start dragging
+            function startDrag(e) {
+                // Don't start drag if clicking a button
+                if (e.target.tagName === 'BUTTON') return;
+
+                isDragging = true;
+                controls.style.cursor = 'grabbing';
+                controls.style.transition = 'none';
+
+                const rect = controls.getBoundingClientRect();
+                startX = e.clientX || (e.touches && e.touches[0].clientX);
+                startY = e.clientY || (e.touches && e.touches[0].clientY);
+                initialX = rect.left;
+                initialY = rect.top;
+
+                // Remove transform since we're using absolute positioning now
+                controls.style.transform = 'none';
+                controls.style.left = initialX + 'px';
+                controls.style.top = initialY + 'px';
+
+                e.preventDefault();
+            }
+
+            // During drag
+            function doDrag(e) {
+                if (!isDragging) return;
+
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+                const deltaX = clientX - startX;
+                const deltaY = clientY - startY;
+
+                let newX = initialX + deltaX;
+                let newY = initialY + deltaY;
+
+                // Keep within screen bounds
+                const maxX = window.innerWidth - controls.offsetWidth;
+                const maxY = window.innerHeight - controls.offsetHeight;
+                newX = Math.max(0, Math.min(newX, maxX));
+                newY = Math.max(0, Math.min(newY, maxY));
+
+                controls.style.left = newX + 'px';
+                controls.style.top = newY + 'px';
+            }
+
+            // End drag
+            function endDrag() {
+                if (!isDragging) return;
+                isDragging = false;
+                controls.style.cursor = '';
+                controls.style.transition = '';
+            }
+
+            // Mouse events
+            controls.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', endDrag);
+
+            // Touch events
+            controls.addEventListener('touchstart', startDrag, { passive: false });
+            document.addEventListener('touchmove', doDrag, { passive: true });
+            document.addEventListener('touchend', endDrag);
+
+            controls.dataset.draggableSetup = 'true';
+            console.log('✅ Draggable toolbar initialized');
+        }
+
+
+        // Show remote desktop - SEPARATE POPUP WINDOW
+        // Uses window.open() to share stream via window.opener (MediaStream can't be IPC'd)
+        window.viewerWindowOpen = false;
+
         window.showRemoteDesktopPopup = function () {
-            console.log('📺 Opening remote desktop popup...');
-            const popup = document.getElementById('remote-desktop-popup');
-            const waitingMsg = document.getElementById('waiting-message');
-            const video = document.getElementById('join-remote-video');
-
-            // Only open popup when there is a video stream (allow muted tracks - common with Android)
-            const hasVideoTrack = video && video.srcObject && video.srcObject.getVideoTracks && video.srcObject.getVideoTracks().length > 0;
-            const trackNotEnded = hasVideoTrack ? video.srcObject.getVideoTracks()[0].readyState !== 'ended' : false;
-            const trackMuted = hasVideoTrack ? video.srcObject.getVideoTracks()[0].muted : false;
-
-            console.log('📺 showRemoteDesktopPopup check:', { hasVideoTrack, trackNotEnded, trackMuted });
-
-            if (!hasVideoTrack || !trackNotEnded) {
-                console.warn('⚠️ showRemoteDesktopPopup called but no valid video stream present - aborting');
+            // Prevent multiple windows
+            if (window.viewerWindowOpen) {
+                console.log('📺 Viewer window already open - ignoring');
                 return;
             }
 
-            // Log if track is muted (will be handled by unmute polling in webrtc.js)
-            if (trackMuted) {
-                console.log('📺 Track is muted - unmute polling should handle this');
+            console.log('📺 Opening remote desktop in popup window...');
+            const video = document.getElementById('join-remote-video');
+
+            // Only open when there is a video stream
+            const hasVideoTrack = video && video.srcObject && video.srcObject.getVideoTracks && video.srcObject.getVideoTracks().length > 0;
+            const trackNotEnded = hasVideoTrack ? video.srcObject.getVideoTracks()[0].readyState !== 'ended' : false;
+
+            if (!hasVideoTrack || !trackNotEnded) {
+                console.warn('⚠️ No valid video stream - aborting');
+                return;
             }
+
+            // Mark as open
+            window.viewerWindowOpen = true;
+
+            // Share stream with popup via window.opener
+            window.sharedStream = video.srcObject;
+
+            // Open popup window
+            const w = Math.round(screen.availWidth * 0.8);
+            const h = Math.round(screen.availHeight * 0.8);
+            const left = Math.round((screen.availWidth - w) / 2);
+            const top = Math.round((screen.availHeight - h) / 2);
+
+            const popup = window.open('viewer-popup.html', 'SuperDeskViewer',
+                `width=${w},height=${h},left=${left},top=${top}`);
 
             if (popup) {
-                popup.style.display = 'flex';
-                showControlBar();
-                console.log('✅ Remote desktop popup opened');
-
-                // Show controls when mouse moves to top 100px (attach listener once)
-                if (video && !video.dataset.moveListenerAttached) {
-                    video.addEventListener('mousemove', (e) => {
-                        if (e.clientY < 100) {
-                            showControlBar();
-                        }
-                    });
-                    video.dataset.moveListenerAttached = 'true';
-                }
-
-                // Make toolbar visible on touch near left edge
-                if (video && !video.dataset.touchListenerAttached) {
-                    video.addEventListener('touchstart', (e) => {
-                        const touch = e.touches[0];
-                        // Show toolbar when touching near the left edge
-                        if (touch && touch.clientX < 80) {
-                            showControlBar();
-                        }
-                    }, { passive: true });
-                    video.dataset.touchListenerAttached = 'true';
-                }
-
-                // Prevent touch events on toolbar from propagating to video
-                const controls = document.getElementById('popup-controls');
-                if (controls && !controls.dataset.touchHandlerAttached) {
-                    controls.addEventListener('touchstart', (e) => {
-                        e.stopPropagation();
-                        showControlBar(); // Keep visible while interacting
-                    }, { passive: true });
-                    controls.addEventListener('touchmove', (e) => {
-                        e.stopPropagation();
-                        // Allow vertical scroll on toolbar
-                    }, { passive: true });
-                    controls.addEventListener('touchend', (e) => {
-                        e.stopPropagation();
-                    }, { passive: true });
-                    controls.dataset.touchHandlerAttached = 'true';
-                    console.log('✅ Touch handlers attached to popup controls for vertical scroll');
-                }
-                // Toolbar is now always positioned on the left side - no repositioning needed
+                console.log('✅ Viewer popup opened');
+                // Reset flag when popup closes
+                const checkClosed = setInterval(() => {
+                    if (popup.closed) {
+                        window.viewerWindowOpen = false;
+                        window.sharedStream = null;
+                        console.log('📺 Viewer popup closed');
+                        clearInterval(checkClosed);
+                    }
+                }, 1000);
+            } else {
+                window.viewerWindowOpen = false;
+                console.error('❌ Failed to open popup');
             }
 
-            if (waitingMsg) {
-                waitingMsg.style.display = 'none';
-            }
-        };
-
-        // Hide remote desktop popup
-        window.hideRemoteDesktopPopup = function () {
-            console.log('📺 Closing remote desktop popup...');
-            const popup = document.getElementById('remote-desktop-popup');
+            // Hide waiting message in main window
             const waitingMsg = document.getElementById('waiting-message');
-
-            if (popup) {
-                popup.style.display = 'none';
-                console.log('✅ Remote desktop popup closed');
-            }
-
-            if (waitingMsg) {
-                waitingMsg.style.display = 'block';
-            }
+            if (waitingMsg) waitingMsg.style.display = 'none';
         };
+
+
+
+
+
+
+
+
+
+        // Hide/Close - clean up
+        window.hideRemoteDesktopPopup = function () {
+            console.log('📺 Closing...');
+            window.viewerWindowOpen = false;
+            window.sharedStream = null;
+
+            // Hide embedded fallback elements
+            const popup = document.getElementById('remote-desktop-popup');
+            if (popup) popup.style.display = 'none';
+            const controls = document.getElementById('popup-controls');
+            if (controls) controls.style.display = 'none';
+            const waitingMsg = document.getElementById('waiting-message');
+            if (waitingMsg) waitingMsg.style.display = 'block';
+        };
+
+
+
+
+
+
+
+
 
         // Control toggle for join-view video
         window.toggleControl = function () {
@@ -7198,6 +7294,53 @@
                     document.mozCancelFullScreen();
                 } else if (document.msExitFullscreen) {
                     document.msExitFullscreen();
+                }
+            }
+        };
+
+        // Toggle microphone (mute/unmute local audio capture if any)
+        window.toggleMicrophone = function () {
+            console.log('🎤 toggleMicrophone called');
+            const btn = document.getElementById('mic-toggle-btn');
+            if (!btn) return;
+
+            // Toggle microphone state
+            if (!window.superdeskState) window.superdeskState = {};
+            const isMuted = window.superdeskState.micMuted !== true;
+            window.superdeskState.micMuted = isMuted;
+
+            if (isMuted) {
+                btn.textContent = '🔇';
+                btn.style.background = '#ef4444';
+                btn.title = 'Microphone Muted';
+                console.log('🎤 Microphone muted');
+            } else {
+                btn.textContent = '🎤';
+                btn.style.background = 'rgba(255,255,255,0.15)';
+                btn.title = 'Toggle Microphone';
+                console.log('🎤 Microphone unmuted');
+            }
+        };
+
+        // Toggle speaker (mute/unmute video element audio)
+        window.toggleSpeaker = function () {
+            console.log('🔊 toggleSpeaker called');
+            const btn = document.getElementById('speaker-toggle-btn');
+            const video = document.getElementById('join-remote-video');
+            if (!btn) return;
+
+            if (video) {
+                video.muted = !video.muted;
+                if (video.muted) {
+                    btn.textContent = '🔇';
+                    btn.style.background = '#ef4444';
+                    btn.title = 'Speaker Muted';
+                    console.log('🔊 Speaker muted');
+                } else {
+                    btn.textContent = '🔊';
+                    btn.style.background = 'rgba(255,255,255,0.15)';
+                    btn.title = 'Toggle Speaker';
+                    console.log('🔊 Speaker unmuted');
                 }
             }
         };
@@ -7477,37 +7620,8 @@
         </div>
     </div>
 
-    <!-- Remote Desktop Popup Viewer (for guests joining sessions) -->
     <div id="remote-desktop-popup"
         style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; flex-direction: column;">
-        <!-- VERTICAL control bar on LEFT SIDE - always accessible without blocking video -->
-        <div id="popup-controls"
-            style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.9); padding: 12px 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; z-index: 1000001; pointer-events: auto; opacity: 1; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); max-height: calc(100vh - 40px); overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: none; -ms-overflow-style: none;">
-            <span id="status-indicator"
-                style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-            <button id="control-toggle-btn"
-                style="padding: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
-                title="Enable Control">
-                🖱️
-            </button>
-            <button id="fullscreen-toggle-btn"
-                style="padding: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
-                title="Fullscreen">
-                ⛶
-            </button>
-            <button id="end-session-btn"
-                style="padding: 10px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
-                title="Close">
-                ✕
-            </button>
-            <!-- File Transfer Toggle Button (Guest) -->
-            <button id="file-transfer-toggle-btn"
-                style="padding: 10px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
-                onclick="toggleFileTransferUI()" title="Files">
-                📁
-            </button>
-        </div>
-
         <!-- File Transfer Drop Zone (Guest) - Floating icon -->
         <div id="guest-file-transfer-zone"
             style="display: none; position: absolute; bottom: 60px; right: 20px; z-index: 1000003;">
@@ -7544,7 +7658,7 @@
                and DO NOT hide the guest cursor by default. Cursor will be hidden only when
                remote control is ENABLED by adding the `control-active` class. -->
         <video id="join-remote-video" autoplay playsinline muted
-            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background: #000; z-index: 1000000;">
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background: #000; z-index: 1;">
         </video>
 
         <!-- Minimal control indicator at bottom corner -->
@@ -7554,6 +7668,44 @@
         </div>
     </div>
 
+    <!-- INDEPENDENT CONTROL BAR - OUTSIDE popup so it's never affected by popup z-index or stacking -->
+    <div id="popup-controls"
+        style="display: none; position: fixed; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.9); padding: 12px 8px; flex-direction: column; justify-content: center; align-items: center; gap: 10px; z-index: 2147483647; pointer-events: auto; opacity: 1; visibility: visible; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); max-height: calc(100vh - 40px); overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: none; -ms-overflow-style: none;">
+        <span id="status-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+        <button id="control-toggle-btn"
+            style="padding: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+            title="Enable Control">
+            🖱️
+        </button>
+        <!-- Microphone Toggle Button -->
+        <button id="mic-toggle-btn"
+            style="padding: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+            title="Toggle Microphone" onclick="toggleMicrophone()">
+            🎤
+        </button>
+        <!-- Speaker Toggle Button -->
+        <button id="speaker-toggle-btn"
+            style="padding: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+            title="Toggle Speaker" onclick="toggleSpeaker()">
+            🔊
+        </button>
+        <button id="fullscreen-toggle-btn"
+            style="padding: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+            title="Fullscreen">
+            ⛶
+        </button>
+        <button id="end-session-btn"
+            style="padding: 10px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: background 0.2s; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+            title="Close">
+            ✕
+        </button>
+        <!-- File Transfer Toggle Button (Guest) -->
+        <button id="file-transfer-toggle-btn"
+            style="padding: 10px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 18px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"
+            onclick="toggleFileTransferUI()" title="Files">
+            📁
+        </button>
+    </div>
 
 
     <!-- Source Selection Modal -->

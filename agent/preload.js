@@ -54,6 +54,16 @@ try {
       ipcRenderer.on('fullscreen-changed', (event, isFullscreen) => {
         callback(isFullscreen);
       });
+    },
+    // Generic IPC listener for receiving messages
+    ipcOn: (channel, callback) => {
+      ipcRenderer.on(channel, (event, ...args) => {
+        callback(...args);
+      });
+    },
+    // Remove IPC listener
+    ipcOff: (channel, callback) => {
+      ipcRenderer.removeListener(channel, callback);
     }
   };
 } catch (e) {

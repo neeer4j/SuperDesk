@@ -957,6 +957,9 @@ async function setupWebRTCReceiver(socket, sessionId) {
             inputChannel.onclose = () => {
                 console.log('📱 GUEST: Input data channel closed');
             };
+
+            // Store for popup access
+            window.superdeskState.inputDataChannel = inputChannel;
         }
     };
 
@@ -1103,14 +1106,10 @@ async function setupWebRTCReceiver(socket, sessionId) {
                     window.showRemoteDesktopPopup();
                     console.log('✅ Remote desktop popup opened (muted:', videoTrackMuted, ')');
 
-                    // Auto-enable remote control when viewing host screen
-                    setTimeout(() => {
-                        if (typeof enableRemoteControl === 'function') {
-                            console.log('🎮 Auto-enabling remote control for mobile host view...');
-                            enableRemoteControl();
-                        }
-                    }, 500); // Small delay to ensure UI is ready
+                    // NOTE: Auto-enable disabled - user should manually enable control
+                    // to prevent instability with the separate viewer window
                 }
+
             } else {
                 console.warn('⚠️ Received stream but no active video tracks - not opening popup');
             }
@@ -1157,6 +1156,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
 
                     console.log('🖱️ Cursor will be:', window.superdeskState.hostIsMobile ? 'VISIBLE (mobile host has no cursor)' : 'HIDDEN when control enabled');
 
+                    // Update cursor visibility if remote control is already enabled
+                    // This fixes the race condition where control was enabled before hostIsMobile was set
+                    if (window.superdeskState.remoteControlEnabled) {
+                        const joinVideo = document.getElementById('join-remote-video');
+                        if (joinVideo) {
+                            if (window.superdeskState.hostIsMobile) {
+                                // Mobile host - ALWAYS show cursor (no host cursor to conflict with)
+                                joinVideo.classList.remove('control-active');
+                                console.log('🖱️ Cursor made VISIBLE (detected mobile host after control was enabled)');
+                            } else {
+                                // Desktop host - hide cursor to avoid double cursor
+                                joinVideo.classList.add('control-active');
+                                console.log('🖱️ Cursor HIDDEN (detected desktop host)');
+                            }
+                        }
+                    }
+
                     // NOTE: Mobile toolbar moving to side is DISABLED as per user request
                     // Toolbar will stay at TOP CENTER
                     console.log('📍 Toolbar kept at TOP CENTER (default)');
@@ -1170,6 +1186,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
                         if (popupControls) popupControls.style.opacity = '1';
                     }
                 }
+
 
                 // Check if dimensions are 0x0 (black screen indicator)
                 if (video.videoWidth === 0 || video.videoHeight === 0) {
@@ -1244,13 +1261,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
                                         window.showRemoteDesktopPopup();
                                         console.log('✅ Remote desktop popup opened (video ready)');
 
-                                        // Auto-enable remote control
-                                        setTimeout(() => {
-                                            if (typeof enableRemoteControl === 'function') {
-                                                console.log('🎮 Auto-enabling remote control...');
-                                                enableRemoteControl();
-                                            }
-                                        }, 500);
+                                        // Auto-enable disabled for stability
                                     }
                                 }
                                 return true;
@@ -1267,13 +1278,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
                                 window.showRemoteDesktopPopup();
                                 console.log('✅ Remote desktop popup opened after video start');
 
-                                // Auto-enable remote control when viewing host screen
-                                setTimeout(() => {
-                                    if (typeof enableRemoteControl === 'function') {
-                                        console.log('🎮 Auto-enabling remote control...');
-                                        enableRemoteControl();
-                                    }
-                                }, 500);
+                                // Auto-enable disabled for stability
                             }
                         }
 

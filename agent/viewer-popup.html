@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Remote Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+        }
+
+        #bar {
+            position: fixed;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 999;
+        }
+
+        button {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        button.on {
+            background: #10b981;
+        }
+
+        button.red {
+            background: #ef4444;
+        }
+
+        #status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            color: #10b981;
+            font-size: 12px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <video id="vid" autoplay playsinline muted></video>
+    <div id="bar">
+        <button id="ctrl">🖱️</button>
+        <button id="spk">🔊</button>
+        <button id="fs">⛶</button>
+        <button id="close" class="red">✕</button>
+    </div>
+    <div id="status">Control ON</div>
+
+    <script>
+        const vid = document.getElementById('vid');
+        const ctrlBtn = document.getElementById('ctrl');
+        const spkBtn = document.getElementById('spk');
+        const fsBtn = document.getElementById('fs');
+        const closeBtn = document.getElementById('close');
+        const status = document.getElementById('status');
+
+        let controlOn = false;
+        let speakerOn = false;
+        let lastClick = 0;
+        let hostIsMobile = false;
+
+        // Get Stream from Opener
+        if (window.opener && window.opener.sharedStream) {
+            vid.srcObject = window.opener.sharedStream;
+            vid.play().catch(err => console.error("Play error:", err));
+            console.log('📺 Stream received from opener');
+        } else {
+            console.error('❌ No stream available from opener');
+        }
+
+        // Check opener state and detect host type
+        function checkOpenerState() {
+            if (!window.opener || !window.opener.superdeskState) {
+                console.warn('⚠️ No opener state available');
+                status.innerHTML = '<span style="color:#ef4444">● No Connection</span>';
+                return false;
+            }
+
+            const state = window.opener.superdeskState;
+            hostIsMobile = state.hostIsMobile || false;
+
+            console.log('📱 Host type:', hostIsMobile ? 'MOBILE (Android)' : 'DESKTOP (PC)');
+            console.log('📡 Data channel:', state.inputDataChannel ?
+                `exists, state=${state.inputDataChannel.readyState}` : 'NOT AVAILABLE');
+            console.log('🔌 Socket:', state.socket ?
+                `exists, connected=${state.socket.connected}` : 'NOT AVAILABLE');
+            console.log('🔑 Session ID:', state.sessionId || 'none');
+
+            if (state.inputDataChannel && state.inputDataChannel.readyState === 'open') {
+                status.innerHTML = '<span style="color:#10b981">● P2P Ready</span>';
+                return true;
+            } else if (state.socket && state.socket.connected) {
+                status.innerHTML = '<span style="color:#f59e0b">● Relay Mode</span>';
+                return true;
+            } else {
+                status.innerHTML = '<span style="color:#ef4444">● Connecting...</span>';
+                return false;
+            }
+        }
+
+        // Check connection on load and periodically
+        checkOpenerState();
+        setInterval(checkOpenerState, 2000);
+
+        // Debounced button handler
+        function debounce(fn) {
+            return function (e) {
+                if (e) e.stopPropagation();
+                const now = Date.now();
+                if (now - lastClick < 300) return;
+                lastClick = now;
+                fn();
+            };
+        }
+
+        // Control toggle
+        ctrlBtn.onclick = debounce(function () {
+            controlOn = !controlOn;
+            ctrlBtn.classList.toggle('on', controlOn);
+            status.style.display = controlOn ? 'block' : 'none';
+
+            // Sync state with opener if possible
+            if (window.opener && window.opener.superdeskState) {
+                window.opener.superdeskState.remoteControlEnabled = controlOn;
+            }
+        });
+
+        // Speaker toggle
+        spkBtn.onclick = debounce(function () {
+            speakerOn = !speakerOn;
+            vid.muted = !speakerOn;
+            spkBtn.textContent = speakerOn ? '🔊' : '🔇';
+            spkBtn.classList.toggle('on', speakerOn);
+        });
+
+        // Fullscreen
+        fsBtn.onclick = debounce(function () {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.error(err));
+            else document.exitFullscreen();
+        });
+
+        // Close
+        closeBtn.onclick = debounce(function () {
+            window.close();
+        });
+
+        // EVENT SENDING LOGIC
+        function sendToHost(payload) {
+            if (!window.opener || !window.opener.superdeskState) {
+                console.warn('❌ No opener state - cannot send');
+                return;
+            }
+            const state = window.opener.superdeskState;
+
+            // Debug: Log what we're trying to send
+            if (payload.type !== 'move') {
+                console.log('📤 Sending to host:', payload.type, 'at', payload.x?.toFixed(2), payload.y?.toFixed(2));
+            }
+
+            // PRIORITY 1: WebRTC Data Channel (P2P - Low Latency)
+            if (state.inputDataChannel && state.inputDataChannel.readyState === 'open') {
+                try {
+                    // Android-specific format: { type, action, data: { x, y, ... } }
+                    const p2pPayload = {
+                        type: 'mouse',
+                        action: payload.type === 'move' ? 'move' :
+                            payload.type === 'down' ? 'down' :
+                                payload.type === 'up' ? 'up' :
+                                    payload.type === 'scroll' ? 'wheel' : payload.type,
+                        data: {
+                            x: payload.x,
+                            y: payload.y,
+                            button: payload.button,
+                            deltaX: payload.deltaX,
+                            deltaY: payload.deltaY
+                        }
+                    };
+                    state.inputDataChannel.send(JSON.stringify(p2pPayload));
+
+                    // Update status with P2P indicator
+                    if (controlOn) {
+                        const coords = `x: ${payload.x.toFixed(2)} y: ${payload.y.toFixed(2)}`;
+                        status.innerHTML = `<span style="color:#10b981">● P2P</span> | ${coords}`;
+                    }
+                    return;
+                } catch (err) {
+                    console.warn("P2P send failed, falling back to socket:", err);
+                }
+            } else {
+                if (payload.type !== 'move') {
+                    console.log('⚠️ Data channel not open, state:', state.inputDataChannel?.readyState);
+                }
+            }
+
+            // PRIORITY 2: Socket.IO (Relay - Fallback)
+            if (state.socket && state.socket.connected && state.sessionId) {
+                state.socket.emit('mouse-event', {
+                    sessionId: state.sessionId,
+                    ...payload
+                });
+
+                if (controlOn) {
+                    const coords = `x: ${payload.x.toFixed(2)} y: ${payload.y.toFixed(2)}`;
+                    status.innerHTML = `<span style="color:#f59e0b">● Relay</span> | ${coords}`;
+                }
+            } else {
+                if (payload.type !== 'move') {
+                    console.warn('❌ No socket connection either');
+                }
+            }
+        }
+
+        function sendKeyToHost(type, e) {
+            if (!window.opener || !window.opener.superdeskState) return;
+            const state = window.opener.superdeskState;
+
+            // Try P2P first
+            if (state.inputDataChannel && state.inputDataChannel.readyState === 'open') {
+                state.inputDataChannel.send(JSON.stringify({
+                    type: 'keyboard',
+                    action: type === 'keydown' ? 'down' : 'up',
+                    data: {
+                        key: e.key,
+                        code: e.code
+                    }
+                }));
+                return;
+            }
+
+            // Fallback to socket
+            if (state.socket && state.socket.connected && state.sessionId) {
+                state.socket.emit('keyboard-event', {
+                    sessionId: state.sessionId,
+                    type,
+                    key: e.key,
+                    code: e.code
+                });
+            }
+        }
+
+        // COORD CALCULATION with CLAMPING
+        function sendMouse(type, e) {
+            if (!controlOn) return;
+
+            const rect = vid.getBoundingClientRect();
+
+            // Use actual video dimensions or fallback to 1 to avoid /0
+            const vW = vid.videoWidth || 1;
+            const vH = vid.videoHeight || 1;
+
+            const videoRatio = vW / vH;
+            const elementRatio = rect.width / rect.height;
+
+            let displayWidth, displayHeight, offsetX = 0, offsetY = 0;
+
+            if (elementRatio > videoRatio) {
+                displayHeight = rect.height;
+                displayWidth = rect.height * videoRatio;
+                offsetX = (rect.width - displayWidth) / 2;
+            } else {
+                displayWidth = rect.width;
+                displayHeight = rect.width / videoRatio;
+                offsetY = (rect.height - displayHeight) / 2;
+            }
+
+            // Calculate x, y relative to the video display area
+            const relX = e.clientX - rect.left - offsetX;
+            const relY = e.clientY - rect.top - offsetY;
+
+            // Normalize and CLAMP to 0-1 (important for reaching edges)
+            const x = Math.max(0, Math.min(1, relX / displayWidth));
+            const y = Math.max(0, Math.min(1, relY / displayHeight));
+
+            // Update status with live coords for debugging
+            status.textContent = `Control ON | x: ${x.toFixed(2)} y: ${y.toFixed(2)}`;
+
+            sendToHost({
+                type,
+                x,
+                y,
+                button: e.button
+            });
+        }
+
+        vid.onmousemove = e => sendMouse('move', e);
+        vid.onmousedown = e => sendMouse('down', e);
+        vid.onmouseup = e => sendMouse('up', e);
+
+        vid.onwheel = e => {
+            if (!controlOn) return;
+            e.preventDefault();
+
+            // Reuse same coordinate logic
+            const rect = vid.getBoundingClientRect();
+            const vW = vid.videoWidth || 1;
+            const vH = vid.videoHeight || 1;
+            const videoRatio = vW / vH;
+            const elementRatio = rect.width / rect.height;
+
+            let displayWidth, displayHeight, offsetX = 0, offsetY = 0;
+            if (elementRatio > videoRatio) {
+                displayHeight = rect.height;
+                displayWidth = rect.height * videoRatio;
+                offsetX = (rect.width - displayWidth) / 2;
+            } else {
+                displayWidth = rect.width;
+                displayHeight = rect.width / videoRatio;
+                offsetY = (rect.height - displayHeight) / 2;
+            }
+
+            const x = Math.max(0, Math.min(1, (e.clientX - rect.left - offsetX) / displayWidth));
+            const y = Math.max(0, Math.min(1, (e.clientY - rect.top - offsetY) / displayHeight));
+
+            sendToHost({
+                type: 'scroll',
+                x,
+                y,
+                deltaX: e.deltaX,
+                deltaY: e.deltaY
+            });
+        };
+
+        // Keyboard
+        document.onkeydown = e => {
+            if (!controlOn) return;
+            if (e.key === 'F11') return; // Allow exit fullscreen
+            e.preventDefault();
+            sendKeyToHost('keydown', e);
+        };
+        document.onkeyup = e => {
+            if (!controlOn) return;
+            e.preventDefault();
+            sendKeyToHost('keyup', e);
+        };
+
+        // Ensure video dimensions are updated
+        vid.addEventListener('loadedmetadata', () => {
+            console.log("Video dimensions loaded:", vid.videoWidth, "x", vid.videoHeight);
+        });
+    </script>
+
+</body>
+
+</html>

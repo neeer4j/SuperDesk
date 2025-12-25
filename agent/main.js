@@ -35,6 +35,7 @@ console.log('   - mouse speed configured:', mouse.config.mouseSpeed);
 
 let mainWindow;
 let toolbarWindow = null;
+let viewerWindow = null;  // Separate window for remote desktop viewing
 let toolbarEdge = 'right'; // 'top', 'right', 'bottom', 'left'
 let toolbarCollapsed = false;
 let lastGuestInfo = null;
@@ -532,6 +533,73 @@ function snapToEdge(screenX, screenY) {
   return edge;
 }
 
+// ==================== VIEWER WINDOW - SEPARATE REMOTE DESKTOP VIEWER ====================
+function createViewerWindow(sessionData = {}) {
+  if (viewerWindow && !viewerWindow.isDestroyed()) {
+    viewerWindow.focus();
+    return viewerWindow;
+  }
+
+  const { width, height } = electronScreen.getPrimaryDisplay().workAreaSize;
+
+  viewerWindow = new BrowserWindow({
+    width: Math.round(width * 0.8),
+    height: Math.round(height * 0.8),
+    minWidth: 640,
+    minHeight: 480,
+    frame: false,  // Borderless for clean look
+    transparent: false,
+    backgroundColor: '#000000',
+    show: false,
+    center: true,
+    alwaysOnTop: false,  // Allow user to access other windows
+    resizable: true,
+    movable: true,
+    hasShadow: true,
+    title: 'Remote Desktop Viewer',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  viewerWindow.loadFile('viewer.html');
+
+  viewerWindow.once('ready-to-show', () => {
+    viewerWindow.show();
+    console.log('✅ [Viewer] Window shown');
+
+    // Send session data to viewer
+    if (sessionData.sessionId) {
+      viewerWindow.webContents.send('viewer-session-data', {
+        sessionId: sessionData.sessionId,
+        serverUrl: sessionData.serverUrl,
+        hostIsMobile: sessionData.hostIsMobile || false
+      });
+    }
+  });
+
+  viewerWindow.on('closed', () => {
+    console.log('📺 [Viewer] Window closed');
+    viewerWindow = null;
+    // Notify main window that viewer was closed
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('viewer-closed');
+    }
+  });
+
+  console.log('✅ [Viewer] Creating viewer window for session:', sessionData.sessionId);
+  return viewerWindow;
+}
+
+function closeViewerWindow() {
+  if (viewerWindow && !viewerWindow.isDestroyed()) {
+    viewerWindow.close();
+    viewerWindow = null;
+  }
+}
+
 function createWindow() {
   console.log('🚀 [STARTUP] createWindow called');
   mainWindow = new BrowserWindow({
@@ -584,7 +652,29 @@ function createWindow() {
     // As a last resort, forcefully exit the process
     process.exit(0);
   });
+
+  // Handle window.open() popups - remove menu bar from them
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    console.log('📺 [Window Open Handler] URL:', url);
+    return {
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        autoHideMenuBar: true,
+        menuBarVisible: false,
+        frame: true,  // Keep standard window frame
+        title: 'Remote Desktop Viewer'
+      }
+    };
+  });
+
+  // After a popup is created, remove its menu
+  mainWindow.webContents.on('did-create-window', (childWindow) => {
+    console.log('📺 [Popup Created] Removing menu bar...');
+    childWindow.setMenu(null);
+    childWindow.setMenuBarVisibility(false);
+  });
 }
+
 
 app.whenReady().then(() => {
   console.log('🚀 [STARTUP] App is ready, initializing...');
@@ -728,6 +818,76 @@ app.whenReady().then(() => {
       mainWindow.webContents.send('toggle-panel-from-toolbar', panelType);
     }
   });
+
+  // ==================== VIEWER WINDOW IPC HANDLERS ====================
+  // Open the separate viewer window for remote desktop viewing
+  ipcMain.on('open-viewer', (event, sessionData) => {
+    console.log('📺 [Viewer] Open request received:', sessionData);
+    createViewerWindow(sessionData);
+  });
+
+  // Open viewer popup without menu bar (for window.open replacement)
+  ipcMain.on('open-viewer-popup', (event, sessionData) => {
+    console.log('📺 [Viewer Popup] Open request received');
+
+    if (viewerWindow && !viewerWindow.isDestroyed()) {
+      viewerWindow.focus();
+      return;
+    }
+
+    const { width, height } = electronScreen.getPrimaryDisplay().workAreaSize;
+
+    viewerWindow = new BrowserWindow({
+      width: Math.round(width * 0.8),
+      height: Math.round(height * 0.8),
+      minWidth: 640,
+      minHeight: 480,
+      frame: true,  // Keep Windows frame with minimize/close
+      autoHideMenuBar: true,  // Hide menu bar
+      backgroundColor: '#000000',
+      show: false,
+      center: true,
+      alwaysOnTop: false,
+      resizable: true,
+      movable: true,
+      title: 'Remote Desktop Viewer',
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false
+      }
+    });
+
+    // Remove menu completely
+    viewerWindow.setMenu(null);
+
+    viewerWindow.loadFile('viewer-popup.html');
+
+    viewerWindow.once('ready-to-show', () => {
+      viewerWindow.show();
+
+      // Send stream info to viewer via IPC
+      viewerWindow.webContents.send('viewer-init', sessionData);
+    });
+
+    viewerWindow.on('closed', () => {
+      viewerWindow = null;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('viewer-closed');
+      }
+    });
+  });
+
+  // Close the viewer window
+  ipcMain.on('viewer-close', () => {
+    console.log('📺 [Viewer] Close request received');
+    closeViewerWindow();
+  });
+
+  // Viewer window is ready
+  ipcMain.on('viewer-ready', (event) => {
+    console.log('📺 [Viewer] Viewer ready');
+  });
+
 
   // Handle show-notification IPC for file transfer alerts
   ipcMain.on('show-notification', (event, { title, body, onClick }) => {

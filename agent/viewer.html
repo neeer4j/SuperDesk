@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Desktop Viewer</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            width: 100%;
+            height: 100%;
+            user-select: none;
+        }
+
+        .viewer-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            position: relative;
+            background: #000;
+        }
+
+        /* Video element - takes full screen */
+        #remote-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+            z-index: 1;
+        }
+
+        /* Hide cursor when controlling a PC desktop host */
+        #remote-video.control-active {
+            cursor: none !important;
+        }
+
+        /* Keep cursor visible by default and for Android hosts */
+        #remote-video:not(.control-active) {
+            cursor: default !important;
+        }
+
+        /* Control bar - fixed on left side, always visible */
+        #control-bar {
+            position: fixed;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            pointer-events: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        #control-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .status-indicator.disconnected {
+            background: #ef4444;
+        }
+
+        .ctrl-btn {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ctrl-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        .ctrl-btn:active {
+            transform: scale(0.95);
+        }
+
+        .ctrl-btn.active {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        .ctrl-btn.end {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+
+        .ctrl-btn.end:hover {
+            background: #dc2626;
+        }
+
+        .ctrl-btn.file-btn {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border: none;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Control indicator at bottom right */
+        #control-indicator {
+            display: none;
+            position: fixed;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(16, 185, 129, 0.9);
+            padding: 6px 12px;
+            border-radius: 6px;
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* File transfer zone */
+        #file-transfer-zone {
+            display: none;
+            position: fixed;
+            bottom: 60px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .file-drop-area {
+            width: 80px;
+            height: 80px;
+            background: rgba(97, 61, 169, 0.9);
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .file-drop-area:hover {
+            border-color: #fff;
+            background: rgba(97, 61, 169, 1);
+        }
+
+        .file-drop-area.drag-over {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .file-progress {
+            display: none;
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 12px;
+            border-radius: 8px;
+            width: 80px;
+        }
+
+        .file-progress-text {
+            font-size: 10px;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .file-progress-bar-container {
+            background: rgba(255, 255, 255, 0.2);
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .file-progress-bar {
+            background: #10b981;
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s;
+        }
+
+        /* Waiting overlay */
+        #waiting-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .waiting-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(139, 92, 246, 0.3);
+            border-top-color: #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .waiting-text {
+            margin-top: 16px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="viewer-container">
+        <!-- Waiting overlay (shown until video stream is ready) -->
+        <div id="waiting-overlay">
+            <div class="waiting-spinner"></div>
+            <div class="waiting-text">Waiting for video stream...</div>
+        </div>
+
+        <!-- Video element -->
+        <video id="remote-video" autoplay playsinline muted></video>
+
+        <!-- Control bar on the left -->
+        <div id="control-bar">
+            <span id="status-indicator" class="status-indicator"></span>
+
+            <button id="control-toggle-btn" class="ctrl-btn" title="Enable Control">
+                🖱️
+            </button>
+
+            <button id="mic-toggle-btn" class="ctrl-btn" title="Toggle Microphone">
+                🎤
+            </button>
+
+            <button id="speaker-toggle-btn" class="ctrl-btn" title="Toggle Speaker">
+                🔊
+            </button>
+
+            <button id="fullscreen-toggle-btn" class="ctrl-btn" title="Fullscreen">
+                ⛶
+            </button>
+
+            <button id="end-session-btn" class="ctrl-btn end" title="End Session">
+                ✕
+            </button>
+
+            <button id="file-transfer-btn" class="ctrl-btn file-btn" title="Files">
+                📁
+            </button>
+        </div>
+
+        <!-- Control active indicator -->
+        <div id="control-indicator">🖱️ Control Active</div>
+
+        <!-- File transfer zone -->
+        <div id="file-transfer-zone">
+            <div id="file-drop-area" class="file-drop-area">
+                <span style="font-size: 28px;">📤</span>
+                <span style="font-size: 10px; color: white; margin-top: 4px;">Send File</span>
+            </div>
+            <div id="send-progress" class="file-progress">
+                <div id="send-status" class="file-progress-text">Sending...</div>
+                <div class="file-progress-bar-container">
+                    <div id="send-progress-bar" class="file-progress-bar"></div>
+                </div>
+            </div>
+            <div id="receive-progress" class="file-progress">
+                <div id="receive-status" class="file-progress-text">Receiving...</div>
+                <div class="file-progress-bar-container">
+                    <div id="receive-progress-bar" class="file-progress-bar" style="background: #3b82f6;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        // State
+        let remoteControlEnabled = false;
+        let hostIsMobile = false;
+        let micMuted = true;
+        let speakerMuted = true;
+        let fileTransferVisible = false;
+        let socket = null;
+        let sessionId = null;
+        let peerConnection = null;
+        let inputDataChannel = null;
+
+        // Elements
+        const video = document.getElementById('remote-video');
+        const waitingOverlay = document.getElementById('waiting-overlay');
+        const statusIndicator = document.getElementById('status-indicator');
+        const controlToggleBtn = document.getElementById('control-toggle-btn');
+        const micToggleBtn = document.getElementById('mic-toggle-btn');
+        const speakerToggleBtn = document.getElementById('speaker-toggle-btn');
+        const fullscreenToggleBtn = document.getElementById('fullscreen-toggle-btn');
+        const endSessionBtn = document.getElementById('end-session-btn');
+        const fileTransferBtn = document.getElementById('file-transfer-btn');
+        const controlIndicator = document.getElementById('control-indicator');
+        const fileTransferZone = document.getElementById('file-transfer-zone');
+        const fileDropArea = document.getElementById('file-drop-area');
+
+        // Request session data from main process
+        ipcRenderer.send('viewer-ready');
+
+        // Receive session data from main process
+        ipcRenderer.on('viewer-session-data', (event, data) => {
+            console.log('📺 Received session data:', data);
+            sessionId = data.sessionId;
+            hostIsMobile = data.hostIsMobile || false;
+
+            // Connect to socket server
+            if (data.serverUrl) {
+                initializeSocket(data.serverUrl);
+            }
+        });
+
+        // Receive video stream from main process
+        ipcRenderer.on('viewer-set-stream', (event, streamId) => {
+            console.log('📺 Received stream ID:', streamId);
+            // Stream will be set via WebRTC
+        });
+
+        // Handle peer connection from main process
+        ipcRenderer.on('viewer-peer-connection', (event, offer) => {
+            console.log('📺 Received offer for peer connection');
+            handleOffer(offer);
+        });
+
+        function initializeSocket(serverUrl) {
+            console.log('🔌 Connecting to server:', serverUrl);
+            socket = io(serverUrl, {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000
+            });
+
+            socket.on('connect', () => {
+                console.log('✅ Socket connected:', socket.id);
+                statusIndicator.classList.remove('disconnected');
+
+                // Join session as guest viewer
+                if (sessionId) {
+                    socket.emit('join-session', { sessionId });
+                }
+            });
+
+            socket.on('disconnect', () => {
+                console.log('❌ Socket disconnected');
+                statusIndicator.classList.add('disconnected');
+            });
+
+            socket.on('offer', handleOffer);
+            socket.on('ice-candidate', handleIceCandidate);
+            socket.on('session-ended', handleSessionEnded);
+        }
+
+        async function handleOffer(data) {
+            console.log('📥 Received offer');
+            try {
+                const config = {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                };
+
+                peerConnection = new RTCPeerConnection(config);
+
+                peerConnection.ontrack = (event) => {
+                    console.log('📺 Received track:', event.track.kind);
+                    if (event.track.kind === 'video') {
+                        video.srcObject = event.streams[0];
+                        hideWaitingOverlay();
+                        detectHostType();
+                    }
+                };
+
+                peerConnection.ondatachannel = (event) => {
+                    console.log('📡 Data channel received:', event.channel.label);
+                    if (event.channel.label === 'input') {
+                        inputDataChannel = event.channel;
+                        setupInputChannel();
+                    }
+                };
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate && socket) {
+                        socket.emit('ice-candidate', {
+                            sessionId,
+                            candidate: event.candidate
+                        });
+                    }
+                };
+
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+
+                socket.emit('answer', {
+                    sessionId,
+                    targetId: data.from,
+                    answer
+                });
+
+            } catch (error) {
+                console.error('❌ Error handling offer:', error);
+            }
+        }
+
+        function handleIceCandidate(data) {
+            if (data.candidate && peerConnection) {
+                peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
+                    .catch(err => console.error('ICE error:', err));
+            }
+        }
+
+        function handleSessionEnded() {
+            console.log('📺 Session ended by host');
+            endSession();
+        }
+
+        function setupInputChannel() {
+            inputDataChannel.onopen = () => {
+                console.log('📡 Input channel open');
+            };
+
+            inputDataChannel.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'handshake' && msg.platform === 'android') {
+                        hostIsMobile = true;
+                        updateCursorVisibility();
+                    }
+                } catch (e) { }
+            };
+        }
+
+        function hideWaitingOverlay() {
+            waitingOverlay.style.display = 'none';
+        }
+
+        function detectHostType() {
+            video.addEventListener('loadedmetadata', () => {
+                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                    const isPortrait = video.videoHeight > video.videoWidth;
+                    if (!hostIsMobile) {
+                        hostIsMobile = isPortrait;
+                    }
+                    console.log('📱 Host type:', hostIsMobile ? 'MOBILE' : 'DESKTOP');
+                    updateCursorVisibility();
+                }
+            }, { once: true });
+        }
+
+        function updateCursorVisibility() {
+            if (remoteControlEnabled) {
+                if (hostIsMobile) {
+                    video.classList.remove('control-active');
+                    console.log('🖱️ Cursor VISIBLE (mobile host)');
+                } else {
+                    video.classList.add('control-active');
+                    console.log('🖱️ Cursor HIDDEN (desktop host)');
+                }
+            } else {
+                video.classList.remove('control-active');
+            }
+        }
+
+        // Control toggle
+        controlToggleBtn.addEventListener('click', () => {
+            remoteControlEnabled = !remoteControlEnabled;
+
+            if (remoteControlEnabled) {
+                controlToggleBtn.classList.add('active');
+                controlIndicator.style.display = 'block';
+                enableRemoteControl();
+            } else {
+                controlToggleBtn.classList.remove('active');
+                controlIndicator.style.display = 'none';
+                disableRemoteControl();
+            }
+
+            updateCursorVisibility();
+            ipcRenderer.send('robot-set-enabled', remoteControlEnabled);
+        });
+
+        function enableRemoteControl() {
+            video.addEventListener('mousemove', handleMouseMove, { capture: true });
+            video.addEventListener('mousedown', handleMouseDown, { capture: true });
+            video.addEventListener('mouseup', handleMouseUp, { capture: true });
+            video.addEventListener('wheel', handleWheel, { capture: true, passive: false });
+            document.addEventListener('keydown', handleKeyDown, { capture: true });
+            document.addEventListener('keyup', handleKeyUp, { capture: true });
+            console.log('✅ Remote control enabled');
+        }
+
+        function disableRemoteControl() {
+            video.removeEventListener('mousemove', handleMouseMove, { capture: true });
+            video.removeEventListener('mousedown', handleMouseDown, { capture: true });
+            video.removeEventListener('mouseup', handleMouseUp, { capture: true });
+            video.removeEventListener('wheel', handleWheel, { capture: true });
+            document.removeEventListener('keydown', handleKeyDown, { capture: true });
+            document.removeEventListener('keyup', handleKeyUp, { capture: true });
+            console.log('✅ Remote control disabled');
+        }
+
+        // Get normalized coordinates
+        function getNormalizedCoords(e) {
+            const rect = video.getBoundingClientRect();
+            if (!video.videoWidth || !video.videoHeight) {
+                return { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height };
+            }
+
+            const videoRatio = video.videoWidth / video.videoHeight;
+            const elementRatio = rect.width / rect.height;
+
+            let displayWidth = rect.width;
+            let displayHeight = rect.height;
+            let offsetX = 0;
+            let offsetY = 0;
+
+            if (elementRatio > videoRatio) {
+                displayWidth = rect.height * videoRatio;
+                offsetX = (rect.width - displayWidth) / 2;
+            } else {
+                displayHeight = rect.width / videoRatio;
+                offsetY = (rect.height - displayHeight) / 2;
+            }
+
+            const mouseX = Math.max(0, Math.min(e.clientX - rect.left - offsetX, displayWidth));
+            const mouseY = Math.max(0, Math.min(e.clientY - rect.top - offsetY, displayHeight));
+
+            return {
+                x: mouseX / displayWidth,
+                y: mouseY / displayHeight
+            };
+        }
+
+        // Mouse event handlers - Route to data channel for Android, IPC for PC
+        let pendingMouseMove = null;
+        let rafScheduled = false;
+
+        // Send input via WebRTC data channel (for Android host)
+        function sendInputViaDataChannel(eventData) {
+            if (inputDataChannel && inputDataChannel.readyState === 'open') {
+                try {
+                    inputDataChannel.send(JSON.stringify(eventData));
+                    return true;
+                } catch (err) {
+                    console.warn('📡 Data channel send failed:', err);
+                }
+            }
+            return false;
+        }
+
+        // Send input - uses data channel for Android, IPC for PC
+        function sendMouseInput(type, coords, button = 0, deltaX = 0, deltaY = 0) {
+            if (hostIsMobile) {
+                // Android host - send via WebRTC data channel
+                const payload = {
+                    type: 'mouse',
+                    action: type === 'scroll' ? 'wheel' : type,
+                    data: {
+                        x: coords.x,
+                        y: coords.y,
+                        button: button,
+                        deltaX: deltaX,
+                        deltaY: deltaY
+                    }
+                };
+                if (!sendInputViaDataChannel(payload)) {
+                    console.warn('📡 Could not send to Android - data channel not open');
+                }
+            } else {
+                // PC host - send via IPC to nut-js
+                ipcRenderer.send('robot-mouse-event', {
+                    type: type,
+                    x: coords.x,
+                    y: coords.y,
+                    button: button,
+                    deltaX: deltaX,
+                    deltaY: deltaY
+                });
+            }
+        }
+
+        function sendKeyboardInput(type, key, code) {
+            if (hostIsMobile) {
+                // Android host - send via WebRTC data channel
+                const payload = {
+                    type: 'keyboard',
+                    action: type === 'keydown' ? 'down' : 'up',
+                    data: {
+                        key: key,
+                        code: code
+                    }
+                };
+                sendInputViaDataChannel(payload);
+            } else {
+                // PC host - send via IPC to nut-js
+                ipcRenderer.send('robot-keyboard-event', {
+                    type: type,
+                    key: key,
+                    code: code
+                });
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (!remoteControlEnabled) return;
+            const coords = getNormalizedCoords(e);
+            pendingMouseMove = coords;
+
+            if (!rafScheduled) {
+                rafScheduled = true;
+                requestAnimationFrame(() => {
+                    rafScheduled = false;
+                    if (pendingMouseMove) {
+                        sendMouseInput('move', pendingMouseMove);
+                        pendingMouseMove = null;
+                    }
+                });
+            }
+        }
+
+        function handleMouseDown(e) {
+            if (!remoteControlEnabled) return;
+            const coords = getNormalizedCoords(e);
+            sendMouseInput('down', coords, e.button);
+        }
+
+        function handleMouseUp(e) {
+            if (!remoteControlEnabled) return;
+            const coords = getNormalizedCoords(e);
+            sendMouseInput('up', coords, e.button);
+        }
+
+        function handleWheel(e) {
+            if (!remoteControlEnabled) return;
+            e.preventDefault();
+            const coords = getNormalizedCoords(e);
+            sendMouseInput('scroll', coords, 0, e.deltaX, e.deltaY);
+        }
+
+        function handleKeyDown(e) {
+            if (!remoteControlEnabled) return;
+            e.preventDefault();
+            sendKeyboardInput('keydown', e.key, e.code);
+        }
+
+        function handleKeyUp(e) {
+            if (!remoteControlEnabled) return;
+            e.preventDefault();
+            sendKeyboardInput('keyup', e.key, e.code);
+        }
+
+        // Microphone toggle
+        micToggleBtn.addEventListener('click', () => {
+            micMuted = !micMuted;
+            if (micMuted) {
+                micToggleBtn.textContent = '🔇';
+                micToggleBtn.classList.add('active');
+                micToggleBtn.style.background = '#ef4444';
+            } else {
+                micToggleBtn.textContent = '🎤';
+                micToggleBtn.classList.remove('active');
+                micToggleBtn.style.background = '';
+            }
+        });
+
+        // Speaker toggle
+        speakerToggleBtn.addEventListener('click', () => {
+            speakerMuted = !speakerMuted;
+            video.muted = speakerMuted;
+            if (speakerMuted) {
+                speakerToggleBtn.textContent = '🔇';
+                speakerToggleBtn.style.background = '#ef4444';
+            } else {
+                speakerToggleBtn.textContent = '🔊';
+                speakerToggleBtn.style.background = '';
+            }
+        });
+
+        // Fullscreen toggle
+        fullscreenToggleBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.error(err));
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // End session
+        endSessionBtn.addEventListener('click', endSession);
+
+        function endSession() {
+            console.log('🛑 Ending session...');
+            remoteControlEnabled = false;
+            ipcRenderer.send('robot-set-enabled', false);
+
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+
+            if (socket) {
+                socket.emit('leave-session', { sessionId });
+                socket.disconnect();
+            }
+
+            // Close this window
+            ipcRenderer.send('viewer-close');
+        }
+
+        // File transfer toggle
+        fileTransferBtn.addEventListener('click', () => {
+            fileTransferVisible = !fileTransferVisible;
+            fileTransferZone.style.display = fileTransferVisible ? 'block' : 'none';
+        });
+
+        // File drop handling
+        fileDropArea.addEventListener('click', async () => {
+            const result = await ipcRenderer.invoke('open-file-dialog');
+            if (result.success) {
+                sendFile(result);
+            }
+        });
+
+        fileDropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileDropArea.classList.add('drag-over');
+        });
+
+        fileDropArea.addEventListener('dragleave', () => {
+            fileDropArea.classList.remove('drag-over');
+        });
+
+        fileDropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileDropArea.classList.remove('drag-over');
+            // Handle dropped files
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                // Read and send file
+            }
+        });
+
+        function sendFile(fileData) {
+            // TODO: Implement file sending via data channel
+            console.log('📤 Sending file:', fileData.fileName);
+        }
+
+        // Handle window close
+        window.addEventListener('beforeunload', () => {
+            endSession();
+        });
+
+        console.log('📺 Viewer window initialized');
+    </script>
+</body>
+
+</html>
