@@ -278,7 +278,8 @@ const getStyles = (darkTheme) => ({
     flexDirection: 'column',
     alignItems: 'center',
     padding: '16px 0',
-    gap: '8px'
+    gap: '8px',
+    animation: 'fade-in 0.5s ease-out'
   },
   sidebarLogo: {
     width: '48px',
@@ -402,6 +403,8 @@ const getStyles = (darkTheme) => ({
     flex: 1,
     padding: '32px',
     overflow: 'hidden',
+    position: 'relative',
+    animation: 'fade-in 0.6s ease-out',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -419,7 +422,8 @@ const getStyles = (darkTheme) => ({
     alignItems: 'center',
     justifyContent: 'center',
     textAlign: 'center',
-    boxShadow: darkTheme.cardShadow
+    boxShadow: darkTheme.cardShadow,
+    animation: 'slide-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both'
   },
   joinVisual: {
     position: 'relative',
@@ -548,7 +552,8 @@ const getStyles = (darkTheme) => ({
     borderRadius: '16px',
     padding: '20px',
     boxShadow: darkTheme.cardShadow,
-    marginBottom: '16px'
+    marginBottom: '16px',
+    animation: 'slide-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both'
   },
   infoCardIcon: {
     width: '36px',
@@ -1072,7 +1077,8 @@ const getStyles = (darkTheme) => ({
     boxShadow: darkTheme.cardShadow,
     minHeight: '0',
     flex: 1,
-    position: 'relative'
+    position: 'relative',
+    animation: 'slide-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both'
   },
   filesVisual: {
     position: 'relative',
@@ -1153,10 +1159,72 @@ const getStyles = (darkTheme) => ({
     color: 'white',
     fontSize: '28px'
   },
-  filesInfoPanel: {
+
+  // Log Modal
+  logsModalOverlay: (isOpen) => ({
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.8)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100002,
+    opacity: isOpen ? 1 : 0,
+    visibility: isOpen ? 'visible' : 'hidden',
+    transition: 'all 0.2s ease-out'
+  }),
+  logsModal: (isOpen) => ({
+    background: darkTheme.cardBg,
+    borderRadius: '16px',
+    width: '90%',
+    maxWidth: '600px',
+    maxHeight: '80vh',
+    border: `1px solid ${darkTheme.cardBorder}`,
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
+    transform: isOpen ? 'scale(1) translateY(0)' : 'scale(0.9) translateY(20px)',
+    transition: 'all 0.2s ease-out',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px'
+    overflow: 'hidden'
+  }),
+  logsList: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '0'
+  },
+  logItem: {
+    padding: '16px 24px',
+    borderBottom: `1px solid ${darkTheme.glassBorder}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  logItemMeta: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  },
+  logId: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: darkTheme.textPrimary,
+    fontFamily: 'monospace'
+  },
+  logTime: {
+    fontSize: '12px',
+    color: darkTheme.textMuted
+  },
+  logStatus: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#10b981',
+    background: 'rgba(16, 185, 129, 0.1)',
+    padding: '4px 10px',
+    borderRadius: '20px'
   }
 });
 
@@ -1179,6 +1247,27 @@ function LandingPage() {
       .settings-content::-webkit-scrollbar-thumb:hover {
         background: rgba(139, 92, 246, 0.7);
       }
+      /* Keyframe Animations */
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slide-up {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes slide-in-right {
+        from { transform: translateX(100%); }
+        to { transform: translateX(0); }
+      }
+      @keyframes scale-in {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
     `;
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
@@ -1199,14 +1288,10 @@ function LandingPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [settings, setSettings] = useState({
-    notifications: true,
-    sounds: true,
-    autostart: false,
-    audio: true,
-    approval: true,
-    history: false,
-    videoQuality: 'auto'
+    history: false
   });
+  const [connectionLogs, setConnectionLogs] = useState([]);
+  const [logsModalOpen, setLogsModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [usernameError, setUsernameError] = useState('');
@@ -1288,10 +1373,21 @@ function LandingPage() {
         clientRef.current = new SuperDeskClient();
 
         clientRef.current.on('sessionJoined', () => {
-          console.log('Successfully joined session');
           setSessionId(sid);
           setInSession(true);
           setConnecting(false);
+
+          // Log connection
+          if (settings.history) {
+            const entry = {
+              id: Date.now(),
+              sessionId: sid,
+              timestamp: new Date().toISOString(),
+              type: 'outgoing',
+              status: 'Success'
+            };
+            saveLogEntry(entry);
+          }
         });
 
         clientRef.current.on('sessionEnded', () => {
@@ -1321,9 +1417,7 @@ function LandingPage() {
     }
   };
 
-  const handleContinue = () => {
-    setUser({ email: 'test@example.com', id: 'test-user' });
-  };
+
 
   const handleAddFriend = () => {
     if (!friendEmail.trim()) {
@@ -1465,6 +1559,28 @@ function LandingPage() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Load connection logs
+  useEffect(() => {
+    try {
+      const savedLogs = localStorage.getItem('connectionLogs');
+      if (savedLogs) {
+        setConnectionLogs(JSON.parse(savedLogs));
+      }
+    } catch (e) {
+      console.error('Failed to load logs', e);
+    }
+  }, []);
+
+  // Save log entry helper
+  const saveLogEntry = (entry) => {
+    if (!settings.history) return;
+
+    const newLogs = [entry, ...connectionLogs].slice(0, 50); // Keep last 50
+    setConnectionLogs(newLogs);
+    localStorage.setItem('connectionLogs', JSON.stringify(newLogs));
+  };
+
 
   // Get user display info
   const getUserDisplay = () => {
@@ -1708,12 +1824,7 @@ function LandingPage() {
                   {loading ? 'Sending...' : 'Send OTP'}
                 </button>
 
-                <button
-                  onClick={handleContinue}
-                  style={styles.btnSecondary}
-                >
-                  Continue Without Auth (Testing)
-                </button>
+
               </>
             ) : (
               <>
@@ -2227,172 +2338,42 @@ function LandingPage() {
             </div>
           </div>
 
-          {/* Preferences Section */}
-          <div style={styles.settingsSection}>
-            <div style={styles.settingsSectionTitle}>Preferences</div>
-
-            <div style={styles.settingsItem}>
-              <div style={styles.settingsItemLeft}>
-                <div style={styles.settingsItemIcon}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                </div>
-                <div style={styles.settingsItemText}>
-                  <div style={styles.settingsItemLabel}>Notifications</div>
-                  <div style={styles.settingsItemDesc}>Get notified when someone joins</div>
-                </div>
-              </div>
-              <div
-                onClick={() => toggleSetting('notifications')}
-                style={styles.toggleSwitch(settings.notifications)}
-              >
-                <div style={styles.toggleSwitchKnob(settings.notifications)}></div>
-              </div>
-            </div>
-
-            <div style={styles.settingsItem}>
-              <div style={styles.settingsItemLeft}>
-                <div style={styles.settingsItemIcon}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                </div>
-                <div style={styles.settingsItemText}>
-                  <div style={styles.settingsItemLabel}>Sound Effects</div>
-                  <div style={styles.settingsItemDesc}>Play sounds for events</div>
-                </div>
-              </div>
-              <div
-                onClick={() => toggleSetting('sounds')}
-                style={styles.toggleSwitch(settings.sounds)}
-              >
-                <div style={styles.toggleSwitchKnob(settings.sounds)}></div>
-              </div>
-            </div>
-
-            <div style={styles.settingsItem}>
-              <div style={styles.settingsItemLeft}>
-                <div style={styles.settingsItemIcon}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                </div>
-                <div style={styles.settingsItemText}>
-                  <div style={styles.settingsItemLabel}>Start on System Boot</div>
-                  <div style={styles.settingsItemDesc}>Launch SuperDesk automatically</div>
-                </div>
-              </div>
-              <div
-                onClick={() => toggleSetting('autostart')}
-                style={styles.toggleSwitch(settings.autostart)}
-              >
-                <div style={styles.toggleSwitchKnob(settings.autostart)}></div>
-              </div>
-            </div>
-          </div>
-
           {/* Connection Section */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsSectionTitle}>Connection</div>
+            {/* Privacy Section */}
+            <div style={styles.settingsSection}>
+              <div style={styles.settingsSectionTitle}>Privacy & Security</div>
 
-            <div style={styles.settingsItem}>
-              <div style={styles.settingsItemLeft}>
-                <div style={styles.settingsItemIcon}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                    <rect x="2" y="7" width="20" height="15" rx="2" />
-                    <polyline points="17 2 12 7 7 2" />
-                  </svg>
+              <div style={styles.settingsItem}>
+                <div style={styles.settingsItemLeft}>
+                  <div style={styles.settingsItemIcon}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                  </div>
+                  <div style={styles.settingsItemText}>
+                    <div style={styles.settingsItemLabel}>Session History</div>
+                    <div style={styles.settingsItemDesc}>Keep connection logs</div>
+                  </div>
                 </div>
-                <div style={styles.settingsItemText}>
-                  <div style={styles.settingsItemLabel}>Video Quality</div>
-                  <div style={styles.settingsItemDesc}>Adjust stream quality</div>
+                <div
+                  onClick={() => toggleSetting('history')}
+                  style={styles.toggleSwitch(settings.history)}
+                >
+                  <div style={styles.toggleSwitchKnob(settings.history)}></div>
                 </div>
               </div>
-              <select
-                value={settings.videoQuality}
-                onChange={handleVideoQualityChange}
-                style={styles.settingsSelect}
+
+              <button
+                onClick={() => setLogsModalOpen(true)}
+                style={styles.settingsActionBtn('secondary')}
               >
-                <option value="auto">Auto</option>
-                <option value="high">High (1080p)</option>
-                <option value="medium">Medium (720p)</option>
-                <option value="low">Low (480p)</option>
-              </select>
-            </div>
-
-            <div style={styles.settingsItem}>
-              <div style={styles.settingsItemLeft}>
-                <div style={styles.settingsItemIcon}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                    <path d="M9 18V5l12-2v13" />
-                    <circle cx="6" cy="18" r="3" />
-                    <circle cx="18" cy="16" r="3" />
-                  </svg>
-                </div>
-                <div style={styles.settingsItemText}>
-                  <div style={styles.settingsItemLabel}>Share Audio</div>
-                  <div style={styles.settingsItemDesc}>Include system audio in share</div>
-                </div>
-              </div>
-              <div
-                onClick={() => toggleSetting('audio')}
-                style={styles.toggleSwitch(settings.audio)}
-              >
-                <div style={styles.toggleSwitchKnob(settings.audio)}></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Privacy Section */}
-          <div style={styles.settingsSection}>
-            <div style={styles.settingsSectionTitle}>Privacy & Security</div>
-
-            <div style={styles.settingsItem}>
-              <div style={styles.settingsItemLeft}>
-                <div style={styles.settingsItemIcon}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                    <rect x="3" y="11" width="18" height="11" rx="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                </div>
-                <div style={styles.settingsItemText}>
-                  <div style={styles.settingsItemLabel}>Require Approval</div>
-                  <div style={styles.settingsItemDesc}>Approve before remote control</div>
-                </div>
-              </div>
-              <div
-                onClick={() => toggleSetting('approval')}
-                style={styles.toggleSwitch(settings.approval)}
-              >
-                <div style={styles.toggleSwitchKnob(settings.approval)}></div>
-              </div>
-            </div>
-
-            <div style={styles.settingsItem}>
-              <div style={styles.settingsItemLeft}>
-                <div style={styles.settingsItemIcon}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                  </svg>
-                </div>
-                <div style={styles.settingsItemText}>
-                  <div style={styles.settingsItemLabel}>Session History</div>
-                  <div style={styles.settingsItemDesc}>Keep connection logs</div>
-                </div>
-              </div>
-              <div
-                onClick={() => toggleSetting('history')}
-                style={styles.toggleSwitch(settings.history)}
-              >
-                <div style={styles.toggleSwitchKnob(settings.history)}></div>
-              </div>
+                View Connection Logs
+              </button>
             </div>
           </div>
 
@@ -2427,103 +2408,164 @@ function LandingPage() {
       </div>
 
       {/* Account Modal - Conditionally Rendered to prevent flash */}
-      {accountModalOpen && (
-        <div
-          style={styles.accountModalOverlay(accountModalOpen)}
-          onClick={(e) => e.target === e.currentTarget && closeAccountModal()}
-        >
-          <div style={styles.accountModal(accountModalOpen)}>
-            <div style={styles.accountModalHeader}>
-              <div style={styles.accountModalTitle}>Edit Profile</div>
-              <button
-                onClick={closeAccountModal}
-                style={styles.accountModalClose}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={styles.accountModalBody}>
-              {/* Avatar Section */}
-              <div style={styles.accountAvatarSection}>
-                <div style={styles.accountAvatarPreview}>
-                  {userInfo.initial}
-                </div>
+      {
+        accountModalOpen && (
+          <div
+            style={styles.accountModalOverlay(accountModalOpen)}
+            onClick={(e) => e.target === e.currentTarget && closeAccountModal()}
+          >
+            <div style={styles.accountModal(accountModalOpen)}>
+              <div style={styles.accountModalHeader}>
+                <div style={styles.accountModalTitle}>Edit Profile</div>
                 <button
-                  onClick={() => alert('Avatar upload coming soon!')}
-                  style={styles.accountAvatarBtn}
+                  onClick={closeAccountModal}
+                  style={styles.accountModalClose}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
                 >
-                  📷 Change Photo
+                  ×
                 </button>
               </div>
 
-              {/* Email Field (Read-only) */}
-              <div style={styles.accountField}>
-                <div style={styles.accountFieldLabel}>Email</div>
-                <input
-                  type="text"
-                  value={userInfo.email}
-                  disabled
-                  style={styles.accountFieldInput(true)}
-                />
-                <div style={styles.accountFieldHint}>Your email cannot be changed</div>
-              </div>
+              <div style={styles.accountModalBody}>
+                {/* Avatar Section */}
+                <div style={styles.accountAvatarSection}>
+                  <div style={styles.accountAvatarPreview}>
+                    {userInfo.initial}
+                  </div>
+                  <button
+                    onClick={() => alert('Avatar upload coming soon!')}
+                    style={styles.accountAvatarBtn}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                  >
+                    📷 Change Photo
+                  </button>
+                </div>
 
-              {/* Username Field */}
-              <div style={styles.accountField}>
-                <div style={styles.accountFieldLabel}>Username</div>
-                <div style={styles.accountFieldInputWrapper}>
-                  <span style={styles.usernamePrefix}>@</span>
+                {/* Email Field (Read-only) */}
+                <div style={styles.accountField}>
+                  <div style={styles.accountFieldLabel}>Email</div>
                   <input
                     type="text"
-                    value={username}
-                    onChange={handleUsernameChange}
-                    placeholder="username"
-                    maxLength={30}
-                    style={{
-                      ...styles.accountFieldInput(false),
-                      paddingLeft: '24px'
-                    }}
+                    value={userInfo.email}
+                    disabled
+                    style={styles.accountFieldInput(true)}
                   />
+                  <div style={styles.accountFieldHint}>Your email cannot be changed</div>
                 </div>
-                <div style={styles.accountFieldHint}>
-                  Letters, numbers, underscores and periods. 3-30 characters.
+
+                {/* Username Field */}
+                <div style={styles.accountField}>
+                  <div style={styles.accountFieldLabel}>Username</div>
+                  <div style={styles.accountFieldInputWrapper}>
+                    <span style={styles.usernamePrefix}>@</span>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={handleUsernameChange}
+                      placeholder="username"
+                      maxLength={30}
+                      style={{
+                        ...styles.accountFieldInput(false),
+                        paddingLeft: '24px'
+                      }}
+                    />
+                  </div>
+                  <div style={styles.accountFieldHint}>
+                    Letters, numbers, underscores and periods. 3-30 characters.
+                  </div>
+                  {usernameError && (
+                    <div style={styles.accountFieldError}>{usernameError}</div>
+                  )}
+                  {usernameSuccess && (
+                    <div style={styles.accountFieldSuccess}>{usernameSuccess}</div>
+                  )}
                 </div>
-                {usernameError && (
-                  <div style={styles.accountFieldError}>{usernameError}</div>
-                )}
-                {usernameSuccess && (
-                  <div style={styles.accountFieldSuccess}>{usernameSuccess}</div>
-                )}
+              </div>
+
+              <div style={styles.accountModalFooter}>
+                <button
+                  onClick={closeAccountModal}
+                  style={styles.accountModalBtn('secondary', false)}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveAccount}
+                  disabled={savingAccount || !!usernameError}
+                  style={styles.accountModalBtn('primary', savingAccount || !!usernameError)}
+                  onMouseEnter={(e) => !savingAccount && !usernameError && (e.currentTarget.style.opacity = '0.9')}
+                  onMouseLeave={(e) => !savingAccount && !usernameError && (e.currentTarget.style.opacity = '1')}
+                >
+                  {savingAccount ? 'Saving...' : 'Save'}
+                </button>
               </div>
             </div>
+          </div>
+        )
+      }
 
-            <div style={styles.accountModalFooter}>
-              <button
-                onClick={closeAccountModal}
-                style={styles.accountModalBtn('secondary', false)}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveAccount}
-                disabled={savingAccount || !!usernameError}
-                style={styles.accountModalBtn('primary', savingAccount || !!usernameError)}
-                onMouseEnter={(e) => !savingAccount && !usernameError && (e.currentTarget.style.opacity = '0.9')}
-                onMouseLeave={(e) => !savingAccount && !usernameError && (e.currentTarget.style.opacity = '1')}
-              >
-                {savingAccount ? 'Saving...' : 'Save'}
-              </button>
-            </div>
+      {/* Logs Modal */}
+      <div style={styles.logsModalOverlay(logsModalOpen)} onClick={(e) => {
+        if (e.target === e.currentTarget) setLogsModalOpen(false);
+      }}>
+        <div style={styles.logsModal(logsModalOpen)}>
+          <div style={{
+            padding: '20px 24px',
+            borderBottom: `1px solid rgba(255,255,255,0.1)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'white' }}>Connection Logs</div>
+            <button
+              onClick={() => setLogsModalOpen(false)}
+              style={{
+                background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer'
+              }}
+            >×</button>
+          </div>
+
+          <div style={styles.logsList}>
+            {connectionLogs.length === 0 ? (
+              <div style={{ padding: '30px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+                No connection history found
+              </div>
+            ) : (
+              connectionLogs.map((log) => (
+                <div key={log.id} style={styles.logItem}>
+                  <div style={styles.logItemMeta}>
+                    <div style={styles.logId}>Session: {log.sessionId}</div>
+                    <div style={styles.logTime}>{new Date(log.timestamp).toLocaleString()}</div>
+                  </div>
+                  <div style={styles.logStatus}>{log.status}</div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div style={{ padding: '16px', borderTop: `1px solid rgba(255,255,255,0.1)`, display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => {
+                setConnectionLogs([]);
+                localStorage.removeItem('connectionLogs');
+              }}
+              style={{
+                padding: '8px 16px',
+                background: 'rgba(239, 68, 68, 0.2)',
+                color: '#f87171',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px'
+              }}
+            >Clear Logs</button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
