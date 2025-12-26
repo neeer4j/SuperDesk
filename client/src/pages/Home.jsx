@@ -1,11 +1,141 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 import superdeskLogoText from '../assets/superdeskmm.png';
 import superdeskLogoWhite from '../assets/superdeskw.png';
 import superdeskShowcase from '../assets/suppm.png';
 import superdeskHeroMockup from '../assets/supipad.png';
+
+// Loading Overlay Component
+const LoadingOverlay = () => (
+    <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: '#0d0d14',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+        }}
+    >
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.5, 1, 0.5],
+            }}
+            transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut"
+            }}
+        >
+            <img src={superdeskLogoText} alt="Loading..." style={{ height: '48px', width: 'auto' }} />
+        </motion.div>
+        <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: 200 }}
+            transition={{ duration: 1.2, ease: "easeInOut" }}
+            style={{
+                height: '2px',
+                backgroundColor: '#8b5cf6',
+                marginTop: '24px',
+                borderRadius: '2px',
+            }}
+        />
+        <p style={{
+            marginTop: '16px',
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: '14px',
+            fontFamily: 'monospace',
+        }}>Initializing Environment...</p>
+    </motion.div>
+);
+
+// Typewriter effect component
+const TypewriterText = ({ lines, typingSpeed = 80, delayBetweenLines = 300 }) => {
+    const [displayedLines, setDisplayedLines] = useState([]);
+    const [currentLineIndex, setCurrentLineIndex] = useState(0);
+    const [currentCharIndex, setCurrentCharIndex] = useState(0);
+    const [showCursor, setShowCursor] = useState(true);
+
+    useEffect(() => {
+        // Blinking cursor effect
+        const cursorInterval = setInterval(() => {
+            setShowCursor(prev => !prev);
+        }, 530);
+        return () => clearInterval(cursorInterval);
+    }, []);
+
+    useEffect(() => {
+        if (currentLineIndex >= lines.length) return;
+
+        const currentLine = lines[currentLineIndex];
+
+        if (currentCharIndex < currentLine.text.length) {
+            const timeout = setTimeout(() => {
+                setDisplayedLines(prev => {
+                    const newLines = [...prev];
+                    if (!newLines[currentLineIndex]) {
+                        newLines[currentLineIndex] = { ...currentLine, text: '' };
+                    }
+                    newLines[currentLineIndex] = {
+                        ...currentLine,
+                        text: currentLine.text.slice(0, currentCharIndex + 1)
+                    };
+                    return newLines;
+                });
+                setCurrentCharIndex(prev => prev + 1);
+            }, typingSpeed);
+            return () => clearTimeout(timeout);
+        } else if (currentLineIndex < lines.length - 1) {
+            const timeout = setTimeout(() => {
+                setCurrentLineIndex(prev => prev + 1);
+                setCurrentCharIndex(0);
+            }, delayBetweenLines);
+            return () => clearTimeout(timeout);
+        }
+    }, [currentLineIndex, currentCharIndex, lines, typingSpeed, delayBetweenLines]);
+
+    const isTypingComplete = currentLineIndex >= lines.length - 1 &&
+        currentCharIndex >= lines[lines.length - 1]?.text.length;
+
+    return (
+        <div>
+            {displayedLines.map((line, index) => (
+                <h1
+                    key={index}
+                    style={{
+                        fontSize: line.fontSize || '64px',
+                        fontWeight: 700,
+                        lineHeight: 1.1,
+                        marginBottom: index === displayedLines.length - 1 ? '24px' : '8px',
+                        letterSpacing: line.letterSpacing || '-2px',
+                        color: line.color || 'white',
+                    }}
+                >
+                    {line.text}
+                    {/* Show cursor only on the last line being typed, and hide when complete */}
+                    {index === displayedLines.length - 1 && !isTypingComplete && (
+                        <span style={{
+                            opacity: showCursor ? 1 : 0,
+                            color: '#a78bfa',
+                            marginLeft: '2px',
+                        }}>|</span>
+                    )}
+                </h1>
+            ))}
+        </div>
+    );
+};
 
 // Icons matching Figma design
 const FeatureIcons = {
@@ -64,6 +194,17 @@ const features = [
 
 export default function Home() {
     const { darkMode, toggleDarkMode } = useTheme();
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleAppNavigation = (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        // Fake loading delay
+        setTimeout(() => {
+            navigate('/app');
+        }, 1200);
+    };
 
     return (
         <div style={{
@@ -72,19 +213,29 @@ export default function Home() {
             color: 'white',
             fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         }}>
+            <AnimatePresence>
+                {isLoading && <LoadingOverlay key="loader" />}
+            </AnimatePresence>
+
             {/* Navbar */}
             <nav style={{
                 position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
+                top: '30px',
+                left: '50%',
+                transform: 'translateX(-50%)',
                 zIndex: 100,
-                padding: '20px 48px',
+                padding: '12px 32px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                backgroundColor: 'rgba(13, 13, 20, 0.9)',
-                backdropFilter: 'blur(10px)',
+                backgroundColor: 'rgba(13, 13, 20, 0.8)',
+                backdropFilter: 'blur(12px)',
+                borderRadius: '50px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                width: 'auto',
+                gap: '60px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                maxWidth: '95%',
             }}>
                 {/* Logo */}
                 <Link to="/" style={{
@@ -108,19 +259,38 @@ export default function Home() {
 
                 {/* Right side */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {/* Web App Button */}
+                    <a
+                        href="/app"
+                        onClick={handleAppNavigation}
+                        style={{
+                            color: 'rgba(255,255,255,0.7)',
+                            textDecoration: 'none',
+                            fontSize: '15px',
+                            fontWeight: 500,
+                            padding: '8px 12px',
+                            transition: 'all 0.2s',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        Web App
+                    </a>
+
                     {/* Get Desktop App Button */}
                     <a
                         href="https://github.com/neeer4j/SuperDesk/releases"
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#8b5cf6',
-                            color: 'white',
+                            color: 'rgba(255,255,255,0.7)',
                             textDecoration: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: 600,
+                            fontSize: '15px',
+                            fontWeight: 500,
+                            padding: '8px 12px',
+                            transition: 'all 0.2s',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
@@ -143,7 +313,25 @@ export default function Home() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '120px 48px 80px',
+                position: 'relative',
+                overflow: 'hidden',
             }}>
+
+                {/* Background Pattern */}
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)`,
+                    backgroundSize: '40px 40px',
+                    maskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
+                    zIndex: 0,
+                    pointerEvents: 'none',
+                }} />
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -151,6 +339,8 @@ export default function Home() {
                     maxWidth: '1200px',
                     width: '100%',
                     gap: '80px',
+                    position: 'relative',
+                    zIndex: 1,
                 }}>
                     {/* Left Content */}
                     <motion.div
@@ -159,25 +349,14 @@ export default function Home() {
                         transition={{ duration: 0.6 }}
                         style={{ flex: 1, maxWidth: '500px' }}
                     >
-                        <h1 style={{
-                            fontSize: '64px',
-                            fontWeight: 700,
-                            lineHeight: 1.1,
-                            marginBottom: '8px',
-                            letterSpacing: '-2px',
-                        }}>
-                            Remote Desktop
-                        </h1>
-                        <h2 style={{
-                            fontSize: '48px',
-                            fontWeight: 700,
-                            color: '#a78bfa',
-                            lineHeight: 1.1,
-                            marginBottom: '24px',
-                            letterSpacing: '-1px',
-                        }}>
-                            Made Simple.
-                        </h2>
+                        <TypewriterText
+                            lines={[
+                                { text: 'Remote Desktop', fontSize: '64px', letterSpacing: '-2px', color: 'white' },
+                                { text: 'Made Simple.', fontSize: '48px', letterSpacing: '-1px', color: '#a78bfa' },
+                            ]}
+                            typingSpeed={70}
+                            delayBetweenLines={200}
+                        />
                         <p style={{
                             fontSize: '18px',
                             color: 'rgba(255,255,255,0.7)',
@@ -307,9 +486,10 @@ export default function Home() {
                 }}>
                     {/* Left - Image/Visual */}
                     <motion.div
-                        initial={{ opacity: 0, x: -30 }}
-                        whileInView={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, clipPath: 'inset(50% 50% 50% 50%)' }}
+                        whileInView={{ opacity: 1, clipPath: 'inset(0% 0% 0% 0%)' }}
                         viewport={{ once: true }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
                         style={{ flexShrink: 0 }}
                     >
                         <img
@@ -325,9 +505,10 @@ export default function Home() {
 
                     {/* Right - Text Content */}
                     <motion.div
-                        initial={{ opacity: 0, x: 30 }}
-                        whileInView={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, clipPath: 'inset(50% 50% 50% 50%)' }}
+                        whileInView={{ opacity: 1, clipPath: 'inset(0% 0% 0% 0%)' }}
                         viewport={{ once: true }}
+                        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
                         style={{ flex: 1 }}
                     >
                         <h2 style={{
@@ -358,39 +539,7 @@ export default function Home() {
             </section>
 
             {/* CTA Section */}
-            <section style={{
-                padding: '80px 48px',
-                textAlign: 'center',
-            }}>
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                >
-                    <Link
-                        to="/app"
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '14px 32px',
-                            backgroundColor: '#8b5cf6',
-                            color: 'white',
-                            textDecoration: 'none',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            fontWeight: 600,
-                            transition: 'all 0.2s',
-                        }}
-                    >
-                        Launch SuperDesk Web App
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                            <polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </Link>
-                </motion.div>
-            </section>
+
 
             {/* Footer */}
             <footer style={{
