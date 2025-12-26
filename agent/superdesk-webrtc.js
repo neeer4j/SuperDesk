@@ -965,6 +965,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
         }
     };
 
+    // Listen for remote camera state changes
+    socket.on('camera-state', (data) => {
+        console.log('📹 GUEST: Received camera-state from host:', data);
+        if (data.enabled && data.cameraTrackId) {
+            window.superdeskState.remoteCameraTrackId = data.cameraTrackId;
+            console.log('📹 GUEST: Expecting camera track with ID:', data.cameraTrackId);
+        } else {
+            window.superdeskState.remoteCameraTrackId = null;
+            // Hide camera overlay when camera is turned off
+            const cameraOverlay = document.getElementById('remote-camera-overlay');
+            if (cameraOverlay) {
+                cameraOverlay.style.display = 'none';
+                console.log('📹 GUEST: Camera overlay hidden');
+            }
+        }
+    });
+
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
         console.log('🔌 GUEST Connection state:', peerConnection.connectionState);
@@ -1085,6 +1102,59 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 }
             }
             return; // Audio-only track handled
+        }
+
+        // Check if this is a CAMERA track (different from screen share)
+        if (event.track.kind === 'video' && window.superdeskState.remoteCameraTrackId === event.track.id) {
+            console.log('📹 ===== CAMERA TRACK RECEIVED =====');
+            console.log('📹 Remote camera track ID matches:', event.track.id);
+
+            // Create or get camera overlay element
+            let cameraOverlay = document.getElementById('remote-camera-overlay');
+            if (!cameraOverlay) {
+                cameraOverlay = document.createElement('div');
+                cameraOverlay.id = 'remote-camera-overlay';
+                cameraOverlay.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    width: 200px;
+                    height: 150px;
+                    background: #000;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    z-index: 1000;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                    border: 2px solid rgba(255,255,255,0.2);
+                `;
+
+                const cameraVideo = document.createElement('video');
+                cameraVideo.id = 'remote-camera-video';
+                cameraVideo.autoplay = true;
+                cameraVideo.playsInline = true;
+                cameraVideo.muted = true;
+                cameraVideo.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+                cameraOverlay.appendChild(cameraVideo);
+
+                document.body.appendChild(cameraOverlay);
+                console.log('📹 Created camera overlay element');
+            }
+
+            // Set camera stream to overlay video
+            const cameraVideo = document.getElementById('remote-camera-video');
+            if (cameraVideo) {
+                let cameraStream;
+                if (event.streams.length > 0) {
+                    cameraStream = event.streams[0];
+                } else {
+                    cameraStream = new MediaStream([event.track]);
+                }
+                cameraVideo.srcObject = cameraStream;
+                cameraVideo.play().catch(e => console.error('📹 Camera play error:', e));
+                cameraOverlay.style.display = 'block';
+                console.log('📹 Camera video playing in overlay');
+            }
+            return; // Camera track handled separately
         }
 
         // Get stream - fallback to creating from track if streams array is empty
@@ -2986,9 +3056,10 @@ async function startVideoStream() {
         if (window.superdeskState.socket && window.superdeskState.socket.connected) {
             window.superdeskState.socket.emit('camera-state', {
                 sessionId: window.superdeskState.sessionId,
-                enabled: true
+                enabled: true,
+                cameraTrackId: window.superdeskState.cameraTrackId
             });
-            console.log('📹 Sent camera-state: ON to remote peer');
+            console.log('📹 Sent camera-state: ON to remote peer, trackId:', window.superdeskState.cameraTrackId);
         }
 
         // Notify toolbar of state change

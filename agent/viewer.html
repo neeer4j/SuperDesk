@@ -249,6 +249,28 @@
             color: rgba(255, 255, 255, 0.8);
             font-size: 14px;
         }
+
+        /* Camera overlay */
+        #remote-camera-overlay {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 90;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            display: none;
+        }
+
+        #remote-camera-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
     </style>
 </head>
 
@@ -295,6 +317,11 @@
         <!-- Control active indicator -->
         <div id="control-indicator">🖱️ Control Active</div>
 
+        <!-- Camera overlay for remote webcam -->
+        <div id="remote-camera-overlay">
+            <video id="remote-camera-video" autoplay playsinline muted></video>
+        </div>
+
         <!-- File transfer zone -->
         <div id="file-transfer-zone">
             <div id="file-drop-area" class="file-drop-area">
@@ -329,6 +356,7 @@
         let sessionId = null;
         let peerConnection = null;
         let inputDataChannel = null;
+        let remoteCameraTrackId = null;
 
         // Elements
         const video = document.getElementById('remote-video');
@@ -398,6 +426,20 @@
             socket.on('offer', handleOffer);
             socket.on('ice-candidate', handleIceCandidate);
             socket.on('session-ended', handleSessionEnded);
+
+            // Listen for camera state from host
+            socket.on('camera-state', (data) => {
+                console.log('📹 Received camera-state:', data);
+                if (data.enabled && data.cameraTrackId) {
+                    remoteCameraTrackId = data.cameraTrackId;
+                    console.log('📹 Expecting camera track:', data.cameraTrackId);
+                } else {
+                    remoteCameraTrackId = null;
+                    const overlay = document.getElementById('remote-camera-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                    console.log('📹 Camera overlay hidden');
+                }
+            });
         }
 
         async function handleOffer(data) {
@@ -413,7 +455,22 @@
                 peerConnection = new RTCPeerConnection(config);
 
                 peerConnection.ontrack = (event) => {
-                    console.log('📺 Received track:', event.track.kind);
+                    console.log('📺 Received track:', event.track.kind, 'id:', event.track.id);
+
+                    // Check if this is the camera track
+                    if (event.track.kind === 'video' && remoteCameraTrackId === event.track.id) {
+                        console.log('📹 Camera track received, showing in overlay');
+                        const cameraVideo = document.getElementById('remote-camera-video');
+                        const overlay = document.getElementById('remote-camera-overlay');
+                        if (cameraVideo && overlay) {
+                            cameraVideo.srcObject = event.streams[0] || new MediaStream([event.track]);
+                            cameraVideo.play().catch(e => console.error('Camera play error:', e));
+                            overlay.style.display = 'block';
+                        }
+                        return;
+                    }
+
+                    // Main video (screen share)
                     if (event.track.kind === 'video') {
                         video.srcObject = event.streams[0];
                         hideWaitingOverlay();
