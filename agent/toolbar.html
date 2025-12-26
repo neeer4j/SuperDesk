@@ -172,6 +172,21 @@
             color: white;
         }
 
+        .btn.active {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn.active:hover {
+            background: #059669;
+        }
+
+        .btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         .btn svg {
             width: 18px;
             height: 18px;
@@ -324,6 +339,24 @@
                 </svg>
             </button>
 
+            <!-- Mic Toggle Button -->
+            <button class="btn" id="micBtn" title="Toggle Microphone">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+            </button>
+
+            <!-- Video Toggle Button -->
+            <button class="btn" id="videoBtn" title="Toggle Camera">
+                <svg viewBox="0 0 24 24">
+                    <polygon points="23 7 16 12 23 17 23 7" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+            </button>
+
             <button class="btn" id="fileBtn" title="Send File">
                 <svg viewBox="0 0 24 24">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -352,10 +385,15 @@
         let dragStartX = 0;
         let dragStartY = 0;
         let currentEdge = 'right'; // 'top', 'right', 'bottom', 'left'
+        let micActive = false;
+        let videoActive = false;
+        let guestIsAndroid = false;
 
         const toolbar = document.getElementById('toolbar');
         const toggleBtn = document.getElementById('toggleBtn');
         const userBtn = document.getElementById('userBtn');
+        const micBtn = document.getElementById('micBtn');
+        const videoBtn = document.getElementById('videoBtn');
         const fileBtn = document.getElementById('fileBtn');
         const endBtn = document.getElementById('endBtn');
         const toast = document.getElementById('toast');
@@ -377,7 +415,7 @@
         toolbar.addEventListener('mousedown', (e) => {
             // Don't drag if clicking on buttons
             if (e.target.closest('button')) return;
-            
+
             isDragging = true;
             dragStartX = e.clientX;
             dragStartY = e.clientY;
@@ -386,10 +424,10 @@
 
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            
+
             const deltaX = e.clientX - dragStartX;
             const deltaY = e.clientY - dragStartY;
-            
+
             // Show visual feedback during drag
             if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
                 // Notify main process that we're dragging
@@ -399,10 +437,10 @@
 
         document.addEventListener('mouseup', (e) => {
             if (!isDragging) return;
-            
+
             isDragging = false;
             toolbar.style.cursor = 'grab';
-            
+
             // Send final position to main process for snap-to-edge
             ipcRenderer.send('toolbar-drag-end', { x: e.screenX, y: e.screenY });
         });
@@ -452,7 +490,7 @@
             // position arrow so it centers below button
             const arrowOffset = Math.round(btnRect.left + (btnRect.width / 2) - left);
             guestPopup.style.setProperty('--arrow-left', `${arrowOffset}px`);
-            
+
             console.log('[Toolbar] Guest popup positioned:', { left, bottom: 60, arrowOffset, btnRect, visible: popupVisible });
         }
 
@@ -515,6 +553,64 @@
             if (popupVisible && !guestPopup.contains(e.target) && !userBtn.contains(e.target)) {
                 hideGuestPopup();
             }
+        });
+
+        // MIC - toggle microphone
+        micBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            micActive = !micActive;
+            micBtn.classList.toggle('active', micActive);
+            micBtn.title = micActive ? 'Microphone On' : 'Toggle Microphone';
+            console.log('[Toolbar] Mic button clicked, active:', micActive);
+            hideGuestPopup();
+            ipcRenderer.send('toolbar-toggle-mic', micActive);
+        });
+
+        // VIDEO - toggle camera
+        videoBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (guestIsAndroid) {
+                showToast('Video not available with Android');
+                return;
+            }
+            videoActive = !videoActive;
+            videoBtn.classList.toggle('active', videoActive);
+            videoBtn.title = videoActive ? 'Camera On' : 'Toggle Camera';
+            console.log('[Toolbar] Video button clicked, active:', videoActive);
+            hideGuestPopup();
+            ipcRenderer.send('toolbar-toggle-video', videoActive);
+        });
+
+        // Listen for guest type updates (to disable video for Android)
+        ipcRenderer.on('guest-is-android', (event, isAndroid) => {
+            console.log('[Toolbar] Guest is Android:', isAndroid);
+            guestIsAndroid = isAndroid;
+            if (isAndroid) {
+                videoBtn.classList.add('disabled');
+                videoBtn.title = 'Video not available with Android';
+                // If video was active, turn it off
+                if (videoActive) {
+                    videoActive = false;
+                    videoBtn.classList.remove('active');
+                    ipcRenderer.send('toolbar-toggle-video', false);
+                }
+            } else {
+                videoBtn.classList.remove('disabled');
+                videoBtn.title = 'Toggle Camera';
+            }
+        });
+
+        // Listen for media state updates (sync UI when streams change)
+        ipcRenderer.on('mic-state-changed', (event, isActive) => {
+            micActive = isActive;
+            micBtn.classList.toggle('active', micActive);
+            micBtn.title = micActive ? 'Microphone On' : 'Toggle Microphone';
+        });
+
+        ipcRenderer.on('video-state-changed', (event, isActive) => {
+            videoActive = isActive;
+            videoBtn.classList.toggle('active', videoActive);
+            videoBtn.title = videoActive ? 'Camera On' : 'Toggle Camera';
         });
 
         console.log('[Toolbar] Initialized successfully');

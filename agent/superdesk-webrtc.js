@@ -806,7 +806,9 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
     // Listen for answer from guest
     console.log('👂 HOST Setting up answer listener...');
-    socket.once('answer', async (data) => {
+    // IMPORTANT: Use .on() instead of .once() to support renegotiation (multiple answers)
+    socket.off('answer'); // Remove previous listeners to avoid duplicates
+    socket.on('answer', async (data) => {
         console.log('📨 ========== HOST RECEIVED ANSWER ==========');
         console.log('📨 Answer type:', data.answer?.type);
         console.log('📨 Answer SDP length:', data.answer?.sdp?.length || 0);
@@ -1037,6 +1039,8 @@ async function setupWebRTCReceiver(socket, sessionId) {
 
     // Handle incoming stream
     let tracksReceived = 0;
+    let mainStream = null; // Track the main stream to add audio tracks to
+
     peerConnection.ontrack = (event) => {
         tracksReceived++;
         console.log('📺 ========== ONTRACK EVENT FIRED #' + tracksReceived + ' ==========');
@@ -1055,6 +1059,34 @@ async function setupWebRTCReceiver(socket, sessionId) {
         }
         updateDebugStatus('stream', 'received');
 
+        // Handle AUDIO tracks specially - they may arrive after video via renegotiation
+        if (event.track.kind === 'audio') {
+            console.log('🔊 ===== AUDIO TRACK RECEIVED =====');
+            console.log('🔊 Audio from remote peer - enabling playback');
+
+            // If we have a main stream, add audio track to it
+            if (mainStream) {
+                console.log('🔊 Adding audio track to existing stream');
+                mainStream.addTrack(event.track);
+
+                // Update video element and sharedStream for popup
+                const video = document.getElementById('join-remote-video');
+                if (video && video.srcObject) {
+                    // srcObject already points to mainStream, but refresh it
+                    video.srcObject = mainStream;
+                    video.play().catch(e => console.error("🔊 Auto-play error:", e));
+                    console.log('🔊 Video element srcObject refreshed with audio');
+                }
+
+                // Update sharedStream for popup window
+                if (window.sharedStream) {
+                    window.sharedStream = mainStream;
+                    console.log('🔊 sharedStream updated for popup window');
+                }
+            }
+            return; // Audio-only track handled
+        }
+
         // Get stream - fallback to creating from track if streams array is empty
         // This is common with react-native-webrtc where tracks may not be associated with streams
         let stream;
@@ -1066,6 +1098,9 @@ async function setupWebRTCReceiver(socket, sessionId) {
             stream = new MediaStream([event.track]);
             console.log('📺 Created new MediaStream from track');
         }
+
+        // Store as main stream for adding audio tracks later
+        mainStream = stream;
 
         // Log stream info
         console.log('📺 Stream ID:', stream.id);
@@ -1449,6 +1484,29 @@ async function setupWebRTCReceiver(socket, sessionId) {
             }
         }
     };
+
+    // Listen for answer from host (needed when Guest initiates renegotiation)
+    console.log('👂 Setting up answer listener (for Guest renegotiation)...');
+    socket.off('answer');
+    socket.on('answer', async (data) => {
+        console.log('📨 ========== GUEST RECEIVED ANSWER ==========');
+        console.log('📨 Answer type:', data.answer?.type);
+        console.log('📨 From:', data.from);
+        console.log('📨 Current signaling state:', peerConnection.signalingState);
+
+        if (peerConnection.signalingState === 'have-local-offer') {
+            try {
+                console.log('📨 GUEST Setting remote description with answer...');
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                console.log('✅ GUEST Remote description set successfully');
+                console.log('✅ New signaling state:', peerConnection.signalingState);
+            } catch (error) {
+                console.error('❌ GUEST Error setting remote description:', error);
+            }
+        } else {
+            console.warn('⚠️ GUEST Ignoring answer - wrong state:', peerConnection.signalingState);
+        }
+    });
 
     // Listen for offer from host - use .on() to handle renegotiation offers
     console.log('👂 Setting up offer listener (supports renegotiation)...');
@@ -2651,6 +2709,11 @@ function endSession() {
         stopScreenShare();
     }
 
+    // IMPORTANT: Stop all mic/video chat media to prevent lingering capture
+    if (typeof stopAllChatMedia === 'function') {
+        stopAllChatMedia();
+    }
+
     // Cleanup
     if (window.superdeskState.webrtc) {
         if (window.superdeskState.webrtc.stream) {
@@ -2754,6 +2817,323 @@ function showNotification(title, message) {
     }
 }
 
+// ==================== AUDIO/VIDEO CHAT STREAM MANAGEMENT ====================
+
+// Store mic and video streams separately from screen share
+window.superdeskState.micStream = null;
+window.superdeskState.videoStream = null;
+
+/**
+ * Start microphone stream and add to peer connection
+ */
+async function startMicStream() {
+    console.log('🎤 Starting microphone stream...');
+
+    try {
+        // Stop existing mic stream if any
+        if (window.superdeskState.micStream) {
+            stopMicStream();
+        }
+
+        // Request microphone access
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        window.superdeskState.micStream = stream;
+
+        console.log('🎤 Microphone access granted');
+
+        // Add audio track to peer connection if available
+        const peerConnection = window.superdeskState.webrtc?.peerConnection;
+        if (peerConnection && peerConnection.signalingState !== 'closed') {
+            const audioTrack = stream.getAudioTracks()[0];
+            if (audioTrack) {
+                peerConnection.addTrack(audioTrack, stream);
+                console.log('🎤 Audio track added to peer connection');
+
+                // IMPORTANT: Trigger renegotiation to send audio to remote peer
+                // This is required when adding tracks mid-session
+                await triggerRenegotiation(peerConnection);
+            }
+        } else {
+            console.warn('🎤 No peer connection available - track will be added when connection is established');
+        }
+
+        // Notify toolbar of state change
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('mic-state-changed', true);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('🎤 Failed to start microphone:', error);
+        showNotification('Microphone Error', 'Could not access microphone: ' + error.message);
+        return false;
+    }
+}
+
+/**
+ * Trigger WebRTC renegotiation after adding a track mid-session
+ */
+async function triggerRenegotiation(peerConnection) {
+    if (!peerConnection || peerConnection.signalingState === 'closed') {
+        console.warn('🔄 Cannot renegotiate - no open peer connection');
+        return;
+    }
+
+    if (!window.superdeskState.socket || !window.superdeskState.socket.connected) {
+        console.warn('🔄 Cannot renegotiate - no socket connection');
+        return;
+    }
+
+    console.log('🔄 Triggering renegotiation for new audio track...');
+
+    try {
+        // Create new offer with updated tracks
+        const offer = await peerConnection.createOffer();
+        console.log('🔄 Renegotiation offer created');
+
+        await peerConnection.setLocalDescription(offer);
+        console.log('🔄 Local description set');
+
+        // Send the offer to remote peer
+        window.superdeskState.socket.emit('offer', {
+            sessionId: window.superdeskState.sessionId,
+            offer
+        });
+        console.log('🔄 ✅ Renegotiation offer sent - audio should now be transmitted');
+    } catch (error) {
+        console.error('🔄 ❌ Renegotiation failed:', error);
+    }
+}
+
+/**
+ * Stop microphone stream and remove from peer connection
+ */
+function stopMicStream() {
+    console.log('🎤 Stopping microphone stream...');
+
+    if (window.superdeskState.micStream) {
+        // Stop all audio tracks
+        window.superdeskState.micStream.getTracks().forEach(track => {
+            track.stop();
+            console.log('🎤 Audio track stopped:', track.id);
+        });
+
+        // Remove from peer connection
+        const peerConnection = window.superdeskState.webrtc?.peerConnection;
+        if (peerConnection && peerConnection.signalingState !== 'closed') {
+            const senders = peerConnection.getSenders();
+            senders.forEach(sender => {
+                if (sender.track && sender.track.kind === 'audio' &&
+                    window.superdeskState.micStream.getAudioTracks().includes(sender.track)) {
+                    peerConnection.removeTrack(sender);
+                    console.log('🎤 Audio sender removed from peer connection');
+                }
+            });
+        }
+
+        window.superdeskState.micStream = null;
+    }
+
+    // Notify toolbar of state change
+    if (window.appControls && window.appControls.ipcSend) {
+        window.appControls.ipcSend('mic-state-changed', false);
+    }
+}
+
+/**
+ * Start video (camera) stream and add to peer connection
+ */
+async function startVideoStream() {
+    console.log('📹 Starting video stream...');
+
+    try {
+        // Stop existing video stream if any
+        if (window.superdeskState.videoStream) {
+            stopVideoStream();
+        }
+
+        // Request camera access
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                width: { ideal: 320 },
+                height: { ideal: 240 },
+                frameRate: { ideal: 15 }
+            }
+        });
+        window.superdeskState.videoStream = stream;
+
+        console.log('📹 Camera access granted');
+
+        // Add video track to peer connection if available
+        const peerConnection = window.superdeskState.webrtc?.peerConnection;
+        if (peerConnection && peerConnection.signalingState !== 'closed') {
+            const videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack) {
+                // Mark this as a camera track so receiver can differentiate from screen share
+                window.superdeskState.cameraTrackId = videoTrack.id;
+                peerConnection.addTrack(videoTrack, stream);
+                console.log('📹 Video track added to peer connection, ID:', videoTrack.id);
+
+                // IMPORTANT: Trigger renegotiation to send camera to remote peer
+                await triggerRenegotiation(peerConnection);
+            }
+        } else {
+            console.warn('📹 No peer connection available - track will be added when connection is established');
+        }
+
+        // Notify remote peer that camera is now on
+        if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+            window.superdeskState.socket.emit('camera-state', {
+                sessionId: window.superdeskState.sessionId,
+                enabled: true
+            });
+            console.log('📹 Sent camera-state: ON to remote peer');
+        }
+
+        // Notify toolbar of state change
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('video-state-changed', true);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('📹 Failed to start camera:', error);
+        showNotification('Camera Error', 'Could not access camera: ' + error.message);
+        return false;
+    }
+}
+
+/**
+ * Stop video (camera) stream and remove from peer connection
+ */
+function stopVideoStream() {
+    console.log('📹 Stopping video stream...');
+
+    if (window.superdeskState.videoStream) {
+        // Stop all video tracks
+        window.superdeskState.videoStream.getTracks().forEach(track => {
+            track.stop();
+            console.log('📹 Video track stopped:', track.id);
+        });
+
+        // Remove from peer connection
+        const peerConnection = window.superdeskState.webrtc?.peerConnection;
+        if (peerConnection && peerConnection.signalingState !== 'closed') {
+            const senders = peerConnection.getSenders();
+            senders.forEach(sender => {
+                if (sender.track && sender.track.kind === 'video' &&
+                    window.superdeskState.videoStream.getVideoTracks().includes(sender.track)) {
+                    peerConnection.removeTrack(sender);
+                    console.log('📹 Video sender removed from peer connection');
+                }
+            });
+        }
+
+        window.superdeskState.videoStream = null;
+        window.superdeskState.cameraTrackId = null;
+    }
+
+    // Notify remote peer that camera is now off
+    if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+        window.superdeskState.socket.emit('camera-state', {
+            sessionId: window.superdeskState.sessionId,
+            enabled: false
+        });
+        console.log('📹 Sent camera-state: OFF to remote peer');
+    }
+
+    // Notify toolbar of state change
+    if (window.appControls && window.appControls.ipcSend) {
+        window.appControls.ipcSend('video-state-changed', false);
+    }
+}
+
+/**
+ * Stop all chat media (mic + video) - called on session end
+ */
+function stopAllChatMedia() {
+    console.log('🛑 Stopping all chat media...');
+    stopMicStream();
+    stopVideoStream();
+}
+
+// Listen for IPC messages from toolbar to toggle mic/video
+if (typeof require !== 'undefined') {
+    try {
+        const { ipcRenderer } = require('electron');
+
+        ipcRenderer.on('toolbar-toggle-mic', (event, isActive) => {
+            console.log('🎤 Received toolbar-toggle-mic:', isActive);
+            if (isActive) {
+                startMicStream();
+            } else {
+                stopMicStream();
+            }
+        });
+
+        ipcRenderer.on('toolbar-toggle-video', (event, isActive) => {
+            console.log('📹 Received toolbar-toggle-video:', isActive);
+            if (isActive) {
+                startVideoStream();
+            } else {
+                stopVideoStream();
+            }
+        });
+
+        console.log('✅ Toolbar mic/video IPC listeners registered');
+    } catch (e) {
+        console.warn('⚠️ Could not set up IPC listeners (probably not in Electron):', e.message);
+    }
+}
+
+// Expose helper to send input events (Mouse/Keyboard) from popup
+window.sendInputEvent = (payload) => {
+    // 1. Try P2P
+    const channel = window.superdeskState.inputDataChannel;
+    if (channel && channel.readyState === 'open') {
+        try {
+            // Android format
+            const p2pPayload = {
+                type: payload.type === 'keydown' || payload.type === 'keyup' ? 'keyboard' : 'mouse',
+                action: payload.type === 'move' ? 'move' :
+                    payload.type === 'down' ? 'down' :
+                        payload.type === 'up' ? 'up' :
+                            payload.type === 'scroll' ? 'wheel' :
+                                payload.type === 'keydown' ? 'down' : 'up',
+                data: {
+                    x: payload.x,
+                    y: payload.y,
+                    button: payload.button,
+                    deltaX: payload.deltaX,
+                    deltaY: payload.deltaY,
+                    key: payload.key,
+                    code: payload.code
+                }
+            };
+            channel.send(JSON.stringify(p2pPayload));
+            return 'p2p';
+        } catch (e) {
+            console.warn('Input P2P send failed:', e);
+        }
+    }
+
+    // 2. Fallback to Socket
+    const socket = window.superdeskState.socket;
+    const sessionId = window.superdeskState.sessionId;
+    if (socket && socket.connected && sessionId) {
+        const eventType = payload.type === 'keydown' || payload.type === 'keyup' ? 'keyboard-event' : 'mouse-event';
+        socket.emit(eventType, {
+            sessionId,
+            ...payload
+        });
+        return 'socket';
+    }
+
+    console.warn('❌ Input send failed: No P2P and No Socket');
+    return 'failed';
+};
+
 // Export functions
 window.createSession = createSession;
 window.joinSession = joinSession;
@@ -2765,6 +3145,11 @@ window.confirmSourceSelection = confirmSourceSelection;
 window.enableRemoteControl = enableRemoteControl;
 window.disableRemoteControl = disableRemoteControl;
 window.endSession = endSession;
+window.startMicStream = startMicStream;
+window.stopMicStream = stopMicStream;
+window.startVideoStream = startVideoStream;
+window.stopVideoStream = stopVideoStream;
+window.stopAllChatMedia = stopAllChatMedia;
 
 // Export WebRTC setup functions for guest to use
 window.superdeskWebRTC = {

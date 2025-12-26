@@ -40,7 +40,7 @@ let toolbarEdge = 'right'; // 'top', 'right', 'bottom', 'left'
 let toolbarCollapsed = false;
 let lastGuestInfo = null;
 
-const TOOLBAR_WIDTH = 328;
+const TOOLBAR_WIDTH = 412; // Increased from 328 for mic/video buttons
 const TOOLBAR_COLLAPSED_WIDTH = 64;
 const TOOLBAR_HEIGHT = 52;
 const TOOLBAR_BOTTOM_MARGIN = 60;
@@ -816,6 +816,43 @@ app.whenReady().then(() => {
     // Forward panel toggle to main window
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('toggle-panel-from-toolbar', panelType);
+    }
+  });
+
+  // Mic toggle from toolbar - forward to main window
+  ipcMain.on('toolbar-toggle-mic', (event, isActive) => {
+    console.log('🎤 [Toolbar] Mic toggle:', isActive);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('toolbar-toggle-mic', isActive);
+    }
+  });
+
+  // Video toggle from toolbar - forward to main window
+  ipcMain.on('toolbar-toggle-video', (event, isActive) => {
+    console.log('📹 [Toolbar] Video toggle:', isActive);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('toolbar-toggle-video', isActive);
+    }
+  });
+
+  // Notify toolbar when Android guest connects (to disable video button)
+  ipcMain.on('guest-is-android', (event, isAndroid) => {
+    console.log('📱 [Main] Guest is Android:', isAndroid);
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.webContents.send('guest-is-android', isAndroid);
+    }
+  });
+
+  // Sync mic/video state to toolbar (when streams change)
+  ipcMain.on('mic-state-changed', (event, isActive) => {
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.webContents.send('mic-state-changed', isActive);
+    }
+  });
+
+  ipcMain.on('video-state-changed', (event, isActive) => {
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.webContents.send('video-state-changed', isActive);
     }
   });
 

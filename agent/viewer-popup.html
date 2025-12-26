@@ -71,10 +71,12 @@
 </head>
 
 <body>
-    <video id="vid" autoplay playsinline muted></video>
+    <!-- Note: Start unmuted to allow audio playback, speaker button controls volume -->
+    <video id="vid" autoplay playsinline></video>
     <div id="bar">
         <button id="ctrl">🖱️</button>
-        <button id="spk">🔊</button>
+        <button id="mic">🔇</button>
+        <button id="spk" class="on">🔊</button>
         <button id="fs">⛶</button>
         <button id="close" class="red">✕</button>
     </div>
@@ -83,23 +85,56 @@
     <script>
         const vid = document.getElementById('vid');
         const ctrlBtn = document.getElementById('ctrl');
+        const micBtn = document.getElementById('mic');
         const spkBtn = document.getElementById('spk');
         const fsBtn = document.getElementById('fs');
         const closeBtn = document.getElementById('close');
         const status = document.getElementById('status');
 
-        let controlOn = false;
-        let speakerOn = false;
+        let controlOn = true; // Enabled by default to avoid confusion
+        let speakerOn = true;  // Speaker ON by default to hear audio
+        let micOn = false;
         let lastClick = 0;
         let hostIsMobile = false;
 
+        // Initialize buttons
+        if (controlOn) ctrlBtn.classList.add('on');
+        if (speakerOn) spkBtn.classList.add('on');
+
         // Get Stream from Opener
         if (window.opener && window.opener.sharedStream) {
-            vid.srcObject = window.opener.sharedStream;
+            const stream = window.opener.sharedStream;
+            vid.srcObject = stream;
+
+            // Check for audio tracks and log their state
+            const audioTracks = stream.getAudioTracks();
+            const videoTracks = stream.getVideoTracks();
+            console.log('📺 Stream received from opener:');
+            console.log('   - Video tracks:', videoTracks.length);
+            console.log('   - Audio tracks:', audioTracks.length);
+
+            if (audioTracks.length > 0) {
+                console.log('🔊 Audio tracks detected:');
+                audioTracks.forEach((track, i) => {
+                    console.log(`   Track ${i}: enabled=${track.enabled}, muted=${track.muted}, readyState=${track.readyState}`);
+                });
+            }
+
             vid.play().catch(err => console.error("Play error:", err));
-            console.log('📺 Stream received from opener');
         } else {
             console.error('❌ No stream available from opener');
+        }
+
+        // Listen for new tracks added to the stream (for audio added mid-session)
+        if (window.opener && window.opener.sharedStream) {
+            window.opener.sharedStream.onaddtrack = (event) => {
+                console.log('🔊 New track added to stream:', event.track.kind);
+                if (event.track.kind === 'audio') {
+                    console.log('🔊 Audio track added mid-session - stream should now have audio');
+                    // Refresh srcObject to pick up new tracks
+                    vid.srcObject = window.opener.sharedStream;
+                }
+            };
         }
 
         // Check opener state and detect host type
@@ -159,6 +194,44 @@
             }
         });
 
+        // Mic toggle - actually start/stop mic stream
+        micBtn.onclick = debounce(async function () {
+            if (!window.opener) {
+                console.warn('❌ No opener window');
+                return;
+            }
+
+            try {
+                if (!micOn) {
+                    // START mic
+                    if (typeof window.opener.startMicStream === 'function') {
+                        const success = await window.opener.startMicStream();
+                        if (success) {
+                            micOn = true;
+                            micBtn.textContent = '🎤';
+                            micBtn.classList.add('on');
+                            console.log('🎤 Mic started');
+                        } else {
+                            console.error('🎤 Failed to start mic');
+                        }
+                    } else {
+                        console.warn('🎤 startMicStream not available');
+                    }
+                } else {
+                    // STOP mic
+                    if (typeof window.opener.stopMicStream === 'function') {
+                        window.opener.stopMicStream();
+                    }
+                    micOn = false;
+                    micBtn.textContent = '🔇';
+                    micBtn.classList.remove('on');
+                    console.log('🎤 Mic stopped');
+                }
+            } catch (err) {
+                console.error('🎤 Mic toggle error:', err);
+            }
+        });
+
         // Speaker toggle
         spkBtn.onclick = debounce(function () {
             speakerOn = !speakerOn;
@@ -180,96 +253,33 @@
 
         // EVENT SENDING LOGIC
         function sendToHost(payload) {
-            if (!window.opener || !window.opener.superdeskState) {
-                console.warn('❌ No opener state - cannot send');
+            if (!controlOn) return;
+
+            if (!window.opener || typeof window.opener.sendInputEvent !== 'function') {
                 return;
             }
-            const state = window.opener.superdeskState;
 
-            // Debug: Log what we're trying to send
-            if (payload.type !== 'move') {
-                console.log('📤 Sending to host:', payload.type, 'at', payload.x?.toFixed(2), payload.y?.toFixed(2));
-            }
+            const res = window.opener.sendInputEvent(payload);
 
-            // PRIORITY 1: WebRTC Data Channel (P2P - Low Latency)
-            if (state.inputDataChannel && state.inputDataChannel.readyState === 'open') {
-                try {
-                    // Android-specific format: { type, action, data: { x, y, ... } }
-                    const p2pPayload = {
-                        type: 'mouse',
-                        action: payload.type === 'move' ? 'move' :
-                            payload.type === 'down' ? 'down' :
-                                payload.type === 'up' ? 'up' :
-                                    payload.type === 'scroll' ? 'wheel' : payload.type,
-                        data: {
-                            x: payload.x,
-                            y: payload.y,
-                            button: payload.button,
-                            deltaX: payload.deltaX,
-                            deltaY: payload.deltaY
-                        }
-                    };
-                    state.inputDataChannel.send(JSON.stringify(p2pPayload));
+            const coords = payload.x ? `x: ${payload.x.toFixed(2)} y: ${payload.y.toFixed(2)}` : '';
 
-                    // Update status with P2P indicator
-                    if (controlOn) {
-                        const coords = `x: ${payload.x.toFixed(2)} y: ${payload.y.toFixed(2)}`;
-                        status.innerHTML = `<span style="color:#10b981">● P2P</span> | ${coords}`;
-                    }
-                    return;
-                } catch (err) {
-                    console.warn("P2P send failed, falling back to socket:", err);
-                }
+            if (res === 'p2p') {
+                status.innerHTML = `<span style="color:#10b981">● P2P</span> | ${coords}`;
+            } else if (res === 'socket') {
+                status.innerHTML = `<span style="color:#f59e0b">● Relay</span> | ${coords}`;
             } else {
-                if (payload.type !== 'move') {
-                    console.log('⚠️ Data channel not open, state:', state.inputDataChannel?.readyState);
-                }
-            }
-
-            // PRIORITY 2: Socket.IO (Relay - Fallback)
-            if (state.socket && state.socket.connected && state.sessionId) {
-                state.socket.emit('mouse-event', {
-                    sessionId: state.sessionId,
-                    ...payload
-                });
-
-                if (controlOn) {
-                    const coords = `x: ${payload.x.toFixed(2)} y: ${payload.y.toFixed(2)}`;
-                    status.innerHTML = `<span style="color:#f59e0b">● Relay</span> | ${coords}`;
-                }
-            } else {
-                if (payload.type !== 'move') {
-                    console.warn('❌ No socket connection either');
-                }
+                status.innerHTML = `<span style="color:#ef4444">● Failed</span>`;
             }
         }
 
         function sendKeyToHost(type, e) {
-            if (!window.opener || !window.opener.superdeskState) return;
-            const state = window.opener.superdeskState;
-
-            // Try P2P first
-            if (state.inputDataChannel && state.inputDataChannel.readyState === 'open') {
-                state.inputDataChannel.send(JSON.stringify({
-                    type: 'keyboard',
-                    action: type === 'keydown' ? 'down' : 'up',
-                    data: {
-                        key: e.key,
-                        code: e.code
-                    }
-                }));
-                return;
-            }
-
-            // Fallback to socket
-            if (state.socket && state.socket.connected && state.sessionId) {
-                state.socket.emit('keyboard-event', {
-                    sessionId: state.sessionId,
-                    type,
-                    key: e.key,
-                    code: e.code
-                });
-            }
+            if (!window.opener || typeof window.opener.sendInputEvent !== 'function') return;
+            const res = window.opener.sendInputEvent({
+                type: type,
+                key: e.key,
+                code: e.code
+            });
+            // We don't update status for keyboard usually, but we could
         }
 
         // COORD CALCULATION with CLAMPING
@@ -318,7 +328,11 @@
 
         vid.onmousemove = e => sendMouse('move', e);
         vid.onmousedown = e => sendMouse('down', e);
-        vid.onmouseup = e => sendMouse('up', e);
+        // Delay UP event to prevent race condition on Android (Accessibility check latency)
+        vid.onmouseup = e => {
+            const eventClone = { clientX: e.clientX, clientY: e.clientY, button: e.button };
+            setTimeout(() => sendMouse('up', eventClone), 150);
+        };
 
         vid.onwheel = e => {
             if (!controlOn) return;
