@@ -3042,6 +3042,19 @@ async function startVideoStream() {
             if (videoTrack) {
                 // Mark this as a camera track so receiver can differentiate from screen share
                 window.superdeskState.cameraTrackId = videoTrack.id;
+
+                // IMPORTANT: Notify remote peer BEFORE adding track to peer connection
+                // This ensures receiver has cameraTrackId ready when track arrives via ontrack
+                if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+                    window.superdeskState.socket.emit('camera-state', {
+                        sessionId: window.superdeskState.sessionId,
+                        enabled: true,
+                        cameraTrackId: window.superdeskState.cameraTrackId
+                    });
+                    console.log('📹 Sent camera-state: ON to remote peer, trackId:', window.superdeskState.cameraTrackId);
+                }
+
+                // Now add track to peer connection
                 peerConnection.addTrack(videoTrack, stream);
                 console.log('📹 Video track added to peer connection, ID:', videoTrack.id);
 
@@ -3050,16 +3063,6 @@ async function startVideoStream() {
             }
         } else {
             console.warn('📹 No peer connection available - track will be added when connection is established');
-        }
-
-        // Notify remote peer that camera is now on
-        if (window.superdeskState.socket && window.superdeskState.socket.connected) {
-            window.superdeskState.socket.emit('camera-state', {
-                sessionId: window.superdeskState.sessionId,
-                enabled: true,
-                cameraTrackId: window.superdeskState.cameraTrackId
-            });
-            console.log('📹 Sent camera-state: ON to remote peer, trackId:', window.superdeskState.cameraTrackId);
         }
 
         // Notify toolbar of state change
@@ -3081,25 +3084,28 @@ async function startVideoStream() {
 function stopVideoStream() {
     console.log('📹 Stopping video stream...');
 
-    if (window.superdeskState.videoStream) {
-        // Stop all video tracks
-        window.superdeskState.videoStream.getTracks().forEach(track => {
-            track.stop();
-            console.log('📹 Video track stopped:', track.id);
-        });
+    const cameraTrackId = window.superdeskState.cameraTrackId;
+    const videoStream = window.superdeskState.videoStream;
 
-        // Remove from peer connection
+    if (videoStream && cameraTrackId) {
+        // Remove from peer connection FIRST (before stopping tracks)
         const peerConnection = window.superdeskState.webrtc?.peerConnection;
         if (peerConnection && peerConnection.signalingState !== 'closed') {
             const senders = peerConnection.getSenders();
             senders.forEach(sender => {
-                if (sender.track && sender.track.kind === 'video' &&
-                    window.superdeskState.videoStream.getVideoTracks().includes(sender.track)) {
+                // Use cameraTrackId to precisely identify the camera sender
+                if (sender.track && sender.track.id === cameraTrackId) {
                     peerConnection.removeTrack(sender);
-                    console.log('📹 Video sender removed from peer connection');
+                    console.log('📹 Camera sender removed from peer connection:', cameraTrackId);
                 }
             });
         }
+
+        // Stop all video tracks AFTER removing from peer connection
+        videoStream.getTracks().forEach(track => {
+            track.stop();
+            console.log('📹 Video track stopped:', track.id);
+        });
 
         window.superdeskState.videoStream = null;
         window.superdeskState.cameraTrackId = null;
