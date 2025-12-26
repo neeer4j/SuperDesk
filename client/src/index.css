@@ -1,13 +1,3 @@
-/* Force right panel to be pure purple, override all other styles */
-.superdesk-right-panel {
-  background-color: #613da9 !important;
-}
-/* Force left panel to be pure white, override all other styles */
-.superdesk-left-panel {
-  background-color: #fff !important;
-}
-/* Temporary high-visibility borders to confirm panels are present and not covered */
-/* debug borders removed above */
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -15,80 +5,12 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Keep the purple background as a safety net; default text color should be
-     dark so left-panel (white) text remains visible unless a component
-     explicitly overrides it. Specific rules below force white text in the
-     right panel. */
-  background: #613da9;
+  background-color: #0d0d14;
+  color: white;
   min-height: 100vh;
-  color: #111;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
-}
-
-/* Temporary override for runtime-generated emotion classes inside the left panel.
-   Some MUI/Emotion-generated classes may inject backgrounds at runtime (e.g. .css-xxxxxx).
-*/
-/* Strong page split: left white, right purple as a failsafe background. This
-   ensures the visual split even if some components set their own backgrounds.
-   We keep it high-specificity and !important to win over other stylesheet rules. */
-html, body, #root {
-  background: linear-gradient(90deg, #ffffff 50%, #613da9 50%) !important;
-  min-height: 100vh !important;
-}
-
-/* Neutralize any generated emotion classes that set opaque dark backgrounds
-   so the page split behind them shows through. This targets any class that
-   contains "css-" which is the convention Emotion uses. */
-[class*="css-"] {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-
-/* Also target inline style fragments that some runtime code may inject. We'll
-   remove exact-match inline backgrounds via JS as a follow-up. These CSS
-   rules still help for many cases. */
-[style*="background: rgb(9, 9, 11)"] {
-  background: transparent !important;
-}
-.superdesk-left-panel [class*="css-"] {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-
-/* Also handle the case where the generated emotion class is on the same element
-   as the `superdesk-left-panel` (e.g. "css-xxxxx superdesk-left-panel" or
-   "superdesk-left-panel css-xxxxx"). This ensures the runtime-injected class
-   cannot override the white background. */
-.superdesk-left-panel[class*="css-"],
-[class*="css-"] .superdesk-left-panel,
-[class*="css-"] .superdesk-left-panel[class*="css-"],
-.superdesk-left-panel[class*="css-"] {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-
-/* Immediate targeted override for the runtime-generated class seen in DevTools
-   (e.g. ".css-wqbxsj { background: rgb(10, 0, 111); }"). This neutralizes the
-   specific generated rule until the root cause is removed in source. */
-.css-wqbxsj,
-.MuiBox-root.css-wqbxsj,
-.css-wqbxsj.MuiBox-root {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-
-/* Force readable text colors inside each panel so generated/global rules
-   don't leave white-on-white or white-on-purple situations. Use high
-   specificity and !important as temporary measures while we remove runtime
-   injected styles at source. */
-.superdesk-left-panel, .superdesk-left-panel * {
-  color: #111 !important;
-}
-
-.superdesk-right-panel, .superdesk-right-panel * {
-  color: #fff !important;
 }
