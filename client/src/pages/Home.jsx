@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
+import '../portfolio.css';
 import superdeskLogoText from '../assets/superdeskmm.png';
 import superdeskLogoWhite from '../assets/superdeskw.png';
 import superdeskShowcase from '../assets/suppm.png';
@@ -188,7 +189,7 @@ const features = [
     {
         icon: 'users',
         title: 'Cross-Platform',
-        description: 'Works on Windows, Android, iOS, and Web browsers seamlessly.',
+        description: 'Works on Windows, Android and Web browsers seamlessly.',
     },
 ];
 
@@ -207,36 +208,13 @@ export default function Home() {
     };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            backgroundColor: '#0d0d14',
-            color: 'white',
-            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-        }}>
+        <div className="portfolio-container">
             <AnimatePresence>
                 {isLoading && <LoadingOverlay key="loader" />}
             </AnimatePresence>
 
             {/* Navbar */}
-            <nav style={{
-                position: 'fixed',
-                top: '30px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 100,
-                padding: '12px 32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: 'rgba(13, 13, 20, 0.8)',
-                backdropFilter: 'blur(12px)',
-                borderRadius: '50px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                width: 'auto',
-                gap: '60px',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-                maxWidth: '95%',
-            }}>
+            <nav className="portfolio-nav">
                 {/* Logo */}
                 <Link to="/" style={{
                     display: 'flex',
@@ -251,14 +229,14 @@ export default function Home() {
                 </Link>
 
                 {/* Nav Links */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+                <div className="portfolio-nav-links">
                     <a href="#about" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '15px', fontWeight: 500 }}>About</a>
                     <a href="#features" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '15px', fontWeight: 500 }}>Features</a>
                     <a href="https://github.com/neeer4j/SuperDesk" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '15px', fontWeight: 500 }}>GitHub</a>
                 </div>
 
                 {/* Right side */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div className="portfolio-nav-buttons">
                     {/* Web App Button */}
                     <a
                         href="/app"
@@ -274,14 +252,13 @@ export default function Home() {
                             whiteSpace: 'nowrap',
                         }}
                     >
-                        Web App
+                        <span>Web App</span>
                     </a>
 
                     {/* Get Desktop App Button */}
                     <a
-                        href="https://github.com/neeer4j/SuperDesk/releases"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href="https://github.com/neeer4j/SuperDesk/releases/download/v1.2.0-alpha/SuperDesk.Agent.Setup.1.2.0.exe"
+                        download
                         style={{
                             color: 'rgba(255,255,255,0.7)',
                             textDecoration: 'none',
@@ -296,26 +273,43 @@ export default function Home() {
                             gap: '8px',
                         }}
                     >
-                        Get Desktop App
+                        <span>Get Desktop App</span>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
                     </a>
+
+                    {/* Get Android App Button */}
+                    <a
+                        href="https://github.com/neeer4j/SuperDesk-Android/releases/download/v1.0.0-alpha/SuperDesk.alpha.v1.0.0.apk"
+                        download
+                        style={{
+                            color: 'rgba(255,255,255,0.7)',
+                            textDecoration: 'none',
+                            fontSize: '15px',
+                            fontWeight: 500,
+                            padding: '8px 12px',
+                            transition: 'all 0.2s',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                        }}
+                    >
+                        <span>Get Android App</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                        </svg>
+                    </a>
                 </div>
             </nav>
 
             {/* Hero Section */}
-            <section id="home" style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '120px 48px 80px',
-                position: 'relative',
-                overflow: 'hidden',
-            }}>
+            <section id="home" className="portfolio-hero">
 
                 {/* Background Pattern */}
                 <div style={{
@@ -332,16 +326,7 @@ export default function Home() {
                     zIndex: 0,
                     pointerEvents: 'none',
                 }} />
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    maxWidth: '1200px',
-                    width: '100%',
-                    gap: '80px',
-                    position: 'relative',
-                    zIndex: 1,
-                }}>
+                <div className="portfolio-hero-content">
                     {/* Left Content */}
                     <motion.div
                         initial={{ opacity: 0, x: -30 }}
@@ -389,10 +374,7 @@ export default function Home() {
             </section>
 
             {/* Features Section */}
-            <section id="features" style={{
-                padding: '100px 48px',
-                backgroundColor: '#0a0a10',
-            }}>
+            <section id="features" className="portfolio-features">
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -406,7 +388,7 @@ export default function Home() {
                             marginBottom: '16px',
                             letterSpacing: '-1px',
                         }}>
-                            What I Do
+                            Capabilities
                         </h2>
                         <p style={{
                             fontSize: '18px',
@@ -419,11 +401,7 @@ export default function Home() {
                     </motion.div>
 
                     {/* Feature Cards Grid */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(4, 1fr)',
-                        gap: '24px',
-                    }}>
+                    <div className="portfolio-features-grid">
                         {features.map((feature, index) => (
                             <motion.div
                                 key={feature.title}
@@ -474,16 +452,8 @@ export default function Home() {
             </section>
 
             {/* About Section */}
-            <section id="about" style={{
-                padding: '100px 48px',
-            }}>
-                <div style={{
-                    maxWidth: '1200px',
-                    margin: '0 auto',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '32px',
-                }}>
+            <section id="about" className="portfolio-about">
+                <div className="portfolio-about-container">
                     {/* Left - Image/Visual */}
                     <motion.div
                         initial={{ opacity: 0, clipPath: 'inset(50% 50% 50% 50%)' }}
@@ -542,11 +512,7 @@ export default function Home() {
 
 
             {/* Footer */}
-            <footer style={{
-                padding: '48px',
-                borderTop: '1px solid rgba(255,255,255,0.05)',
-                textAlign: 'center',
-            }}>
+            <footer className="portfolio-footer">
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',

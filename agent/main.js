@@ -36,6 +36,8 @@ console.log('   - mouse speed configured:', mouse.config.mouseSpeed);
 let mainWindow;
 let toolbarWindow = null;
 let viewerWindow = null;  // Separate window for remote desktop viewing
+let localCameraOverlay = null;  // Host's own camera overlay
+let remoteCameraOverlay = null; // Guest's camera overlay
 let toolbarEdge = 'right'; // 'top', 'right', 'bottom', 'left'
 let toolbarCollapsed = false;
 let lastGuestInfo = null;
@@ -1021,6 +1023,184 @@ ipcMain.handle('open-file-dialog', async (event) => {
   } catch (error) {
     console.error('[file-transfer] Open error:', error);
     return { success: false, error: error.message };
+  }
+});
+
+// Camera Overlay Functions
+function showLocalCameraOverlay() {
+  if (localCameraOverlay && !localCameraOverlay.isDestroyed()) {
+    localCameraOverlay.show();
+    return;
+  }
+
+  const { width, height } = electronScreen.getPrimaryDisplay().workAreaSize;
+
+  localCameraOverlay = new BrowserWindow({
+    width: 200,
+    height: 150,
+    x: 20,
+    y: height - 170,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  localCameraOverlay.setAlwaysOnTop(true, 'screen-saver');
+  localCameraOverlay.loadFile(path.join(__dirname, 'camera-overlay.html'));
+
+  localCameraOverlay.webContents.on('did-finish-load', () => {
+    localCameraOverlay.webContents.send('init-overlay', {
+      type: 'local',
+      label: 'You',
+      mirror: true
+    });
+  });
+
+  localCameraOverlay.on('closed', () => {
+    localCameraOverlay = null;
+  });
+
+  console.log('📹 Local camera overlay created');
+}
+
+function hideLocalCameraOverlay() {
+  if (localCameraOverlay && !localCameraOverlay.isDestroyed()) {
+    localCameraOverlay.close();
+    localCameraOverlay = null;
+  }
+}
+
+function showRemoteCameraOverlay() {
+  if (remoteCameraOverlay && !remoteCameraOverlay.isDestroyed()) {
+    remoteCameraOverlay.show();
+    return;
+  }
+
+  const { width, height } = electronScreen.getPrimaryDisplay().workAreaSize;
+
+  remoteCameraOverlay = new BrowserWindow({
+    width: 200,
+    height: 150,
+    x: width - 220,
+    y: height - 170,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  remoteCameraOverlay.setAlwaysOnTop(true, 'screen-saver');
+  remoteCameraOverlay.loadFile(path.join(__dirname, 'camera-overlay.html'));
+
+  remoteCameraOverlay.webContents.on('did-finish-load', () => {
+    remoteCameraOverlay.webContents.send('init-overlay', {
+      type: 'remote',
+      label: 'Guest',
+      mirror: false
+    });
+  });
+
+  remoteCameraOverlay.on('closed', () => {
+    remoteCameraOverlay = null;
+  });
+
+  console.log('📹 Remote camera overlay created');
+}
+
+function hideRemoteCameraOverlay() {
+  if (remoteCameraOverlay && !remoteCameraOverlay.isDestroyed()) {
+    remoteCameraOverlay.close();
+    remoteCameraOverlay = null;
+  }
+}
+
+// IPC handlers for overlays
+ipcMain.on('show-local-camera-overlay', showLocalCameraOverlay);
+ipcMain.on('hide-local-camera-overlay', hideLocalCameraOverlay);
+ipcMain.on('show-remote-camera-overlay', showRemoteCameraOverlay);
+ipcMain.on('hide-remote-camera-overlay', hideRemoteCameraOverlay);
+
+// IPC handlers for remote stream transfer
+ipcMain.handle('check-remote-camera-in-main', async () => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return false;
+  }
+
+  try {
+    const hasStream = await mainWindow.webContents.executeJavaScript(`
+      !!document.getElementById('guest-camera-video')?.srcObject
+    `);
+    return hasStream;
+  } catch (e) {
+    console.error('Error checking remote camera:', e);
+    return false;
+  }
+});
+
+ipcMain.handle('transfer-remote-stream-to-overlay', async () => {
+  if (!mainWindow || mainWindow.isDestroyed() || !remoteCameraOverlay || remoteCameraOverlay.isDestroyed()) {
+    return false;
+  }
+
+  try {
+    // Step 1: Store stream in a global on main window
+    await mainWindow.webContents.executeJavaScript(`
+      (function() {
+        const video = document.getElementById('guest-camera-video');
+        if (video && video.srcObject) {
+          window.__sharedRemoteCameraStream = video.srcObject;
+          return true;
+        }
+        return false;
+      })()
+    `);
+
+    // Step 2: Try to access that stream from overlay
+    // This is the tricky part - we'll use a shared identifier
+    const streamTransferred = await remoteCameraOverlay.webContents.executeJavaScript(`
+      new Promise(async (resolve) => {
+        try {
+          // Try to get stream from a shared location
+          // Since we can't directly pass it, we'll use executeJavaScript to access main window
+          
+          const { ipcRenderer } = require('electron');
+          
+          // Request main process to give us access
+          const streamData = await ipcRenderer.invoke('get-stream-from-main');
+          
+          if (streamData) {
+            // We got something, but MediaStream can't be serialized
+            // So we need another approach...
+            resolve(false);
+          } else {
+            resolve(false);
+          }
+        } catch (e) {
+          console.error('Overlay stream transfer error:', e);
+          resolve(false);
+        }
+      })
+    `);
+
+    // Alternative approach: Use a different method
+    // Let's try using window.open or accessing via webContents
+    console.log('ℹ️ Stream transfer attempted, result:', streamTransferred);
+
+    return streamTransferred;
+  } catch (e) {
+    console.error('transfer-remote-stream-to-overlay error:', e);
+    return false;
   }
 });
 

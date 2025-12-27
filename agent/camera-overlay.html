@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 200px;
+            height: 150px;
+            background: #000;
+            overflow: hidden;
+            border-radius: 12px;
+            cursor: move;
+            -webkit-app-region: drag;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .label {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            font-size: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+            -webkit-app-region: no-drag;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <video id="video" autoplay playsinline muted></video>
+    <div class="label" id="label">Camera</div>
+    <div id="loading">Initializing...</div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const video = document.getElementById('video');
+        const loading = document.getElementById('loading');
+
+        // Listen for initialization
+        ipcRenderer.on('init-overlay', async (event, data) => {
+            const { type, label, mirror } = data;
+            document.getElementById('label').textContent = label;
+
+            if (mirror) {
+                video.style.transform = 'scaleX(-1)';
+            }
+
+            if (type === 'local') {
+                // For local camera, directly request access
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: 320, height: 240 },
+                        audio: false
+                    });
+                    video.srcObject = stream;
+                    video.play();
+                    loading.style.display = 'none';
+                    console.log('✅ Local camera overlay initialized');
+                } catch (e) {
+                    console.error('Failed to get local camera:', e);
+                    loading.textContent = 'Camera access denied';
+                    ipcRenderer.send('overlay-error', e.message);
+                }
+            } else if (type === 'remote') {
+                // For remote camera, get stream from shared registry
+                loading.textContent = 'Waiting for stream...';
+                console.log('📹 Remote overlay waiting for stream from registry');
+
+                const streamRegistry = require('./stream-registry');
+
+                // Poll for stream in registry
+                let pollCount = 0;
+                const pollInterval = setInterval(() => {
+                    pollCount++;
+
+                    if (streamRegistry.hasStream('guest-camera')) {
+                        const stream = streamRegistry.getStream('guest-camera');
+
+                        if (stream && stream.getVideoTracks().length > 0) {
+                            console.log('✅ Found guest camera stream in registry');
+                            video.srcObject = stream;
+                            video.play().catch(e => console.error('Play error:', e));
+                            loading.style.display = 'none';
+                            clearInterval(pollInterval);
+                        }
+                    }
+
+                    // Stop polling after 60 seconds
+                    if (pollCount > 120) {
+                        clearInterval(pollInterval);
+                        loading.textContent = 'Stream unavailable';
+                        console.warn('⏱️ Timeout waiting for guest camera stream');
+                    }
+                }, 500);
+            }
+        });
+
+        // Expose function to set stream directly (if we can pass it)
+        window.setRemoteStream = function (stream) {
+            console.log('📹 setRemoteStream called with:', stream);
+            if (stream && stream.getVideoTracks().length > 0) {
+                video.srcObject = stream;
+                video.play().catch(e => console.error('Play error:', e));
+                loading.style.display = 'none';
+                console.log('✅ Remote stream set successfully');
+                return true;
+            }
+            return false;
+        };
+    </script>
+</body>
+
+</html>

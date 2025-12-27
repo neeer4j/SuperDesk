@@ -29,8 +29,11 @@
       "main.js",
       "agent.html",
       "toolbar.html",
+      "viewer-popup.html",
+      "viewer.html",
       "preload.js",
       "superdesk-webrtc.js",
+      "supabaseClient.js",
       "modules/**/*",
       "assets/**/*",
       "package.json"

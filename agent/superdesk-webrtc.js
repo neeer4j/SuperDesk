@@ -705,9 +705,15 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     // Note: sourceId must be from desktopCapturer.getSources()
     let stream;
     try {
-        console.log('🎥 Getting screen stream...');
+        console.log('🎥 Getting screen stream with system audio...');
+        // Try to capture screen WITH system audio loopback (Windows only)
+        // On Windows, we can capture desktop audio using chromeMediaSource: 'desktop' with audio
         stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
+            audio: {
+                mandatory: {
+                    chromeMediaSource: 'desktop'
+                }
+            },
             video: {
                 mandatory: {
                     chromeMediaSource: 'desktop',
@@ -721,11 +727,34 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 }
             }
         });
-        console.log('✅ Stream obtained:', stream.id);
+        console.log('✅ Stream obtained with audio:', stream.id);
         console.log('✅ Video tracks:', stream.getVideoTracks().length);
+        console.log('✅ Audio tracks:', stream.getAudioTracks().length);
     } catch (err) {
-        console.error('❌ getUserMedia failed:', err);
-        throw new Error('Failed to capture screen: ' + err.message + '. Make sure you selected a valid source.');
+        console.warn('⚠️ Failed to get stream with audio, trying video only:', err.message);
+        // Fallback: video only without audio
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    mandatory: {
+                        chromeMediaSource: 'desktop',
+                        chromeMediaSourceId: sourceId,
+                        minWidth: 640,
+                        maxWidth: 1920,
+                        minHeight: 480,
+                        maxHeight: 1080,
+                        minFrameRate: 5,
+                        maxFrameRate: 30
+                    }
+                }
+            });
+            console.log('✅ Stream obtained (video only):', stream.id);
+            console.log('✅ Video tracks:', stream.getVideoTracks().length);
+        } catch (err2) {
+            console.error('❌ getUserMedia failed:', err2);
+            throw new Error('Failed to capture screen: ' + err2.message + '. Make sure you selected a valid source.');
+        }
     }
 
     // Add tracks to peer connection
@@ -870,6 +899,181 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     console.log('📤 ✅ Offer emitted to session:', sessionId);
     console.log('✅ HOST Offer sent');
 
+    // === HOST: Listen for guest's camera-state and mic-state signals ===
+    socket.on('camera-state', (data) => {
+        console.log('📹 HOST: Received camera-state from guest:', data);
+        if (data.enabled && data.cameraTrackId) {
+            window.superdeskState.guestCameraTrackId = data.cameraTrackId;
+            console.log('📹 HOST: Expecting guest camera track with ID:', data.cameraTrackId);
+        } else {
+            window.superdeskState.guestCameraTrackId = null;
+            // Hide guest camera overlay when camera is turned off
+            const guestCameraOverlay = document.getElementById('guest-camera-overlay');
+            if (guestCameraOverlay) {
+                guestCameraOverlay.style.display = 'none';
+                console.log('📹 HOST: Guest camera overlay hidden');
+            }
+
+            // Unregister from stream registry
+            try {
+                const streamRegistry = require('./stream-registry');
+                streamRegistry.deleteStream('guest-camera');
+
+                // Hide overlay on screen
+                if (window.appControls && window.appControls.ipcSend) {
+                    window.appControls.ipcSend('hide-remote-camera-overlay');
+                }
+            } catch (e) {
+                console.error('Failed to unregister guest camera stream:', e);
+            }
+        }
+    });
+
+    socket.on('mic-state', (data) => {
+        console.log('🎤 HOST: Received mic-state from guest:', data);
+        if (data.enabled && data.micTrackId) {
+            window.superdeskState.guestMicTrackId = data.micTrackId;
+            console.log('🎤 HOST: Expecting guest mic track with ID:', data.micTrackId);
+        } else {
+            window.superdeskState.guestMicTrackId = null;
+            // Stop guest mic audio when mic is turned off
+            const guestMicAudio = document.getElementById('guest-mic-audio');
+            if (guestMicAudio) {
+                guestMicAudio.srcObject = null;
+                console.log('🎤 HOST: Guest mic audio stopped');
+            }
+        }
+    });
+
+    // === HOST: Handler for receiving tracks from guest (camera/mic) ===
+    peerConnection.ontrack = (event) => {
+        console.log('📺 HOST: ========== ONTRACK EVENT FIRED ==========');
+        console.log('📺 HOST: Track kind:', event.track.kind);
+        console.log('📺 HOST: Track id:', event.track.id);
+
+        // Handle AUDIO tracks from guest
+        if (event.track.kind === 'audio') {
+            const isGuestMic = window.superdeskState.guestMicTrackId === event.track.id;
+            console.log('🔊 HOST: Audio track received');
+            console.log('🔊 HOST: Expected track ID:', window.superdeskState.guestMicTrackId);
+            console.log('🔊 HOST: Actual track ID:', event.track.id);
+            console.log('🔊 HOST: IDs match:', isGuestMic);
+
+            // ALWAYS play guest mic audio, regardless of ID match
+            // This handles race conditions where track arrives before mic-state event
+            let guestMicAudio = document.getElementById('guest-mic-audio');
+            if (!guestMicAudio) {
+                guestMicAudio = document.createElement('audio');
+                guestMicAudio.id = 'guest-mic-audio';
+                guestMicAudio.autoplay = true;
+                document.body.appendChild(guestMicAudio);
+                console.log('🎤 HOST: Created guest mic audio element');
+            }
+            guestMicAudio.srcObject = new MediaStream([event.track]);
+            guestMicAudio.play().catch(e => console.error('🎤 HOST: Mic play error:', e));
+            console.log('🎤 HOST: Guest mic audio playing (track ID:', event.track.id, ')');
+            return;
+        }
+
+        // Handle VIDEO tracks from guest (camera)
+        if (event.track.kind === 'video') {
+            const isGuestCamera = window.superdeskState.guestCameraTrackId === event.track.id;
+            console.log('📹 HOST: Video track received');
+            console.log('📹 HOST: Expected camera track ID:', window.superdeskState.guestCameraTrackId);
+            console.log('📹 HOST: Actual track ID:', event.track.id);
+            console.log('📹 HOST: IDs match:', isGuestCamera);
+
+            // Create or get guest camera overlay (HIDDEN - only for stream registry)
+            let guestCameraOverlay = document.getElementById('guest-camera-overlay');
+            if (!guestCameraOverlay) {
+                guestCameraOverlay = document.createElement('div');
+                guestCameraOverlay.id = 'guest-camera-overlay';
+                guestCameraOverlay.style.cssText = `
+                    display: none !important;
+                `;
+
+                const guestCameraVideo = document.createElement('video');
+                guestCameraVideo.id = 'guest-camera-video';
+                guestCameraVideo.autoplay = true;
+                guestCameraVideo.playsInline = true;
+                guestCameraVideo.muted = true;
+                guestCameraVideo.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+                guestCameraOverlay.appendChild(guestCameraVideo);
+
+                document.body.appendChild(guestCameraOverlay);
+
+                console.log('📹 HOST: Created hidden guest camera overlay (for stream registry only)');
+            }
+
+            // Set guest camera stream - ALWAYS show video track in overlay
+            // This handles race conditions where track arrives before camera-state event
+            const guestCameraVideo = document.getElementById('guest-camera-video');
+            if (guestCameraVideo) {
+                const cameraStream = event.streams.length > 0 ? event.streams[0] : new MediaStream([event.track]);
+                guestCameraVideo.srcObject = cameraStream;
+                guestCameraVideo.play().catch(e => console.error('📹 HOST: Camera play error:', e));
+                // In-app overlay intentionally hidden - only screen overlay is shown
+                console.log('📹 HOST: Guest camera video playing (track ID:', event.track.id, ')');
+
+                // Register stream in shared registry for overlay access
+                try {
+                    const streamRegistry = require('./stream-registry');
+                    streamRegistry.setStream('guest-camera', cameraStream);
+                    console.log('📹 HOST: Guest camera registered in stream registry');
+
+                    // Show overlay on screen
+                    if (window.appControls && window.appControls.ipcSend) {
+                        window.appControls.ipcSend('show-remote-camera-overlay');
+                    }
+                } catch (e) {
+                    console.error('Failed to register guest camera stream:', e);
+                }
+            }
+        }
+    };
+
+    // Helper to make elements draggable
+    function makeDraggable(element) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+        element.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            // Get the mouse cursor position at startup:
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            // Call a function whenever the cursor moves:
+            document.onmousemove = elementDrag;
+            element.style.cursor = 'grabbing';
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            // Calculate the new cursor position:
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            // Set the element's new position:
+            element.style.top = (element.offsetTop - pos2) + "px";
+            element.style.left = (element.offsetLeft - pos1) + "px";
+            // Remove bottom/right if they interfere
+            element.style.bottom = 'auto';
+            element.style.right = 'auto';
+        }
+
+        function closeDragElement() {
+            // Stop moving when mouse button is released:
+            document.onmouseup = null;
+            document.onmousemove = null;
+            element.style.cursor = 'grab';
+        }
+    }
+
     window.superdeskState.webrtc = { peerConnection, stream };
     window.superdeskState.sharingActive = true;
 
@@ -982,6 +1186,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
         }
     });
 
+    // Listen for remote mic state changes (for audio differentiation)
+    socket.on('mic-state', (data) => {
+        console.log('🎤 GUEST: Received mic-state from host:', data);
+        if (data.enabled && data.micTrackId) {
+            window.superdeskState.remoteMicTrackId = data.micTrackId;
+            console.log('🎤 GUEST: Expecting mic track with ID:', data.micTrackId);
+        } else {
+            window.superdeskState.remoteMicTrackId = null;
+            // Stop remote mic audio when mic is turned off
+            const micAudio = document.getElementById('remote-mic-audio');
+            if (micAudio) {
+                micAudio.srcObject = null;
+                console.log('🎤 GUEST: Remote mic audio stopped');
+            }
+        }
+    });
+
     // Log connection state changes with detailed info
     peerConnection.onconnectionstatechange = () => {
         console.log('🔌 GUEST Connection state:', peerConnection.connectionState);
@@ -1079,11 +1300,33 @@ async function setupWebRTCReceiver(socket, sessionId) {
         // Handle AUDIO tracks specially - they may arrive after video via renegotiation
         if (event.track.kind === 'audio') {
             console.log('🔊 ===== AUDIO TRACK RECEIVED =====');
-            console.log('🔊 Audio from remote peer - enabling playback');
 
-            // If we have a main stream, add audio track to it
+            // Check if this is microphone audio (vs system audio from screen capture)
+            const isMicAudio = window.superdeskState.remoteMicTrackId === event.track.id;
+            console.log('🔊 Audio source:', isMicAudio ? 'MICROPHONE' : 'SYSTEM AUDIO');
+            console.log('🔊 Track ID:', event.track.id, '| Expected mic ID:', window.superdeskState.remoteMicTrackId);
+
+            if (isMicAudio) {
+                // MIC AUDIO - play through DEDICATED audio element (separate from video element)
+                // This ensures mic audio and system audio can play simultaneously
+                let micAudio = document.getElementById('remote-mic-audio');
+                if (!micAudio) {
+                    micAudio = document.createElement('audio');
+                    micAudio.id = 'remote-mic-audio';
+                    micAudio.autoplay = true;
+                    document.body.appendChild(micAudio);
+                    console.log('🎤 Created dedicated mic audio element');
+                }
+                micAudio.srcObject = new MediaStream([event.track]);
+                micAudio.play().catch(e => console.error('🎤 Mic play error:', e));
+                console.log('🎤 Remote mic audio playing (separate from system audio)');
+                return; // Mic track handled separately
+            }
+
+            // SYSTEM AUDIO - add to mainStream so it plays through video element
+            console.log('🔊 System audio from remote peer - adding to video element');
             if (mainStream) {
-                console.log('🔊 Adding audio track to existing stream');
+                console.log('🔊 Adding system audio track to existing stream');
                 mainStream.addTrack(event.track);
 
                 // Update video element and sharedStream for popup
@@ -1092,7 +1335,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
                     // srcObject already points to mainStream, but refresh it
                     video.srcObject = mainStream;
                     video.play().catch(e => console.error("🔊 Auto-play error:", e));
-                    console.log('🔊 Video element srcObject refreshed with audio');
+                    console.log('🔊 Video element srcObject refreshed with system audio');
                 }
 
                 // Update sharedStream for popup window
@@ -1105,9 +1348,20 @@ async function setupWebRTCReceiver(socket, sessionId) {
         }
 
         // Check if this is a CAMERA track (different from screen share)
-        if (event.track.kind === 'video' && window.superdeskState.remoteCameraTrackId === event.track.id) {
+        // A video track is the camera if:
+        // 1. It matches remoteCameraTrackId (from camera-state signal), OR
+        // 2. It's a SECOND video track and mainStream already has video (screen share was first)
+        const isKnownCameraTrack = window.superdeskState.remoteCameraTrackId === event.track.id;
+        const isSecondVideoTrack = event.track.kind === 'video' && mainStream && mainStream.getVideoTracks().length > 0;
+
+        if (event.track.kind === 'video' && (isKnownCameraTrack || isSecondVideoTrack)) {
             console.log('📹 ===== CAMERA TRACK RECEIVED =====');
-            console.log('📹 Remote camera track ID matches:', event.track.id);
+            if (isKnownCameraTrack) {
+                console.log('📹 Remote camera track ID matches:', event.track.id);
+            } else if (isSecondVideoTrack) {
+                console.log('📹 Detected as camera via second-video-track heuristic');
+                window.superdeskState.remoteCameraTrackId = event.track.id;
+            }
 
             // Create or get camera overlay element
             let cameraOverlay = document.getElementById('remote-camera-overlay');
@@ -1123,9 +1377,10 @@ async function setupWebRTCReceiver(socket, sessionId) {
                     background: #000;
                     border-radius: 12px;
                     overflow: hidden;
-                    z-index: 1000;
+                    z-index: 1000005;
                     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
                     border: 2px solid rgba(255,255,255,0.2);
+                    cursor: grab;
                 `;
 
                 const cameraVideo = document.createElement('video');
@@ -1133,10 +1388,20 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 cameraVideo.autoplay = true;
                 cameraVideo.playsInline = true;
                 cameraVideo.muted = true;
-                cameraVideo.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+                cameraVideo.style.cssText = 'width: 100%; height: 100%; object-fit: cover; pointer-events: none;';
                 cameraOverlay.appendChild(cameraVideo);
 
+                // Add label
+                const label = document.createElement('div');
+                label.style.cssText = 'position: absolute; bottom: 4px; left: 4px; font-size: 10px; color: white; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; pointer-events: none;';
+                label.textContent = 'Remote';
+                cameraOverlay.appendChild(label);
+
                 document.body.appendChild(cameraOverlay);
+
+                // Make draggable
+                makeDraggable(cameraOverlay);
+
                 console.log('📹 Created camera overlay element');
             }
 
@@ -1608,7 +1873,22 @@ async function setupWebRTCReceiver(socket, sessionId) {
 
         updateDebugStatus('offer', 'received');
 
-        // Accept offers in stable state, or handle renegotiation (have-local-offer)
+        // Handle GLARE condition: if we're in have-local-offer state, we sent an offer too
+        // As the "polite" peer (guest), we should rollback our offer and accept the host's
+        if (peerConnection.signalingState === 'have-local-offer') {
+            console.log('⚠️ GLARE DETECTED: Both sides sent offers simultaneously');
+            console.log('📨 Rolling back local offer to accept remote offer...');
+            try {
+                await peerConnection.setLocalDescription({ type: 'rollback' });
+                console.log('✅ Rolled back local description, now in state:', peerConnection.signalingState);
+            } catch (rollbackError) {
+                console.error('❌ Rollback failed:', rollbackError);
+                updateDebugStatus('error', 'rollback-failed');
+                return;
+            }
+        }
+
+        // Accept offers in stable state (or after rollback)
         if (peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer') {
             try {
                 console.log('📨 Setting remote description with offer...');
@@ -2916,6 +3196,19 @@ async function startMicStream() {
         if (peerConnection && peerConnection.signalingState !== 'closed') {
             const audioTrack = stream.getAudioTracks()[0];
             if (audioTrack) {
+                // Store mic track ID for remote differentiation
+                window.superdeskState.micTrackId = audioTrack.id;
+
+                // Notify remote peer BEFORE adding track (so they know to expect it)
+                if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+                    window.superdeskState.socket.emit('mic-state', {
+                        sessionId: window.superdeskState.sessionId,
+                        enabled: true,
+                        micTrackId: audioTrack.id
+                    });
+                    console.log('🎤 Sent mic-state to remote, trackId:', audioTrack.id);
+                }
+
                 peerConnection.addTrack(audioTrack, stream);
                 console.log('🎤 Audio track added to peer connection');
 
@@ -2941,8 +3234,12 @@ async function startMicStream() {
 }
 
 /**
- * Trigger WebRTC renegotiation after adding a track mid-session
+ * Trigger WebRTC renegotiation after adding a track mid-session.
+ * Uses a queue to prevent rapid sequential renegotiations from colliding.
  */
+window.superdeskState.renegotiationPending = false;
+window.superdeskState.renegotiationQueue = [];
+
 async function triggerRenegotiation(peerConnection) {
     if (!peerConnection || peerConnection.signalingState === 'closed') {
         console.warn('🔄 Cannot renegotiate - no open peer connection');
@@ -2954,7 +3251,16 @@ async function triggerRenegotiation(peerConnection) {
         return;
     }
 
-    console.log('🔄 Triggering renegotiation for new audio track...');
+    // Queue if renegotiation already in progress (prevents glare from rapid track additions)
+    if (window.superdeskState.renegotiationPending) {
+        console.log('🔄 Renegotiation already pending, queuing this request...');
+        return new Promise(resolve => {
+            window.superdeskState.renegotiationQueue.push(resolve);
+        });
+    }
+
+    window.superdeskState.renegotiationPending = true;
+    console.log('🔄 Triggering renegotiation for new track...');
 
     try {
         // Create new offer with updated tracks
@@ -2969,9 +3275,20 @@ async function triggerRenegotiation(peerConnection) {
             sessionId: window.superdeskState.sessionId,
             offer
         });
-        console.log('🔄 ✅ Renegotiation offer sent - audio should now be transmitted');
+        console.log('🔄 ✅ Renegotiation offer sent - track should now be transmitted');
     } catch (error) {
         console.error('🔄 ❌ Renegotiation failed:', error);
+    } finally {
+        window.superdeskState.renegotiationPending = false;
+
+        // Process next queued renegotiation (with a small delay to let signaling settle)
+        if (window.superdeskState.renegotiationQueue.length > 0) {
+            const next = window.superdeskState.renegotiationQueue.shift();
+            console.log('🔄 Processing queued renegotiation...');
+            setTimeout(() => {
+                triggerRenegotiation(peerConnection).then(next);
+            }, 200);
+        }
     }
 }
 
@@ -3002,6 +3319,16 @@ function stopMicStream() {
         }
 
         window.superdeskState.micStream = null;
+        window.superdeskState.micTrackId = null;
+    }
+
+    // Notify remote peer that mic is now off
+    if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+        window.superdeskState.socket.emit('mic-state', {
+            sessionId: window.superdeskState.sessionId,
+            enabled: false
+        });
+        console.log('🎤 Sent mic-state: OFF to remote peer');
     }
 
     // Notify toolbar of state change
@@ -3070,6 +3397,41 @@ async function startVideoStream() {
             window.appControls.ipcSend('video-state-changed', true);
         }
 
+        // === Create local camera preview (HIDDEN - only screen overlay shown) ===
+        let localCameraPreview = document.getElementById('local-camera-preview');
+        if (!localCameraPreview) {
+            localCameraPreview = document.createElement('div');
+            localCameraPreview.id = 'local-camera-preview';
+            localCameraPreview.style.cssText = `
+                display: none !important;
+            `;
+
+            const localVideo = document.createElement('video');
+            localVideo.id = 'local-camera-video';
+            localVideo.autoplay = true;
+            localVideo.playsInline = true;
+            localVideo.muted = true;
+            localVideo.style.cssText = 'width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);';
+            localCameraPreview.appendChild(localVideo);
+
+            document.body.appendChild(localCameraPreview);
+
+            console.log('📹 Created hidden local camera preview');
+        }
+
+        // Set local camera stream to preview
+        const localCameraVideo = document.getElementById('local-camera-video');
+        if (localCameraVideo) {
+            localCameraVideo.srcObject = stream;
+            // In-app preview intentionally hidden - only screen overlay is shown
+            console.log('📹 Local camera stream set');
+        }
+
+        // Show overlay on screen
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('show-local-camera-overlay');
+        }
+
         return true;
     } catch (error) {
         console.error('📹 Failed to start camera:', error);
@@ -3124,6 +3486,22 @@ function stopVideoStream() {
     if (window.appControls && window.appControls.ipcSend) {
         window.appControls.ipcSend('video-state-changed', false);
     }
+
+    // === Hide local camera preview ===
+    const localCameraPreview = document.getElementById('local-camera-preview');
+    if (localCameraPreview) {
+        localCameraPreview.style.display = 'none';
+        const localCameraVideo = document.getElementById('local-camera-video');
+        if (localCameraVideo) {
+            localCameraVideo.srcObject = null;
+        }
+        console.log('📹 Local camera preview hidden');
+    }
+
+    // Hide overlay on screen
+    if (window.appControls && window.appControls.ipcSend) {
+        window.appControls.ipcSend('hide-local-camera-overlay');
+    }
 }
 
 /**
@@ -3156,6 +3534,12 @@ if (typeof require !== 'undefined') {
             } else {
                 stopVideoStream();
             }
+        });
+
+        // Listen for viewer window close event to cleanup media
+        ipcRenderer.on('viewer-closed', () => {
+            console.log('📺 Viewer window closed - cleaning up media streams');
+            stopAllChatMedia();
         });
 
         console.log('✅ Toolbar mic/video IPC listeners registered');

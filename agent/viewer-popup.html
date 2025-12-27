@@ -16,7 +16,7 @@
             overflow: hidden;
         }
 
-        video {
+        #vid {
             width: 100vw;
             height: 100vh;
             object-fit: contain;
@@ -67,18 +67,142 @@
             font-size: 12px;
             display: none;
         }
+
+        /* Camera overlay for host's webcam */
+        #camera-overlay {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(139, 92, 246, 0.5);
+            display: none;
+        }
+
+        #camera-overlay video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Local camera overlay (user's own camera) */
+        #local-camera-overlay {
+            position: fixed;
+            bottom: 20px;
+            left: 70px;
+            width: 160px;
+            height: 120px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 1001;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(16, 185, 129, 0.5);
+            display: none;
+        }
+
+        #local-camera-overlay video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        #local-camera-overlay .label {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            font-size: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        #camera-overlay .label {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            font-size: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 
 <body>
     <!-- Note: Start unmuted to allow audio playback, speaker button controls volume -->
     <video id="vid" autoplay playsinline></video>
+
+    <!-- Camera overlay for remote peer's webcam -->
+    <div id="camera-overlay">
+        <video id="camera-vid" autoplay playsinline muted></video>
+        <div class="label">Remote</div>
+    </div>
+
+    <!-- Local camera overlay (user's own camera) -->
+    <div id="local-camera-overlay">
+        <video id="local-camera-vid" autoplay playsinline muted></video>
+        <div class="label">You</div>
+    </div>
+
     <div id="bar">
-        <button id="ctrl">🖱️</button>
-        <button id="mic">🔇</button>
-        <button id="spk" class="on">🔊</button>
-        <button id="fs">⛶</button>
-        <button id="close" class="red">✕</button>
+        <button id="ctrl" title="Remote Control">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+                <path d="M13 13l6 6" />
+            </svg>
+        </button>
+        <button id="mic" title="Microphone">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path class="mic-on" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path class="mic-on" d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line class="mic-on" x1="12" y1="19" x2="12" y2="23" />
+                <line class="mic-on" x1="8" y1="23" x2="16" y2="23" />
+                <line class="mic-off" x1="1" y1="1" x2="23" y2="23" style="display:none" />
+            </svg>
+        </button>
+        <button id="cam" title="Camera">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path class="cam-on" d="M23 7l-7 5 7 5V7z" />
+                <rect class="cam-on" x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                <line class="cam-off" x1="1" y1="1" x2="23" y2="23" style="display:none" />
+            </svg>
+        </button>
+        <button id="spk" class="on" title="Speaker">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon class="spk-shape" points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path class="spk-on" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                <path class="spk-on" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                <line class="spk-off" x1="23" y1="9" x2="17" y2="15" style="display:none" />
+                <line class="spk-off" x1="17" y1="9" x2="23" y2="15" style="display:none" />
+            </svg>
+        </button>
+        <button id="fs" title="Fullscreen">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
+        </button>
+        <button id="close" class="red" title="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
     </div>
     <div id="status">Control ON</div>
 
@@ -86,19 +210,23 @@
         const vid = document.getElementById('vid');
         const ctrlBtn = document.getElementById('ctrl');
         const micBtn = document.getElementById('mic');
+        const camBtn = document.getElementById('cam');
         const spkBtn = document.getElementById('spk');
         const fsBtn = document.getElementById('fs');
         const closeBtn = document.getElementById('close');
         const status = document.getElementById('status');
+        const cameraOverlay = document.getElementById('camera-overlay');
+        const cameraVid = document.getElementById('camera-vid');
 
-        let controlOn = true; // Enabled by default to avoid confusion
+        let controlOn = false; // OFF by default - user must explicitly enable
         let speakerOn = true;  // Speaker ON by default to hear audio
         let micOn = false;
+        let camOn = false;
         let lastClick = 0;
         let hostIsMobile = false;
 
-        // Initialize buttons
-        if (controlOn) ctrlBtn.classList.add('on');
+        // Initialize buttons - control is OFF by default
+        if (!controlOn) ctrlBtn.classList.remove('on');
         if (speakerOn) spkBtn.classList.add('on');
 
         // Get Stream from Opener
@@ -125,10 +253,10 @@
             console.error('❌ No stream available from opener');
         }
 
-        // Listen for new tracks added to the stream (for audio added mid-session)
+        // Listen for new tracks added to the stream (for audio/video added mid-session)
         if (window.opener && window.opener.sharedStream) {
             window.opener.sharedStream.onaddtrack = (event) => {
-                console.log('🔊 New track added to stream:', event.track.kind);
+                console.log('📺 New track added to stream:', event.track.kind);
                 if (event.track.kind === 'audio') {
                     console.log('🔊 Audio track added mid-session - stream should now have audio');
                     // Refresh srcObject to pick up new tracks
@@ -136,6 +264,114 @@
                 }
             };
         }
+
+        // Check for camera overlays - poll the opener's state for BOTH local and remote cameras
+        const localCameraOverlay = document.getElementById('local-camera-overlay');
+        const localCameraVid = document.getElementById('local-camera-vid');
+
+        function checkCameraOverlays() {
+            if (!window.opener || !window.opener.superdeskState) return;
+
+            const state = window.opener.superdeskState;
+
+            // === LOCAL CAMERA (user's own camera) ===
+            const localVideoStream = state.videoStream;
+            if (localVideoStream && localVideoStream.active) {
+                // User has their own camera enabled - show local overlay
+                if (localCameraVid.srcObject !== localVideoStream) {
+                    localCameraVid.srcObject = localVideoStream;
+                    localCameraOverlay.style.display = 'block';
+                    localCameraVid.play().catch(e => console.warn('Local camera play error:', e));
+                    console.log('📹 Local camera overlay shown in viewer');
+                }
+            } else {
+                // User's camera is off
+                if (localCameraOverlay.style.display !== 'none') {
+                    localCameraOverlay.style.display = 'none';
+                    localCameraVid.srcObject = null;
+                    console.log('📹 Local camera overlay hidden');
+                }
+            }
+
+            // === REMOTE CAMERA (peer's camera) ===
+            // Check for remoteCameraTrackId (GUEST viewing HOST's camera)
+            // OR guestCameraTrackId (HOST viewing GUEST's camera)
+            const remoteCameraTrackId = state.remoteCameraTrackId;
+            const guestCameraTrackId = state.guestCameraTrackId;
+            const hasRemoteCamera = remoteCameraTrackId || guestCameraTrackId;
+
+            if (hasRemoteCamera) {
+                // Try to get the remote camera video element from opener
+                // Could be either "remote-camera-video" (guest side) or "guest-camera-video" (host side)
+                let openerCameraVid = window.opener.document.getElementById('remote-camera-video');
+                if (!openerCameraVid) {
+                    openerCameraVid = window.opener.document.getElementById('guest-camera-video');
+                }
+
+                if (openerCameraVid && openerCameraVid.srcObject) {
+                    // Copy the camera stream to our overlay
+                    if (cameraVid.srcObject !== openerCameraVid.srcObject) {
+                        cameraVid.srcObject = openerCameraVid.srcObject;
+                        cameraOverlay.style.display = 'block';
+                        cameraVid.play().catch(e => console.warn('Remote camera play error:', e));
+                        console.log('📹 Remote camera overlay shown in viewer');
+                    }
+                }
+            } else {
+                // Remote camera is off
+                if (cameraOverlay.style.display !== 'none') {
+                    cameraOverlay.style.display = 'none';
+                    cameraVid.srcObject = null;
+                    console.log('📹 Remote camera overlay hidden');
+                }
+            }
+        }
+
+        // Poll for camera overlays every 500ms
+        setInterval(checkCameraOverlays, 500);
+
+        // === MIC AUDIO POLLING ===
+        // Ensure remote mic audio plays in this viewer window
+        let viewerMicAudio = null;
+
+        function checkMicAudio() {
+            if (!window.opener || !window.opener.document) return;
+
+            // Try to find mic audio element from opener
+            // Could be "remote-mic-audio" (GUEST side receiving HOST mic)
+            // Or "guest-mic-audio" (HOST side receiving GUEST mic)
+            let openerMicAudio = window.opener.document.getElementById('remote-mic-audio');
+            if (!openerMicAudio) {
+                openerMicAudio = window.opener.document.getElementById('guest-mic-audio');
+            }
+
+            if (openerMicAudio && openerMicAudio.srcObject) {
+                // Create our local audio element if needed
+                if (!viewerMicAudio) {
+                    viewerMicAudio = document.createElement('audio');
+                    viewerMicAudio.id = 'viewer-mic-audio';
+                    viewerMicAudio.autoplay = true;
+                    document.body.appendChild(viewerMicAudio);
+                    console.log('🎤 Created mic audio element in viewer');
+                }
+
+                // Copy the srcObject if different
+                if (viewerMicAudio.srcObject !== openerMicAudio.srcObject) {
+                    viewerMicAudio.srcObject = openerMicAudio.srcObject;
+                    viewerMicAudio.play().catch(e => console.warn('🎤 Viewer mic play error:', e));
+                    console.log('🎤 Mic audio playing in viewer');
+                }
+            } else {
+                // No remote mic - stop playback
+                if (viewerMicAudio && viewerMicAudio.srcObject) {
+                    viewerMicAudio.srcObject = null;
+                    console.log('🎤 Mic audio stopped in viewer');
+                }
+            }
+        }
+
+        // Poll for mic audio every 500ms
+        setInterval(checkMicAudio, 500);
 
         // Check opener state and detect host type
         function checkOpenerState() {
@@ -182,15 +418,26 @@
             };
         }
 
-        // Control toggle
+        // Control toggle - properly call enable/disable functions to emit socket events
         ctrlBtn.onclick = debounce(function () {
             controlOn = !controlOn;
             ctrlBtn.classList.toggle('on', controlOn);
             status.style.display = controlOn ? 'block' : 'none';
 
-            // Sync state with opener if possible
-            if (window.opener && window.opener.superdeskState) {
-                window.opener.superdeskState.remoteControlEnabled = controlOn;
+            // IMPORTANT: Call the actual enable/disable functions to emit socket events
+            // This ensures the host receives the remote-control-enabled/disabled event
+            if (window.opener) {
+                if (controlOn) {
+                    if (typeof window.opener.enableRemoteControl === 'function') {
+                        window.opener.enableRemoteControl();
+                        console.log('🟢 Called opener.enableRemoteControl()');
+                    }
+                } else {
+                    if (typeof window.opener.disableRemoteControl === 'function') {
+                        window.opener.disableRemoteControl();
+                        console.log('🔴 Called opener.disableRemoteControl()');
+                    }
+                }
             }
         });
 
@@ -208,7 +455,8 @@
                         const success = await window.opener.startMicStream();
                         if (success) {
                             micOn = true;
-                            micBtn.textContent = '🎤';
+                            micBtn.querySelector('.mic-off').style.display = 'none';
+                            micBtn.querySelectorAll('.mic-on').forEach(el => el.style.display = '');
                             micBtn.classList.add('on');
                             console.log('🎤 Mic started');
                         } else {
@@ -223,7 +471,8 @@
                         window.opener.stopMicStream();
                     }
                     micOn = false;
-                    micBtn.textContent = '🔇';
+                    micBtn.querySelector('.mic-off').style.display = '';
+                    micBtn.querySelectorAll('.mic-on').forEach(el => el.style.display = 'none');
                     micBtn.classList.remove('on');
                     console.log('🎤 Mic stopped');
                 }
@@ -232,11 +481,57 @@
             }
         });
 
+        // Camera toggle - start/stop guest's camera stream
+        camBtn.onclick = debounce(async function () {
+            if (!window.opener) {
+                console.warn('❌ No opener window');
+                return;
+            }
+
+            try {
+                if (!camOn) {
+                    // START camera
+                    if (typeof window.opener.startVideoStream === 'function') {
+                        const success = await window.opener.startVideoStream();
+                        if (success) {
+                            camOn = true;
+                            camBtn.querySelector('.cam-off').style.display = 'none';
+                            camBtn.querySelectorAll('.cam-on').forEach(el => el.style.display = '');
+                            camBtn.classList.add('on');
+                            console.log('📹 Camera started');
+                        } else {
+                            console.error('📹 Failed to start camera');
+                        }
+                    } else {
+                        console.warn('📹 startVideoStream not available');
+                    }
+                } else {
+                    // STOP camera
+                    if (typeof window.opener.stopVideoStream === 'function') {
+                        window.opener.stopVideoStream();
+                    }
+                    camOn = false;
+                    camBtn.querySelector('.cam-off').style.display = '';
+                    camBtn.querySelectorAll('.cam-on').forEach(el => el.style.display = 'none');
+                    camBtn.classList.remove('on');
+                    console.log('📹 Camera stopped');
+                }
+            } catch (err) {
+                console.error('📹 Camera toggle error:', err);
+            }
+        });
+
         // Speaker toggle
         spkBtn.onclick = debounce(function () {
             speakerOn = !speakerOn;
             vid.muted = !speakerOn;
-            spkBtn.textContent = speakerOn ? '🔊' : '🔇';
+            if (speakerOn) {
+                spkBtn.querySelectorAll('.spk-on').forEach(el => el.style.display = '');
+                spkBtn.querySelectorAll('.spk-off').forEach(el => el.style.display = 'none');
+            } else {
+                spkBtn.querySelectorAll('.spk-on').forEach(el => el.style.display = 'none');
+                spkBtn.querySelectorAll('.spk-off').forEach(el => el.style.display = '');
+            }
             spkBtn.classList.toggle('on', speakerOn);
         });
 
@@ -385,6 +680,75 @@
         vid.addEventListener('loadedmetadata', () => {
             console.log("Video dimensions loaded:", vid.videoWidth, "x", vid.videoHeight);
         });
+
+        // Toggle cursor visibility based on control state
+        function updateCursorVisibility() {
+            if (controlOn) {
+                vid.style.cursor = 'none';
+            } else {
+                vid.style.cursor = 'default';
+            }
+        }
+
+        // Initialize drag behavior
+        function makeDraggable(element) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            element.addEventListener('mousedown', dragMouseDown);
+
+            function dragMouseDown(e) {
+                if (e.target.tagName === 'BUTTON') return; // Don't drag if clicking buttons inside (if any)
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.addEventListener('mouseup', closeDragElement);
+                document.addEventListener('mousemove', elementDrag);
+                element.style.cursor = 'grabbing';
+            }
+
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+                // Reset bottom/right to allow free movement
+                element.style.bottom = 'auto';
+                element.style.right = 'auto';
+            }
+
+            function closeDragElement() {
+                document.removeEventListener('mouseup', closeDragElement);
+                document.removeEventListener('mousemove', elementDrag);
+                element.style.cursor = 'grab';
+            }
+        }
+
+        // Make overlays draggable
+        const remoteOverlay = document.getElementById('camera-overlay');
+        const localOverlay = document.getElementById('local-camera-overlay');
+
+        // Add cursor styles via JS to ensure they persist
+        if (remoteOverlay) {
+            remoteOverlay.style.cursor = 'grab';
+            makeDraggable(remoteOverlay);
+        }
+        if (localOverlay) {
+            localOverlay.style.cursor = 'grab';
+            makeDraggable(localOverlay);
+        }
+
+        // Hook into control button to update cursor
+        const originalCtrlClick = ctrlBtn.onclick;
+        ctrlBtn.onclick = function (e) {
+            originalCtrlClick(e); // Call original
+            updateCursorVisibility();
+        };
+
+        // Also update on init
+        updateCursorVisibility();
+
     </script>
 
 </body>

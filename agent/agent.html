@@ -5,8 +5,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SuperDesk Agent</title>
+    <!-- Google Fonts - Roboto Mono for clear session IDs -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <!-- Supabase JS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Initialize Supabase client - make global for access from other scripts
+        // NOTE: window.supabase is the CDN library (has .createClient method) - DO NOT OVERWRITE IT
+        var SUPABASE_URL = 'https://srwrsgkfkzstdsiqonzi.supabase.co';
+        var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyd3JzZ2tma3pzdGRzaXFvbnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyODM2MzUsImV4cCI6MjA3ODg1OTYzNX0.URa75VP24G6anG_9Pyo2PqNrgNZ20DmEalcLAKezkSM';
+
+        // Create client instance and store globally
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Create a script-level alias 'supabase' that refers to the client (not the CDN library)
+        // This allows code using 'supabase.channel()' etc to work
+        // Using var so it can be redeclared in other inline scripts if needed
+        var supabaseClient = window.supabaseClient;
+        var supabase = window.supabaseClient;
+
+        console.log('✅ Supabase client initialized (window.supabaseClient)');
+    </script>
     <!-- Socket.io Client CDN -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <!-- WebRTC Implementation -->
@@ -1137,7 +1158,7 @@
         }
 
         .session-id-value {
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-family: 'Roboto Mono', 'Courier New', 'Lucida Console', monospace;
             font-size: 32px;
             font-weight: 700;
             letter-spacing: 4px;
@@ -2767,7 +2788,7 @@
             background: var(--input-bg);
             border-radius: 10px;
             border: 1px solid var(--input-border);
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-family: 'Roboto Mono', 'Courier New', 'Lucida Console', monospace;
             font-size: 20px;
             font-weight: 700;
             letter-spacing: 2px;
@@ -5432,6 +5453,45 @@
                     </div>
                 </div>
 
+                <!-- Other Platforms Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Other Platforms</div>
+
+                    <div class="settings-item clickable"
+                        onclick="window.open('https://www.superdesk.co.in/app', '_blank')">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="2" y1="12" x2="22" y2="12" />
+                                    <path
+                                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                </svg></div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Web App</div>
+                                <div class="settings-item-desc">Open SuperDesk in your browser</div>
+                            </div>
+                        </div>
+                        <div class="settings-item-arrow">›</div>
+                    </div>
+
+                    <div class="settings-item clickable"
+                        onclick="window.open('https://github.com/neeer4j/SuperDesk-Android/releases/download/v1.0.0-alpha/SuperDesk.alpha.v1.0.0.apk', '_blank')">
+                        <div class="settings-item-left">
+                            <div class="settings-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                                    <line x1="12" y1="18" x2="12.01" y2="18" />
+                                </svg></div>
+                            <div class="settings-item-text">
+                                <div class="settings-item-label">Get Android App</div>
+                                <div class="settings-item-desc">Download SuperDesk APK</div>
+                            </div>
+                        </div>
+                        <div class="settings-item-arrow">›</div>
+                    </div>
+                </div>
+
                 <!-- Privacy Section -->
                 <div class="settings-section">
                     <div class="settings-section-title">Privacy & Security</div>
@@ -6012,10 +6072,7 @@
     </div>
 
     <script>
-        // Supabase client initialization
-        const SUPABASE_URL = 'https://srwrsgkfkzstdsiqonzi.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyd3JzZ2tma3pzdGRzaXFvbnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyODM2MzUsImV4cCI6MjA3ODg1OTYzNX0.URa75VP24G6anG_9Pyo2PqNrgNZ20DmEalcLAKezkSM';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Supabase client is initialized at the top of the file
 
         let currentUser = null;
         let currentView = 'share';
@@ -6055,7 +6112,7 @@
                 // Check for existing session WITH TIMEOUT to prevent hanging
                 let session = null;
                 try {
-                    const sessionPromise = supabaseClient.auth.getSession();
+                    const sessionPromise = window.supabaseClient.auth.getSession();
                     const timeoutPromise = new Promise((_, reject) =>
                         setTimeout(() => reject(new Error('Auth timeout')), 3000)
                     );
@@ -6095,7 +6152,7 @@
                 }
 
                 // Listen for auth changes
-                supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+                window.supabaseClient.auth.onAuthStateChange(async (_event, session) => {
                     if (session) {
                         currentUser = session.user;
                         // Load profile for fresh logins too
@@ -6412,7 +6469,7 @@
             btn.textContent = 'Sending...';
 
             try {
-                const { error } = await supabaseClient.auth.signInWithOtp({
+                const { error } = await window.supabaseClient.auth.signInWithOtp({
                     email,
                     options: {
                         shouldCreateUser: true,
@@ -6446,7 +6503,7 @@
             btn.textContent = 'Verifying...';
 
             try {
-                const { error } = await supabaseClient.auth.verifyOtp({
+                const { error } = await window.supabaseClient.auth.verifyOtp({
                     email,
                     token: otp,
                     type: 'email'
@@ -6474,7 +6531,7 @@
         }
 
         async function signOut() {
-            await supabaseClient.auth.signOut();
+            await window.supabaseClient.auth.signOut();
             currentUser = null;
             showAuth();
         }
@@ -8216,7 +8273,7 @@
             saveBtn.disabled = true;
             usernameCheckTimeout = setTimeout(async () => {
                 try {
-                    const { data: existing, error } = await supabase
+                    const { data: existing, error } = await supabaseClient
                         .from('profiles')
                         .select('id')
                         .ilike('username', username)
@@ -8269,14 +8326,14 @@
                 const fileName = `avatar.${fileExt}`;
                 const filePath = `${currentUser.id}/${fileName}`;
 
-                const { error: uploadError } = await supabase.storage
+                const { error: uploadError } = await window.supabaseClient.storage
                     .from('avatars')
                     .upload(filePath, file, { upsert: true });
 
                 if (uploadError) throw uploadError;
 
                 // Get public URL
-                const { data: { publicUrl } } = supabase.storage
+                const { data: { publicUrl } } = window.supabaseClient.storage
                     .from('avatars')
                     .getPublicUrl(filePath);
 
@@ -8330,7 +8387,7 @@
                     updates.avatar_url = pendingAvatarUrl;
                 }
 
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('profiles')
                     .update(updates)
                     .eq('id', currentUser.id);
@@ -8372,7 +8429,7 @@
             }
 
             try {
-                const { data: profile, error } = await supabase
+                const { data: profile, error } = await supabaseClient
                     .from('profiles')
                     .select('*')
                     .eq('id', currentUser.id)
@@ -9268,7 +9325,7 @@
 
             try {
                 // Use maybeSingle() to avoid 406 error when no row exists
-                const { data: profile, error } = await supabase
+                const { data: profile, error } = await supabaseClient
                     .from('profiles')
                     .select('*')
                     .eq('id', currentUser.id)
@@ -9281,7 +9338,7 @@
 
                 if (!profile) {
                     // Profile doesn't exist, create it
-                    const { error: insertError } = await supabase
+                    const { error: insertError } = await supabaseClient
                         .from('profiles')
                         .insert({
                             id: currentUser.id,
@@ -9297,7 +9354,7 @@
                     }
                 } else {
                     // Update status to online
-                    await supabase
+                    await supabaseClient
                         .from('profiles')
                         .update({ status: 'online', updated_at: new Date().toISOString() })
                         .eq('id', currentUser.id);
@@ -9367,19 +9424,19 @@
             // Clean up any existing subscriptions first
             if (messagesSubscription) {
                 console.log('🧹 Cleaning up old messages subscription');
-                supabase.removeChannel(messagesSubscription);
+                window.supabaseClient.removeChannel(messagesSubscription);
                 messagesSubscription = null;
             }
             if (friendsSubscription) {
                 console.log('🧹 Cleaning up old friends subscription');
-                supabase.removeChannel(friendsSubscription);
+                window.supabaseClient.removeChannel(friendsSubscription);
                 friendsSubscription = null;
             }
 
             console.log('📡 Setting up realtime subscriptions for user:', currentUser.id);
 
             // Subscribe to new messages
-            messagesSubscription = supabase
+            messagesSubscription = window.supabaseClient
                 .channel('messages-channel-' + currentUser.id + '-' + Date.now())
                 .on('postgres_changes', {
                     event: 'INSERT',
@@ -9399,7 +9456,7 @@
                 });
 
             // Subscribe to friend requests and removals
-            friendsSubscription = supabase
+            friendsSubscription = window.supabaseClient
                 .channel('friends-channel-' + currentUser.id + '-' + Date.now())
                 .on('postgres_changes', {
                     event: '*',
@@ -9480,7 +9537,7 @@
 
             try {
                 // First get the friend requests
-                const { data: requests, error } = await supabase
+                const { data: requests, error } = await supabaseClient
                     .from('friends')
                     .select('id, user_id, status, created_at')
                     .eq('friend_id', currentUser.id)
@@ -9498,7 +9555,7 @@
                 const senderIds = requests.map(r => r.user_id);
 
                 // Fetch their profiles
-                const { data: profiles, error: profileError } = await supabase
+                const { data: profiles, error: profileError } = await supabaseClient
                     .from('profiles')
                     .select('id, email, display_name, status, avatar_url')
                     .in('id', senderIds);
@@ -9531,14 +9588,14 @@
 
             try {
                 // Get friends where I sent the request
-                const { data: sentRequests, error: err1 } = await supabase
+                const { data: sentRequests, error: err1 } = await supabaseClient
                     .from('friends')
                     .select('id, friend_id, status')
                     .eq('user_id', currentUser.id)
                     .eq('status', 'accepted');
 
                 // Get friends where I received the request
-                const { data: receivedRequests, error: err2 } = await supabase
+                const { data: receivedRequests, error: err2 } = await supabaseClient
                     .from('friends')
                     .select('id, user_id, status')
                     .eq('friend_id', currentUser.id)
@@ -9560,7 +9617,7 @@
                 }
 
                 // Fetch profiles for all friends
-                const { data: profiles, error: profileError } = await supabase
+                const { data: profiles, error: profileError } = await supabaseClient
                     .from('profiles')
                     .select('id, email, display_name, status, avatar_url')
                     .in('id', friendUserIds);
@@ -9606,7 +9663,7 @@
 
             try {
                 // Get all messages involving this user
-                const { data: messages, error } = await supabase
+                const { data: messages, error } = await supabaseClient
                     .from('messages')
                     .select('*')
                     .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
@@ -9645,7 +9702,7 @@
                 const partnerIds = Array.from(convMap.keys());
 
                 // Fetch profiles for all partners
-                const { data: profiles, error: profileError } = await supabase
+                const { data: profiles, error: profileError } = await supabaseClient
                     .from('profiles')
                     .select('id, email, display_name, status, avatar_url')
                     .in('id', partnerIds);
@@ -9942,7 +9999,7 @@
 
                 if (isEmail) {
                     // Search by email
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('profiles')
                         .select('id, email, username, display_name, avatar_url')
                         .eq('email', cleanValue)
@@ -9952,7 +10009,7 @@
                     profile = data;
                 } else {
                     // Search by username (case-insensitive)
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('profiles')
                         .select('id, email, username, display_name, avatar_url')
                         .ilike('username', cleanValue)
@@ -9973,7 +10030,7 @@
                 }
 
                 // Check if already friends or request exists
-                const { data: existing } = await supabase
+                const { data: existing } = await supabaseClient
                     .from('friends')
                     .select('id, status')
                     .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${profile.id}),and(user_id.eq.${profile.id},friend_id.eq.${currentUser.id})`);
@@ -9989,7 +10046,7 @@
                 }
 
                 // Send request
-                const { error: insertError } = await supabase
+                const { error: insertError } = await supabaseClient
                     .from('friends')
                     .insert({
                         user_id: currentUser.id,
@@ -10012,7 +10069,7 @@
         // Accept friend request
         async function acceptFriendRequest(requestId) {
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('friends')
                     .update({ status: 'accepted', updated_at: new Date().toISOString() })
                     .eq('id', requestId);
@@ -10033,7 +10090,7 @@
         // Reject friend request
         async function rejectFriendRequest(requestId) {
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('friends')
                     .delete()
                     .eq('id', requestId);
@@ -10058,7 +10115,7 @@
             if (!confirmed) return;
 
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('friends')
                     .delete()
                     .eq('id', friendshipId);
@@ -10136,7 +10193,7 @@
         // Load chat messages
         async function loadChatMessages(friendId) {
             try {
-                const { data: messages, error } = await supabase
+                const { data: messages, error } = await supabaseClient
                     .from('messages')
                     .select('*')
                     .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`)
@@ -10208,7 +10265,7 @@
             if (!content) return;
 
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('messages')
                     .insert({
                         sender_id: currentUser.id,
@@ -10243,7 +10300,7 @@
             }
 
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('messages')
                     .insert({
                         sender_id: currentUser.id,
@@ -10285,7 +10342,7 @@
         // Mark messages as read
         async function markMessagesAsRead(friendId) {
             try {
-                await supabase
+                await supabaseClient
                     .from('messages')
                     .update({ read: true })
                     .eq('sender_id', friendId)
@@ -10365,7 +10422,7 @@
 
             try {
                 // Search by username or email (case insensitive)
-                const { data: users, error } = await supabase
+                const { data: users, error } = await supabaseClient
                     .from('profiles')
                     .select('id, email, username, avatar_url')
                     .or(`username.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
@@ -10513,7 +10570,7 @@
         // Update user status on window close/hide
         window.addEventListener('beforeunload', async () => {
             if (currentUser) {
-                await supabase
+                await supabaseClient
                     .from('profiles')
                     .update({ status: 'offline' })
                     .eq('id', currentUser.id);

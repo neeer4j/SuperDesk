@@ -18,8 +18,15 @@ html {
 
 /* Animation utilities */
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .animate-float {
@@ -27,10 +34,225 @@ html {
 }
 
 @keyframes glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.6); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.6);
+  }
 }
 
 .animate-glow {
   animation: glow 2s ease-in-out infinite;
+}
+
+/* --- NEW RESPONSIVE STYLES --- */
+
+/* Global Resets for Portfolio */
+.portfolio-container * {
+  box-sizing: border-box;
+}
+
+.portfolio-container img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Main Container */
+.portfolio-container {
+  min-height: 100vh;
+  background-color: #0d0d14;
+  color: white;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+  /* Prevent horizontal scroll on mobile */
+}
+
+/* Navbar */
+.portfolio-nav {
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(13, 13, 20, 0.8);
+  backdrop-filter: blur(12px);
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: auto;
+  min-width: 60%;
+  gap: 60px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 95%;
+  transition: all 0.3s ease;
+}
+
+.portfolio-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.portfolio-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Mobile Navbar Overrides */
+@media (max-width: 1024px) {
+  .portfolio-nav {
+    gap: 20px;
+    padding: 12px 20px;
+    top: 20px;
+    width: 90%;
+  }
+}
+
+@media (max-width: 768px) {
+  .portfolio-nav {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 10px 16px;
+    gap: 10px;
+    top: 10px;
+    width: 95%;
+    border-radius: 16px;
+  }
+
+  .portfolio-nav-links {
+    display: none;
+    /* Hide links on mobile for simplicity, or implement hamburger */
+  }
+
+  .portfolio-nav-buttons a span {
+    display: none;
+    /* Hide text in buttons, show only icon? Or keep simplified */
+  }
+
+  /* Simplify buttons text */
+  .portfolio-nav-buttons a {
+    font-size: 13px !important;
+    padding: 8px 10px !important;
+  }
+}
+
+/* Hero Section */
+.portfolio-hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 48px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.portfolio-hero-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  width: 100%;
+  gap: 80px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 960px) {
+  .portfolio-hero {
+    padding: 100px 32px 60px;
+  }
+
+  .portfolio-hero-content {
+    flex-direction: column;
+    gap: 50px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .portfolio-hero {
+    padding: 100px 20px 40px;
+  }
+
+  .portfolio-hero-content {
+    gap: 40px;
+  }
+}
+
+/* Features Section */
+.portfolio-features {
+  padding: 100px 48px;
+  background-color: #0a0a10;
+}
+
+.portfolio-features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .portfolio-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .portfolio-features {
+    padding: 60px 20px;
+  }
+
+  .portfolio-features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* About Section */
+.portfolio-about {
+  padding: 100px 48px;
+}
+
+.portfolio-about-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+@media (max-width: 960px) {
+  .portfolio-about-container {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .portfolio-about {
+    padding: 60px 20px 80px;
+  }
+}
+
+/* Footer */
+.portfolio-footer {
+  padding: 48px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .portfolio-footer {
+    padding: 32px 20px;
+  }
 }
