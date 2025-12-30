@@ -196,7 +196,15 @@
                     d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
             </svg>
         </button>
-        <button id="close" class="red" title="Close">
+        <button id="endSession" class="red" title="End Session">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+                <line x1="23" y1="1" x2="1" y2="23" />
+            </svg>
+        </button>
+        <button id="close" title="Close Viewer">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -214,6 +222,7 @@
         const spkBtn = document.getElementById('spk');
         const fsBtn = document.getElementById('fs');
         const closeBtn = document.getElementById('close');
+        const endSessionBtn = document.getElementById('endSession');
         const status = document.getElementById('status');
         const cameraOverlay = document.getElementById('camera-overlay');
         const cameraVid = document.getElementById('camera-vid');
@@ -253,6 +262,15 @@
             console.error('❌ No stream available from opener');
         }
 
+        // Listen for session-ended events from HOST
+        if (window.opener && window.opener.superdeskState && window.opener.superdeskState.socket) {
+            window.opener.superdeskState.socket.on('session-ended', () => {
+                alert('The host has ended the session.');
+                window.close();
+            });
+            console.log('📡 Listening for session-ended events');
+        }
+
         // Listen for new tracks added to the stream (for audio/video added mid-session)
         if (window.opener && window.opener.sharedStream) {
             window.opener.sharedStream.onaddtrack = (event) => {
@@ -268,6 +286,18 @@
         // Check for camera overlays - poll the opener's state for BOTH local and remote cameras
         const localCameraOverlay = document.getElementById('local-camera-overlay');
         const localCameraVid = document.getElementById('local-camera-vid');
+
+        // === MESSAGE LISTENER for immediate camera-off events (Discord-style) ===
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'camera-off') {
+                console.log('📹 Received camera-off message - hiding overlay immediately');
+                // Immediately hide remote camera overlay
+                if (cameraOverlay) {
+                    cameraOverlay.style.display = 'none';
+                    cameraVid.srcObject = null;
+                }
+            }
+        });
 
         function checkCameraOverlays() {
             if (!window.opener || !window.opener.superdeskState) return;
@@ -285,7 +315,7 @@
                     console.log('📹 Local camera overlay shown in viewer');
                 }
             } else {
-                // User's camera is off
+                // User's camera is off - IMMEDIATELY hide (Discord-style)
                 if (localCameraOverlay.style.display !== 'none') {
                     localCameraOverlay.style.display = 'none';
                     localCameraVid.srcObject = null;
@@ -298,27 +328,29 @@
             // OR guestCameraTrackId (HOST viewing GUEST's camera)
             const remoteCameraTrackId = state.remoteCameraTrackId;
             const guestCameraTrackId = state.guestCameraTrackId;
-            const hasRemoteCamera = remoteCameraTrackId || guestCameraTrackId;
 
-            if (hasRemoteCamera) {
-                // Try to get the remote camera video element from opener
-                // Could be either "remote-camera-video" (guest side) or "guest-camera-video" (host side)
-                let openerCameraVid = window.opener.document.getElementById('remote-camera-video');
-                if (!openerCameraVid) {
-                    openerCameraVid = window.opener.document.getElementById('guest-camera-video');
-                }
+            // Try to get the remote camera video element from opener
+            // Could be either "remote-camera-video" (guest side) or "guest-camera-video" (host side)
+            let openerCameraVid = window.opener.document.getElementById('remote-camera-video');
+            if (!openerCameraVid) {
+                openerCameraVid = window.opener.document.getElementById('guest-camera-video');
+            }
 
-                if (openerCameraVid && openerCameraVid.srcObject) {
-                    // Copy the camera stream to our overlay
-                    if (cameraVid.srcObject !== openerCameraVid.srcObject) {
-                        cameraVid.srcObject = openerCameraVid.srcObject;
-                        cameraOverlay.style.display = 'block';
-                        cameraVid.play().catch(e => console.warn('Remote camera play error:', e));
-                        console.log('📹 Remote camera overlay shown in viewer');
-                    }
+            // Check BOTH: state variable OR actual video element with stream
+            const hasRemoteCameraByState = remoteCameraTrackId || guestCameraTrackId;
+            const hasRemoteCameraByElement = openerCameraVid && openerCameraVid.srcObject && openerCameraVid.srcObject.active;
+            const hasRemoteCamera = hasRemoteCameraByState || hasRemoteCameraByElement;
+
+            if (hasRemoteCamera && openerCameraVid && openerCameraVid.srcObject) {
+                // Copy the camera stream to our overlay
+                if (cameraVid.srcObject !== openerCameraVid.srcObject) {
+                    cameraVid.srcObject = openerCameraVid.srcObject;
+                    cameraOverlay.style.display = 'block';
+                    cameraVid.play().catch(e => console.warn('Remote camera play error:', e));
+                    console.log('📹 Remote camera overlay shown in viewer');
                 }
             } else {
-                // Remote camera is off
+                // Remote camera is off - IMMEDIATELY hide (Discord-style)
                 if (cameraOverlay.style.display !== 'none') {
                     cameraOverlay.style.display = 'none';
                     cameraVid.srcObject = null;
@@ -327,8 +359,8 @@
             }
         }
 
-        // Poll for camera overlays every 500ms
-        setInterval(checkCameraOverlays, 500);
+        // Poll for camera overlays every 200ms (faster detection)
+        setInterval(checkCameraOverlays, 200);
 
         // === MIC AUDIO POLLING ===
         // Ensure remote mic audio plays in this viewer window
@@ -541,9 +573,29 @@
             else document.exitFullscreen();
         });
 
-        // Close
+        // Close (just closes the viewer, doesn't end session)
         closeBtn.onclick = debounce(function () {
-            window.close();
+            if (confirm('Close the viewer? The session will continue in the background.')) {
+                window.close();
+            }
+        });
+
+        // End Session (ends the entire session with confirmation)
+        endSessionBtn.onclick = debounce(function () {
+            if (confirm('End this session? The remote connection will be terminated.')) {
+                // Notify opener to end the session
+                if (window.opener && typeof window.opener.endSession === 'function') {
+                    window.opener.endSession();
+                    alert('Session ended successfully.');
+                } else if (window.opener && window.opener.superdeskState && window.opener.superdeskState.socket) {
+                    // Fallback: emit session-ended via socket
+                    window.opener.superdeskState.socket.emit('session-ended', {
+                        sessionId: window.opener.superdeskState.sessionId
+                    });
+                    alert('Session ended successfully.');
+                }
+                window.close();
+            }
         });
 
         // EVENT SENDING LOGIC

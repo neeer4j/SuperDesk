@@ -435,9 +435,14 @@
                     console.log('📹 Expecting camera track:', data.cameraTrackId);
                 } else {
                     remoteCameraTrackId = null;
+                    // IMMEDIATELY remove camera overlay from DOM (Discord-style)
                     const overlay = document.getElementById('remote-camera-overlay');
-                    if (overlay) overlay.style.display = 'none';
-                    console.log('📹 Camera overlay hidden');
+                    if (overlay) {
+                        const cameraVideo = document.getElementById('remote-camera-video');
+                        if (cameraVideo) cameraVideo.srcObject = null;
+                        overlay.remove(); // Remove from DOM - no black box
+                        console.log('📹 Camera overlay REMOVED from DOM');
+                    }
                 }
             });
         }

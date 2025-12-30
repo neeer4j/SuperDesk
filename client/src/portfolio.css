@@ -95,6 +95,19 @@ html {
   transition: all 0.3s ease;
 }
 
+/* Navbar Logo - Prevents distortion at different zoom levels */
+.portfolio-nav-logo {
+  height: 24px;
+  width: auto;
+  min-height: 20px;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  flex-shrink: 0;
+}
+
 .portfolio-nav-links {
   display: flex;
   align-items: center;
@@ -220,27 +233,212 @@ html {
 /* About Section */
 .portfolio-about {
   padding: 100px 48px;
+  background-color: #0d0d14;
 }
 
 .portfolio-about-container {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
   display: flex;
-  align-items: flex-start;
-  gap: 32px;
+  align-items: center;
+  gap: 60px;
+}
+
+.portfolio-about-container h2 {
+  font-size: 36px !important;
+}
+
+.portfolio-about-image {
+  flex-shrink: 0;
+  width: 260px;
+}
+
+.portfolio-about-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.portfolio-about-text {
+  flex: 1;
+}
+
+.portfolio-about-text h2 {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  letter-spacing: -1px;
+}
+
+.portfolio-about-text p {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.8;
+  margin-bottom: 18px;
+}
+
+.portfolio-about-text p:last-child {
+  margin-bottom: 0;
 }
 
 @media (max-width: 960px) {
+  .portfolio-about {
+    padding: 80px 32px;
+  }
+
   .portfolio-about-container {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    gap: 40px;
+  }
+
+  .portfolio-about-image {
+    width: 200px;
+  }
+
+  .portfolio-about-container h2 {
+    font-size: 32px !important;
   }
 }
 
 @media (max-width: 640px) {
   .portfolio-about {
-    padding: 60px 20px 80px;
+    padding: 60px 20px;
+  }
+
+  .portfolio-about-container {
+    gap: 32px;
+  }
+
+  .portfolio-about-image {
+    width: 160px;
+  }
+
+  .portfolio-about-container h2 {
+    font-size: 28px !important;
+  }
+
+  .portfolio-about-text p {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+}
+
+/* Developers Note Section */
+.portfolio-developers-note {
+  padding: 100px 48px;
+  background: linear-gradient(180deg, #0a0a10 0%, #0d0d14 50%, #0f0f18 100%);
+  position: relative;
+}
+
+.portfolio-developers-note::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.3) 50%, transparent 100%);
+}
+
+.portfolio-developers-note-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.portfolio-developers-note h2 {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 40px;
+  letter-spacing: -1px;
+  text-align: center;
+}
+
+.developers-note-content {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.9;
+  text-align: center;
+}
+
+.developers-note-content p {
+  margin-bottom: 20px;
+}
+
+.developers-note-content .highlight-paragraph {
+  color: rgba(167, 139, 250, 0.9);
+  font-style: italic;
+  padding: 20px 24px;
+  margin: 28px 0;
+  background: rgba(139, 92, 246, 0.05);
+  border-left: 3px solid rgba(139, 92, 246, 0.4);
+  border-radius: 0 8px 8px 0;
+  text-align: left;
+}
+
+.developers-signature {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.developers-signature .signature-names {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.developers-signature .signature-title {
+  font-size: 14px;
+  color: rgba(167, 139, 250, 0.7);
+  font-style: italic;
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .portfolio-developers-note {
+    padding: 60px 24px;
+  }
+
+  .portfolio-developers-note h2 {
+    font-size: 28px;
+    margin-bottom: 32px;
+  }
+
+  .developers-note-content {
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .developers-note-content .highlight-paragraph {
+    padding: 16px 20px;
+  }
+
+  .developers-signature {
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .portfolio-developers-note {
+    padding: 50px 20px;
+  }
+
+  .portfolio-developers-note h2 {
+    font-size: 24px;
+  }
+
+  .developers-note-content {
+    font-size: 13px;
+  }
+
+  .developers-note-content p {
+    margin-bottom: 16px;
   }
 }
 

@@ -67,11 +67,14 @@ const buttonStyles = {
 function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
+  const cameraVideoRef = useRef(null);
+  const micAudioRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [remoteControlEnabled, setRemoteControlEnabled] = useState(false);
   const [connectionState, setConnectionState] = useState('connecting');
   const [stream, setStream] = useState(null);
   const [toast, setToast] = useState(null); // { message, type: 'info' | 'success' | 'error' }
+  const [showCameraOverlay, setShowCameraOverlay] = useState(false);
 
   const isAndroid = hostPlatform === 'android';
 
@@ -105,6 +108,42 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
     client.on('sessionEnded', () => {
       console.log('Session ended by host');
       onClose();
+    });
+
+    // Camera overlay callbacks
+    client.on('remoteCameraStream', (cameraStream) => {
+      console.log('📹 WEBAPP: Remote camera stream received');
+      setShowCameraOverlay(true);
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = cameraStream;
+        cameraVideoRef.current.play().catch(e => console.warn('Camera play error:', e));
+      }
+      showToast('Host camera enabled', 'info', 2000);
+    });
+
+    client.on('remoteCameraOff', () => {
+      console.log('📹 WEBAPP: Remote camera turned off');
+      setShowCameraOverlay(false);
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = null;
+      }
+    });
+
+    // Mic audio callbacks
+    client.on('remoteMicStream', (micStream) => {
+      console.log('🎤 WEBAPP: Remote mic stream received');
+      if (micAudioRef.current) {
+        micAudioRef.current.srcObject = micStream;
+        micAudioRef.current.play().catch(e => console.warn('Mic audio play error:', e));
+      }
+      showToast('Host microphone enabled', 'info', 2000);
+    });
+
+    client.on('remoteMicOff', () => {
+      console.log('🎤 WEBAPP: Remote mic turned off');
+      if (micAudioRef.current) {
+        micAudioRef.current.srcObject = null;
+      }
     });
 
     // Cleanup
@@ -374,6 +413,50 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
           onMouseUp={handleMouseUp}
           onClick={handleClick}
         />
+
+        {/* Remote Camera Overlay - shows host's webcam */}
+        {showCameraOverlay && (
+          <div style={{
+            position: 'absolute',
+            bottom: '100px',
+            right: '24px',
+            width: '200px',
+            height: '150px',
+            background: '#000',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            zIndex: 10001,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            border: '2px solid rgba(139, 92, 246, 0.5)'
+          }}>
+            <video
+              ref={cameraVideoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+            <div style={{
+              position: 'absolute',
+              bottom: '4px',
+              left: '4px',
+              fontSize: '10px',
+              color: 'white',
+              background: 'rgba(0, 0, 0, 0.6)',
+              padding: '2px 6px',
+              borderRadius: '4px'
+            }}>
+              Host Camera
+            </div>
+          </div>
+        )}
+
+        {/* Hidden audio element for remote mic playback */}
+        <audio ref={micAudioRef} autoPlay style={{ display: 'none' }} />
 
         {/* File Transfer Floating Button */}
         <button

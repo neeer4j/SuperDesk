@@ -99,11 +99,38 @@
                         const stream = streamRegistry.getStream('guest-camera');
 
                         if (stream && stream.getVideoTracks().length > 0) {
+                            const videoTrack = stream.getVideoTracks()[0];
+
+                            // Check if track is still alive
+                            if (videoTrack.readyState === 'ended') {
+                                console.log('📹 Stream track already ended - closing overlay');
+                                clearInterval(pollInterval);
+                                ipcRenderer.send('close-camera-overlay', 'remote');
+                                return;
+                            }
+
                             console.log('✅ Found guest camera stream in registry');
                             video.srcObject = stream;
                             video.play().catch(e => console.error('Play error:', e));
                             loading.style.display = 'none';
                             clearInterval(pollInterval);
+
+                            // === TRACK LIFECYCLE: Close overlay when track ends ===
+                            videoTrack.onended = () => {
+                                console.log('📹 Remote camera track ENDED - requesting overlay close');
+                                ipcRenderer.send('close-camera-overlay', 'remote');
+                            };
+
+                            // Also monitor for track becoming inactive
+                            videoTrack.onmute = () => {
+                                console.log('📹 Remote camera track MUTED');
+                            };
+                        }
+                    } else {
+                        // Check if poll timeout - stream might have been removed
+                        if (pollCount > 10 && loading.style.display !== 'none') {
+                            // Stream hasn't arrived in 5 seconds, check if it was deleted
+                            console.log('📹 Still waiting for stream...');
                         }
                     }
 
@@ -112,8 +139,25 @@
                         clearInterval(pollInterval);
                         loading.textContent = 'Stream unavailable';
                         console.warn('⏱️ Timeout waiting for guest camera stream');
+                        // Close the overlay if stream never arrived
+                        setTimeout(() => {
+                            ipcRenderer.send('close-camera-overlay', 'remote');
+                        }, 2000);
                     }
                 }, 500);
+
+                // Also periodically check if stream is still valid 
+                // This catches cases where track ended but onended didn't fire
+                const healthCheck = setInterval(() => {
+                    if (video.srcObject) {
+                        const tracks = video.srcObject.getVideoTracks();
+                        if (tracks.length === 0 || tracks[0].readyState === 'ended') {
+                            console.log('📹 Health check: stream ended - closing overlay');
+                            clearInterval(healthCheck);
+                            ipcRenderer.send('close-camera-overlay', 'remote');
+                        }
+                    }
+                }, 2000);
             }
         });
 

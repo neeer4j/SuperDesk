@@ -1131,6 +1131,82 @@ ipcMain.on('hide-local-camera-overlay', hideLocalCameraOverlay);
 ipcMain.on('show-remote-camera-overlay', showRemoteCameraOverlay);
 ipcMain.on('hide-remote-camera-overlay', hideRemoteCameraOverlay);
 
+// Handle overlay window requesting its own closure (when stream ends)
+ipcMain.on('close-camera-overlay', (event, overlayType) => {
+  console.log(`📹 [Camera Overlay] Close requested for: ${overlayType}`);
+  if (overlayType === 'remote') {
+    hideRemoteCameraOverlay();
+  } else if (overlayType === 'local') {
+    hideLocalCameraOverlay();
+  }
+});
+
+// === Guest Camera PiP (Picture-in-Picture) for HOST ===
+// Instead of a separate window, transform the main window into a small PiP overlay
+// This works because the guest camera stream is already in the main window
+let mainWindowPipMode = false;
+let mainWindowOriginalBounds = null;
+
+function showGuestCameraPip() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  if (mainWindowPipMode) {
+    // Already in PiP mode
+    mainWindow.show();
+    return;
+  }
+
+  // Save original bounds
+  mainWindowOriginalBounds = mainWindow.getBounds();
+
+  const { width, height } = electronScreen.getPrimaryDisplay().workAreaSize;
+
+  // Transform main window into PiP overlay
+  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  mainWindow.setSize(220, 165);
+  mainWindow.setPosition(width - 240, height - 185);
+  mainWindow.setResizable(false);
+  mainWindow.setSkipTaskbar(true);
+
+  // Send message to renderer to show only the camera overlay
+  mainWindow.webContents.send('enter-pip-mode');
+
+  mainWindowPipMode = true;
+  console.log('📹 Main window entered PiP mode for guest camera');
+}
+
+function hideGuestCameraPip() {
+  if (!mainWindow || mainWindow.isDestroyed() || !mainWindowPipMode) return;
+
+  // Restore main window to original state
+  mainWindow.setAlwaysOnTop(false);
+  mainWindow.setResizable(true);
+  mainWindow.setSkipTaskbar(false);
+
+  if (mainWindowOriginalBounds) {
+    mainWindow.setBounds(mainWindowOriginalBounds);
+  }
+
+  // Send message to renderer to restore normal view
+  mainWindow.webContents.send('exit-pip-mode');
+
+  mainWindowPipMode = false;
+  mainWindowOriginalBounds = null;
+  console.log('📹 Main window exited PiP mode');
+}
+
+ipcMain.on('show-guest-camera-pip', showGuestCameraPip);
+ipcMain.on('hide-guest-camera-pip', hideGuestCameraPip);
+
+// Handle PiP window requesting video element from main window
+ipcMain.handle('get-guest-camera-source', async () => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return null;
+  }
+  // Return the main window's ID so PiP can capture its video element
+  return mainWindow.webContents.id;
+});
+
 // IPC handlers for remote stream transfer
 ipcMain.handle('check-remote-camera-in-main', async () => {
   if (!mainWindow || mainWindow.isDestroyed()) {

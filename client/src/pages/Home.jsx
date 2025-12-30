@@ -224,7 +224,7 @@ export default function Home() {
                     <img
                         src={superdeskLogoText}
                         alt="SuperDesk"
-                        style={{ height: '36px', width: 'auto' }}
+                        className="portfolio-nav-logo"
                     />
                 </Link>
 
@@ -300,7 +300,7 @@ export default function Home() {
                         }}
                     >
                         <span>Get Android App</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
                             <line x1="12" y1="18" x2="12.01" y2="18"></line>
                         </svg>
@@ -456,53 +456,80 @@ export default function Home() {
                 <div className="portfolio-about-container">
                     {/* Left - Image/Visual */}
                     <motion.div
+                        className="portfolio-about-image"
                         initial={{ opacity: 0, clipPath: 'inset(50% 50% 50% 50%)' }}
                         whileInView={{ opacity: 1, clipPath: 'inset(0% 0% 0% 0%)' }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6, ease: 'easeOut' }}
-                        style={{ flexShrink: 0 }}
                     >
                         <img
                             src={superdeskShowcase}
                             alt="SuperDesk App"
-                            style={{
-                                width: '280px',
-                                height: 'auto',
-                                borderRadius: '12px',
-                            }}
                         />
                     </motion.div>
 
                     {/* Right - Text Content */}
                     <motion.div
+                        className="portfolio-about-text"
                         initial={{ opacity: 0, clipPath: 'inset(50% 50% 50% 50%)' }}
                         whileInView={{ opacity: 1, clipPath: 'inset(0% 0% 0% 0%)' }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
-                        style={{ flex: 1 }}
                     >
-                        <h2 style={{
-                            fontSize: '42px',
-                            fontWeight: 700,
-                            marginBottom: '24px',
-                            letterSpacing: '-1px',
-                        }}>
-                            About SuperDesk
-                        </h2>
-                        <div style={{
-                            fontSize: '16px',
-                            color: 'rgba(255,255,255,0.7)',
-                            lineHeight: 1.8,
-                        }}>
-                            <p style={{ marginBottom: '20px' }}>
+                        <h2>About SuperDesk</h2>
+                        <div>
+                            <p>
                                 SuperDesk is an indie remote desktop solution created out of a passion for building tools that make work easier, faster, and more secure. Developed under real-world limitations, it proves that thoughtful design and dedication can create powerful software.
                             </p>
-                            <p style={{ marginBottom: '20px' }}>
+                            <p>
                                 Built on WebRTC, all connections are peer to peer, meaning your data never passes through any server. Privacy, security, and speed are integral to every part of the platform.
                             </p>
                             <p>
                                 SuperDesk is truly cross platform available as a web app, with mobile apps for Android and a desktop version that offers full functionality and flexibility.
                             </p>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
+            {/* Note from the Developers Section */}
+            <section id="developers-note" className="portfolio-developers-note">
+                <div className="portfolio-developers-note-container">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <h2>A Note from the Developers</h2>
+
+                        <div className="developers-note-content">
+                            <p>
+                                SuperDesk started with a simple thought. Remote access should not feel complicated, heavy, or intrusive.
+                            </p>
+                            <p>
+                                We are a small independent team, and SuperDesk was built out of curiosity, frustration with existing tools, and a genuine love for building good software.
+                            </p>
+                            <p>
+                                This is not a product created by a large company or backed by investors. It was built under real limitations, with a lot of trial and error, late nights, and constant learning. Every feature exists because it solves a real problem we personally cared about.
+                            </p>
+                            <p className="highlight-paragraph">
+                                Privacy sits at the heart of SuperDesk. Connections are peer to peer using WebRTC, so your data does not pass through our servers. We believe remote access should be fast, secure, and respectful of the user.
+                            </p>
+                            <p>
+                                SuperDesk is not perfect, and it never will be. Software is always evolving. What we can promise is that we will give our full effort every single day to make it better, more reliable, and more useful with each update.
+                            </p>
+                            <p>
+                                The aim of SuperDesk is simple. To make remote access easy and reliable. To put privacy and control back in the hands of users. To build software that feels lightweight, honest, and human.
+                            </p>
+                            <p>
+                                SuperDesk is still evolving, and so are we as developers. If you are using it or supporting it in any way, you are already part of this journey. Thank you for being here.
+                            </p>
+
+                            <div className="developers-signature">
+                                <p className="signature-names">Neeraj Venu and B Joniyal</p>
+                                <p className="signature-title">Developers of SuperDesk</p>
+                            </div>
                         </div>
                     </motion.div>
                 </div>
@@ -517,11 +544,9 @@ export default function Home() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '12px',
                     marginBottom: '16px',
                 }}>
-                    <img src={superdeskLogoWhite} alt="SuperDesk" style={{ height: '32px', width: 'auto' }} />
-                    <img src={superdeskLogoText} alt="SuperDesk" style={{ height: '24px', width: 'auto' }} />
+                    <img src={superdeskLogoText} alt="SuperDesk" style={{ height: '40px', width: 'auto' }} />
                 </div>
                 <p style={{
                     fontSize: '14px',

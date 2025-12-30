@@ -634,10 +634,27 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
     inputDataChannel.onopen = () => {
         console.log('🎮 HOST: Input data channel OPEN - ready to receive mobile input');
+
+        // AUTO-ENABLE remote control when data channel opens
+        // This fixes the race condition where mobile sends input before Socket.IO enable-remote-control completes
+        // The Socket.IO flow still works for manual enable/disable control
+        console.log('🎮 HOST: Auto-enabling remote control for data channel input');
+        window.superdeskState.remoteControlEnabled = true;
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('robot-refresh-screen-size');
+            window.appControls.ipcSend('robot-set-enabled', true);
+        }
     };
 
     inputDataChannel.onclose = () => {
         console.log('🎮 HOST: Input data channel closed');
+        // Disable remote control when data channel closes
+        console.log('🎮 HOST: Disabling remote control (data channel closed)');
+        window.superdeskState.remoteControlEnabled = false;
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('robot-set-enabled', false);
+            window.appControls.ipcSend('robot-release-keys');
+        }
     };
 
     inputDataChannel.onerror = (error) => {
@@ -899,6 +916,56 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     console.log('📤 ✅ Offer emitted to session:', sessionId);
     console.log('✅ HOST Offer sent');
 
+    // === HOST: Listen for renegotiation offers from GUEST (e.g., when GUEST turns on camera) ===
+    console.log('👂 HOST Setting up offer listener (for Guest renegotiation)...');
+    socket.off('offer'); // Remove any previous listeners
+    socket.on('offer', async (data) => {
+        console.log('📨 HOST ========== RECEIVED OFFER (Renegotiation) ==========');
+        console.log('📨 HOST Offer type:', data.offer?.type);
+        console.log('📨 HOST Offer SDP length:', data.offer?.sdp?.length || 0);
+        console.log('📨 HOST Current signaling state:', peerConnection.signalingState);
+
+        // Handle GLARE condition: if we're in have-local-offer state, we sent an offer too
+        // As the "impolite" peer (host), we can ignore the guest's offer if we already sent one
+        // But for simplicity, we'll be polite and rollback if needed
+        if (peerConnection.signalingState === 'have-local-offer') {
+            console.log('⚠️ HOST GLARE: Both sides sent offers - rolling back to accept guest offer');
+            try {
+                await peerConnection.setLocalDescription({ type: 'rollback' });
+                console.log('📨 HOST Rollback successful');
+            } catch (rollbackErr) {
+                console.warn('⚠️ HOST Rollback failed, continuing anyway:', rollbackErr);
+            }
+        }
+
+        // Accept the offer
+        if (peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer') {
+            try {
+                console.log('📨 HOST Setting remote description with offer...');
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                console.log('✅ HOST Remote description set');
+
+                // Create and send answer
+                console.log('📨 HOST Creating answer...');
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                console.log('✅ HOST Local description (answer) set');
+
+                // Send answer back to guest
+                socket.emit('answer', {
+                    sessionId,
+                    targetId: data.from,
+                    answer
+                });
+                console.log('📤 HOST Answer sent to guest');
+            } catch (error) {
+                console.error('❌ HOST Error handling renegotiation offer:', error);
+            }
+        } else {
+            console.warn('⚠️ HOST Ignoring offer - wrong state:', peerConnection.signalingState);
+        }
+    });
+
     // === HOST: Listen for guest's camera-state and mic-state signals ===
     socket.on('camera-state', (data) => {
         console.log('📹 HOST: Received camera-state from guest:', data);
@@ -907,25 +974,22 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
             console.log('📹 HOST: Expecting guest camera track with ID:', data.cameraTrackId);
         } else {
             window.superdeskState.guestCameraTrackId = null;
-            // Hide guest camera overlay when camera is turned off
-            const guestCameraOverlay = document.getElementById('guest-camera-overlay');
-            if (guestCameraOverlay) {
-                guestCameraOverlay.style.display = 'none';
-                console.log('📹 HOST: Guest camera overlay hidden');
-            }
+            window.superdeskState.guestCameraStream = null;
 
-            // Unregister from stream registry
+            // Remove from stream-registry
             try {
                 const streamRegistry = require('./stream-registry');
                 streamRegistry.deleteStream('guest-camera');
+                console.log('📹 HOST: Guest camera stream removed from registry');
+            } catch (e) { /* ignore */ }
 
-                // Hide overlay on screen
-                if (window.appControls && window.appControls.ipcSend) {
-                    window.appControls.ipcSend('hide-remote-camera-overlay');
-                }
-            } catch (e) {
-                console.error('Failed to unregister guest camera stream:', e);
+            // Hide the floating IPC overlay window
+            if (window.appControls && window.appControls.ipcSend) {
+                window.appControls.ipcSend('hide-remote-camera-overlay');
+                window.appControls.ipcSend('hide-guest-camera-pip');
             }
+
+            console.log('📹 HOST: Guest camera stopped, overlay hidden');
         }
     });
 
@@ -945,7 +1009,53 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         }
     });
 
-    // === HOST: Handler for receiving tracks from guest (camera/mic) ===
+    // === HOST: Listen for renegotiation requests from GUEST ===
+    // When GUEST adds new tracks (camera/mic), they request HOST to renegotiate
+    socket.on('request-renegotiation', async (data) => {
+        console.log('🔄 HOST: Received renegotiation request from GUEST:', data.reason);
+
+        if (peerConnection && peerConnection.signalingState !== 'closed') {
+            try {
+                // Create new offer to pick up GUEST's new tracks
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                socket.emit('offer', {
+                    sessionId: data.sessionId,
+                    offer
+                });
+                console.log('🔄 HOST: Sent renegotiation offer in response to GUEST request');
+            } catch (error) {
+                console.error('🔄 HOST: Failed to handle renegotiation request:', error);
+            }
+        }
+    });
+
+    // === HOST: Listen for session-ended from GUEST ===
+    socket.on('session-ended', () => {
+        console.log('📡 HOST: GUEST has ended the session');
+
+        // Show notification to HOST
+        showNotification('Session Ended', 'The remote user has ended the session.');
+
+        // Hide any camera overlays
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('hide-remote-camera-overlay');
+            window.appControls.ipcSend('hide-local-camera-overlay');
+            window.appControls.ipcSend('hide-guest-camera-pip');
+        }
+
+        // Clean up the WebRTC connection
+        if (peerConnection && peerConnection.signalingState !== 'closed') {
+            peerConnection.close();
+        }
+
+        // Reset state
+        window.superdeskState.sessionId = null;
+        window.superdeskState.guestCameraTrackId = null;
+        window.superdeskState.guestCameraStream = null;
+    });
+
     peerConnection.ontrack = (event) => {
         console.log('📺 HOST: ========== ONTRACK EVENT FIRED ==========');
         console.log('📺 HOST: Track kind:', event.track.kind);
@@ -972,63 +1082,98 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
             guestMicAudio.srcObject = new MediaStream([event.track]);
             guestMicAudio.play().catch(e => console.error('🎤 HOST: Mic play error:', e));
             console.log('🎤 HOST: Guest mic audio playing (track ID:', event.track.id, ')');
+
+            // === TRACK LIFECYCLE: Auto-stop audio when mic track ends ===
+            event.track.onended = () => {
+                console.log('🎤 HOST: Guest mic track ENDED - stopping audio');
+                window.superdeskState.guestMicTrackId = null;
+                const audioEl = document.getElementById('guest-mic-audio');
+                if (audioEl) {
+                    audioEl.srcObject = null;
+                }
+            };
+
             return;
         }
 
         // Handle VIDEO tracks from guest (camera)
+        // Display guest's camera as an in-page overlay DIV (same approach as GUEST side)
         if (event.track.kind === 'video') {
-            const isGuestCamera = window.superdeskState.guestCameraTrackId === event.track.id;
-            console.log('📹 HOST: Video track received');
+            console.log('📹 HOST: ===== VIDEO TRACK RECEIVED =====');
             console.log('📹 HOST: Expected camera track ID:', window.superdeskState.guestCameraTrackId);
             console.log('📹 HOST: Actual track ID:', event.track.id);
-            console.log('📹 HOST: IDs match:', isGuestCamera);
 
-            // Create or get guest camera overlay (HIDDEN - only for stream registry)
-            let guestCameraOverlay = document.getElementById('guest-camera-overlay');
-            if (!guestCameraOverlay) {
-                guestCameraOverlay = document.createElement('div');
-                guestCameraOverlay.id = 'guest-camera-overlay';
-                guestCameraOverlay.style.cssText = `
-                    display: none !important;
-                `;
-
-                const guestCameraVideo = document.createElement('video');
-                guestCameraVideo.id = 'guest-camera-video';
-                guestCameraVideo.autoplay = true;
-                guestCameraVideo.playsInline = true;
-                guestCameraVideo.muted = true;
-                guestCameraVideo.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
-                guestCameraOverlay.appendChild(guestCameraVideo);
-
-                document.body.appendChild(guestCameraOverlay);
-
-                console.log('📹 HOST: Created hidden guest camera overlay (for stream registry only)');
+            // ALWAYS set guestCameraTrackId when we receive a video track
+            // This handles race conditions where track arrives before camera-state signal
+            if (!window.superdeskState.guestCameraTrackId) {
+                window.superdeskState.guestCameraTrackId = event.track.id;
+                console.log('📹 HOST: Set guestCameraTrackId from incoming track (race condition fix)');
             }
 
-            // Set guest camera stream - ALWAYS show video track in overlay
-            // This handles race conditions where track arrives before camera-state event
-            const guestCameraVideo = document.getElementById('guest-camera-video');
-            if (guestCameraVideo) {
-                const cameraStream = event.streams.length > 0 ? event.streams[0] : new MediaStream([event.track]);
-                guestCameraVideo.srcObject = cameraStream;
-                guestCameraVideo.play().catch(e => console.error('📹 HOST: Camera play error:', e));
-                // In-app overlay intentionally hidden - only screen overlay is shown
-                console.log('📹 HOST: Guest camera video playing (track ID:', event.track.id, ')');
+            // Store the guest camera stream (for IPC overlay window and popup to access)
+            const cameraStream = event.streams.length > 0 ? event.streams[0] : new MediaStream([event.track]);
+            window.superdeskState.guestCameraStream = cameraStream;
 
-                // Register stream in shared registry for overlay access
+            // Also register with stream-registry for the overlay window to access
+            try {
+                const streamRegistry = require('./stream-registry');
+                streamRegistry.setStream('guest-camera', cameraStream);
+                console.log('📹 HOST: Guest camera stream registered in stream-registry');
+            } catch (e) {
+                console.warn('📹 HOST: Could not register stream (stream-registry may not be available):', e.message);
+            }
+
+            // Log track state for debugging
+            console.log('📹 HOST: Guest camera track state:', {
+                id: event.track.id,
+                enabled: event.track.enabled,
+                muted: event.track.muted,
+                readyState: event.track.readyState
+            });
+
+            // Ensure track is enabled
+            if (!event.track.enabled) {
+                event.track.enabled = true;
+                console.log('📹 HOST: Enabled guest camera track');
+            }
+
+            // Show floating overlay on actual screen (not in app window)
+            if (window.appControls && window.appControls.ipcSend) {
+                window.appControls.ipcSend('show-remote-camera-overlay');
+            }
+
+            // === TRACK LIFECYCLE: Auto-hide overlay when camera track ends ===
+            // This ensures overlay disappears immediately when guest turns off camera
+            // Works even if camera-state signal is delayed or lost
+            event.track.onended = () => {
+                console.log('📹 HOST: Guest camera track ENDED - hiding overlay');
+                window.superdeskState.guestCameraTrackId = null;
+                window.superdeskState.guestCameraStream = null;
+
+                // Remove from stream-registry
                 try {
                     const streamRegistry = require('./stream-registry');
-                    streamRegistry.setStream('guest-camera', cameraStream);
-                    console.log('📹 HOST: Guest camera registered in stream registry');
+                    streamRegistry.deleteStream('guest-camera');
+                    console.log('📹 HOST: Guest camera stream removed from registry');
+                } catch (e) { /* ignore */ }
 
-                    // Show overlay on screen
-                    if (window.appControls && window.appControls.ipcSend) {
-                        window.appControls.ipcSend('show-remote-camera-overlay');
-                    }
-                } catch (e) {
-                    console.error('Failed to register guest camera stream:', e);
+                // Hide the overlay
+                if (window.appControls && window.appControls.ipcSend) {
+                    window.appControls.ipcSend('hide-remote-camera-overlay');
+                    window.appControls.ipcSend('hide-guest-camera-pip');
                 }
-            }
+            };
+
+            // Also handle muted state changes (some browsers fire mute instead of ended)
+            event.track.onmute = () => {
+                console.log('📹 HOST: Guest camera track MUTED');
+            };
+
+            event.track.onunmute = () => {
+                console.log('📹 HOST: Guest camera track UNMUTED');
+            };
+
+            console.log('📹 HOST: Guest camera stream stored, IPC overlay triggered, lifecycle handlers attached');
         }
     };
 
@@ -1177,11 +1322,22 @@ async function setupWebRTCReceiver(socket, sessionId) {
             console.log('📹 GUEST: Expecting camera track with ID:', data.cameraTrackId);
         } else {
             window.superdeskState.remoteCameraTrackId = null;
-            // Hide camera overlay when camera is turned off
+            // IMMEDIATELY remove camera overlay when camera is turned off (Discord-style)
             const cameraOverlay = document.getElementById('remote-camera-overlay');
             if (cameraOverlay) {
-                cameraOverlay.style.display = 'none';
-                console.log('📹 GUEST: Camera overlay hidden');
+                const cameraVideo = document.getElementById('remote-camera-video');
+                if (cameraVideo) {
+                    cameraVideo.srcObject = null;
+                }
+                cameraOverlay.remove(); // Remove from DOM entirely - no black box
+                console.log('📹 GUEST: Camera overlay REMOVED from DOM');
+            }
+
+            // Also notify popup windows to hide their camera overlays
+            if (window.viewerPopup && !window.viewerPopup.closed) {
+                try {
+                    window.viewerPopup.postMessage({ type: 'camera-off' }, '*');
+                } catch (e) { /* popup may be closed */ }
             }
         }
     });
@@ -1201,6 +1357,34 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 console.log('🎤 GUEST: Remote mic audio stopped');
             }
         }
+    });
+
+    // === GUEST: Listen for session-ended from HOST ===
+    socket.on('session-ended', () => {
+        console.log('📡 GUEST: HOST has ended the session');
+
+        // Show notification
+        showNotification('Session Ended', 'The host has ended the session.');
+
+        // Hide any camera overlays
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('hide-remote-camera-overlay');
+            window.appControls.ipcSend('hide-local-camera-overlay');
+        }
+
+        // Close viewer popup if open
+        if (window.viewerPopup && !window.viewerPopup.closed) {
+            window.viewerPopup.close();
+        }
+
+        // Clean up the WebRTC connection
+        if (peerConnection && peerConnection.signalingState !== 'closed') {
+            peerConnection.close();
+        }
+
+        // Reset state
+        window.superdeskState.sessionId = null;
+        window.superdeskState.remoteCameraTrackId = null;
     });
 
     // Log connection state changes with detailed info
@@ -1303,12 +1487,22 @@ async function setupWebRTCReceiver(socket, sessionId) {
 
             // Check if this is microphone audio (vs system audio from screen capture)
             const isMicAudio = window.superdeskState.remoteMicTrackId === event.track.id;
-            console.log('🔊 Audio source:', isMicAudio ? 'MICROPHONE' : 'SYSTEM AUDIO');
+            // Also check if this audio arrived via renegotiation (after video already exists)
+            // In that case, it's most likely mic audio even if we didn't get the signal yet
+            const arrivedViaRenegotiation = mainStream !== null && mainStream.getVideoTracks().length > 0;
+
+            console.log('🔊 Audio source:', isMicAudio ? 'MICROPHONE (ID match)' : arrivedViaRenegotiation ? 'MICROPHONE (renegotiation)' : 'SYSTEM AUDIO');
             console.log('🔊 Track ID:', event.track.id, '| Expected mic ID:', window.superdeskState.remoteMicTrackId);
 
-            if (isMicAudio) {
+            if (isMicAudio || arrivedViaRenegotiation) {
                 // MIC AUDIO - play through DEDICATED audio element (separate from video element)
                 // This ensures mic audio and system audio can play simultaneously
+                // Also handles race condition where mic-state signal arrives after the track
+                if (!window.superdeskState.remoteMicTrackId) {
+                    window.superdeskState.remoteMicTrackId = event.track.id;
+                    console.log('🎤 Set remoteMicTrackId from incoming track (race condition fix)');
+                }
+
                 let micAudio = document.getElementById('remote-mic-audio');
                 if (!micAudio) {
                     micAudio = document.createElement('audio');
@@ -1320,6 +1514,17 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 micAudio.srcObject = new MediaStream([event.track]);
                 micAudio.play().catch(e => console.error('🎤 Mic play error:', e));
                 console.log('🎤 Remote mic audio playing (separate from system audio)');
+
+                // === TRACK LIFECYCLE: Auto-stop audio when mic track ends ===
+                event.track.onended = () => {
+                    console.log('🎤 GUEST: Remote mic track ENDED - stopping audio');
+                    window.superdeskState.remoteMicTrackId = null;
+                    const audioEl = document.getElementById('remote-mic-audio');
+                    if (audioEl) {
+                        audioEl.srcObject = null;
+                    }
+                };
+
                 return; // Mic track handled separately
             }
 
@@ -1350,16 +1555,38 @@ async function setupWebRTCReceiver(socket, sessionId) {
         // Check if this is a CAMERA track (different from screen share)
         // A video track is the camera if:
         // 1. It matches remoteCameraTrackId (from camera-state signal), OR
-        // 2. It's a SECOND video track and mainStream already has video (screen share was first)
+        // 2. It's marked as camera in track properties/label, OR
+        // 3. It arrives AFTER we already have a screen share video track
         const isKnownCameraTrack = window.superdeskState.remoteCameraTrackId === event.track.id;
-        const isSecondVideoTrack = event.track.kind === 'video' && mainStream && mainStream.getVideoTracks().length > 0;
+        const hasExistingVideo = mainStream && mainStream.getVideoTracks().length > 0;
+        const isLabeledAsCamera = event.track.label && (
+            event.track.label.toLowerCase().includes('camera') ||
+            event.track.label.toLowerCase().includes('webcam') ||
+            event.track.label.toLowerCase().includes('facetime')
+        );
 
-        if (event.track.kind === 'video' && (isKnownCameraTrack || isSecondVideoTrack)) {
+        // Log all detection criteria for debugging
+        console.log('📹 GUEST: Camera detection check:', {
+            trackId: event.track.id,
+            remoteCameraTrackId: window.superdeskState.remoteCameraTrackId,
+            isKnownCameraTrack,
+            hasExistingVideo,
+            isLabeledAsCamera,
+            trackLabel: event.track.label
+        });
+
+        // Check if this video track should be displayed as camera overlay
+        const isCameraTrack = isKnownCameraTrack || hasExistingVideo || isLabeledAsCamera;
+
+        if (event.track.kind === 'video' && isCameraTrack) {
             console.log('📹 ===== CAMERA TRACK RECEIVED =====');
             if (isKnownCameraTrack) {
                 console.log('📹 Remote camera track ID matches:', event.track.id);
-            } else if (isSecondVideoTrack) {
+            } else if (hasExistingVideo) {
                 console.log('📹 Detected as camera via second-video-track heuristic');
+                window.superdeskState.remoteCameraTrackId = event.track.id;
+            } else if (isLabeledAsCamera) {
+                console.log('📹 Detected as camera via track label:', event.track.label);
                 window.superdeskState.remoteCameraTrackId = event.track.id;
             }
 
@@ -1405,19 +1632,77 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 console.log('📹 Created camera overlay element');
             }
 
-            // Set camera stream to overlay video
+            // Set camera stream to overlay video with retry mechanism
             const cameraVideo = document.getElementById('remote-camera-video');
             if (cameraVideo) {
                 let cameraStream;
                 if (event.streams.length > 0) {
                     cameraStream = event.streams[0];
+                    console.log('📹 Using stream from event.streams[0]');
                 } else {
                     cameraStream = new MediaStream([event.track]);
+                    console.log('📹 Created new MediaStream from track');
                 }
+
+                // Log track state for debugging
+                console.log('📹 Camera track state:', {
+                    id: event.track.id,
+                    enabled: event.track.enabled,
+                    muted: event.track.muted,
+                    readyState: event.track.readyState,
+                    label: event.track.label
+                });
+
+                // Ensure track is enabled
+                if (!event.track.enabled) {
+                    event.track.enabled = true;
+                    console.log('📹 Enabled camera track');
+                }
+
                 cameraVideo.srcObject = cameraStream;
-                cameraVideo.play().catch(e => console.error('📹 Camera play error:', e));
                 cameraOverlay.style.display = 'block';
-                console.log('📹 Camera video playing in overlay');
+
+                // Playback with retry mechanism
+                const playWithRetry = async (attempts = 3) => {
+                    for (let i = 0; i < attempts; i++) {
+                        try {
+                            await cameraVideo.play();
+                            console.log('📹 Camera video playing successfully (attempt', i + 1, ')');
+                            return true;
+                        } catch (e) {
+                            console.warn(`📹 Camera play attempt ${i + 1}/${attempts} failed:`, e.message);
+                            if (i < attempts - 1) {
+                                await new Promise(r => setTimeout(r, 500));
+                            }
+                        }
+                    }
+                    console.error('📹 Camera playback failed after all retries');
+                    return false;
+                };
+                playWithRetry();
+
+                // === TRACK LIFECYCLE: Auto-remove overlay when camera track ends ===
+                // This ensures overlay disappears immediately when host turns off camera
+                event.track.onended = () => {
+                    console.log('📹 GUEST: Remote camera track ENDED - removing overlay');
+                    window.superdeskState.remoteCameraTrackId = null;
+                    const overlay = document.getElementById('remote-camera-overlay');
+                    if (overlay) {
+                        const video = document.getElementById('remote-camera-video');
+                        if (video) video.srcObject = null;
+                        overlay.remove(); // Remove from DOM entirely
+                    }
+                    // Notify popup windows
+                    if (window.viewerPopup && !window.viewerPopup.closed) {
+                        try {
+                            window.viewerPopup.postMessage({ type: 'camera-off' }, '*');
+                        } catch (e) { /* ignore */ }
+                    }
+                };
+
+                console.log('📹 Camera overlay displayed, lifecycle handler attached');
+            } else {
+                console.error('📹 Failed to find remote-camera-video element!');
             }
             return; // Camera track handled separately
         }
@@ -3263,19 +3548,35 @@ async function triggerRenegotiation(peerConnection) {
     console.log('🔄 Triggering renegotiation for new track...');
 
     try {
-        // Create new offer with updated tracks
-        const offer = await peerConnection.createOffer();
-        console.log('🔄 Renegotiation offer created');
+        // Determine role: HOST creates offers, GUEST requests HOST to create offer
+        const isHost = window.superdeskState.isHost === true;
 
-        await peerConnection.setLocalDescription(offer);
-        console.log('🔄 Local description set');
+        console.log('🔄 Renegotiation role:', isHost ? 'HOST (will create offer)' : 'GUEST (will request offer from HOST)');
 
-        // Send the offer to remote peer
-        window.superdeskState.socket.emit('offer', {
-            sessionId: window.superdeskState.sessionId,
-            offer
-        });
-        console.log('🔄 ✅ Renegotiation offer sent - track should now be transmitted');
+        if (isHost) {
+            // HOST: Create and send new offer with updated tracks
+            const offer = await peerConnection.createOffer();
+            console.log('🔄 HOST: Renegotiation offer created');
+
+            await peerConnection.setLocalDescription(offer);
+            console.log('🔄 HOST: Local description set');
+
+            // Send the offer to remote peer
+            window.superdeskState.socket.emit('offer', {
+                sessionId: window.superdeskState.sessionId,
+                offer
+            });
+            console.log('🔄 ✅ HOST: Renegotiation offer sent - track should now be transmitted');
+        } else {
+            // GUEST: Request HOST to send a new offer (polite peer pattern)
+            // We can't create an offer as the answerer in the established connection
+            // Instead, signal HOST that we have new tracks and need renegotiation
+            window.superdeskState.socket.emit('request-renegotiation', {
+                sessionId: window.superdeskState.sessionId,
+                reason: 'new-track-added'
+            });
+            console.log('🔄 ✅ GUEST: Requested renegotiation from HOST - waiting for new offer');
+        }
     } catch (error) {
         console.error('🔄 ❌ Renegotiation failed:', error);
     } finally {
@@ -3397,37 +3698,11 @@ async function startVideoStream() {
             window.appControls.ipcSend('video-state-changed', true);
         }
 
-        // === Create local camera preview (HIDDEN - only screen overlay shown) ===
-        let localCameraPreview = document.getElementById('local-camera-preview');
-        if (!localCameraPreview) {
-            localCameraPreview = document.createElement('div');
-            localCameraPreview.id = 'local-camera-preview';
-            localCameraPreview.style.cssText = `
-                display: none !important;
-            `;
+        // NOTE: No in-app preview is created - camera is only shown via IPC overlay on screen
+        // This prevents black placeholders from appearing in the app window
+        console.log('📹 Camera started - overlay will be shown on screen via IPC');
 
-            const localVideo = document.createElement('video');
-            localVideo.id = 'local-camera-video';
-            localVideo.autoplay = true;
-            localVideo.playsInline = true;
-            localVideo.muted = true;
-            localVideo.style.cssText = 'width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);';
-            localCameraPreview.appendChild(localVideo);
-
-            document.body.appendChild(localCameraPreview);
-
-            console.log('📹 Created hidden local camera preview');
-        }
-
-        // Set local camera stream to preview
-        const localCameraVideo = document.getElementById('local-camera-video');
-        if (localCameraVideo) {
-            localCameraVideo.srcObject = stream;
-            // In-app preview intentionally hidden - only screen overlay is shown
-            console.log('📹 Local camera stream set');
-        }
-
-        // Show overlay on screen
+        // Show overlay on screen (separate floating window)
         if (window.appControls && window.appControls.ipcSend) {
             window.appControls.ipcSend('show-local-camera-overlay');
         }
@@ -3511,6 +3786,46 @@ function stopAllChatMedia() {
     console.log('🛑 Stopping all chat media...');
     stopMicStream();
     stopVideoStream();
+
+    // === CLEANUP: Remove all camera overlay elements from DOM ===
+    // Remove HOST side guest camera overlay
+    const guestCameraOverlay = document.getElementById('guest-camera-overlay');
+    if (guestCameraOverlay) {
+        guestCameraOverlay.remove();
+        console.log('🛑 Removed guest-camera-overlay from DOM');
+    }
+
+    // Remove GUEST side remote camera overlay  
+    const remoteCameraOverlay = document.getElementById('remote-camera-overlay');
+    if (remoteCameraOverlay) {
+        remoteCameraOverlay.remove();
+        console.log('🛑 Removed remote-camera-overlay from DOM');
+    }
+
+    // Remove local camera preview
+    const localCameraPreview = document.getElementById('local-camera-preview');
+    if (localCameraPreview) {
+        localCameraPreview.remove();
+        console.log('🛑 Removed local-camera-preview from DOM');
+    }
+
+    // Remove audio elements
+    const guestMicAudio = document.getElementById('guest-mic-audio');
+    if (guestMicAudio) {
+        guestMicAudio.remove();
+        console.log('🛑 Removed guest-mic-audio from DOM');
+    }
+
+    const remoteMicAudio = document.getElementById('remote-mic-audio');
+    if (remoteMicAudio) {
+        remoteMicAudio.remove();
+        console.log('🛑 Removed remote-mic-audio from DOM');
+    }
+
+    // Exit PiP mode
+    if (window.appControls && window.appControls.ipcSend) {
+        window.appControls.ipcSend('hide-guest-camera-pip');
+    }
 }
 
 // Listen for IPC messages from toolbar to toggle mic/video
@@ -3540,6 +3855,49 @@ if (typeof require !== 'undefined') {
         ipcRenderer.on('viewer-closed', () => {
             console.log('📺 Viewer window closed - cleaning up media streams');
             stopAllChatMedia();
+        });
+
+        // === PiP MODE ===
+        // When HOST receives GUEST camera while sharing, transform window to show only the overlay
+        ipcRenderer.on('enter-pip-mode', () => {
+            console.log('📹 Entering PiP mode - showing only guest camera overlay');
+            // Hide all content except the camera overlay
+            document.body.style.background = 'transparent';
+            document.body.style.overflow = 'hidden';
+
+            // Hide all children except camera overlay
+            const children = document.body.children;
+            for (let child of children) {
+                if (child.id !== 'guest-camera-overlay') {
+                    child.style.display = 'none';
+                }
+            }
+
+            // Position camera overlay to fill the window
+            const cameraOverlay = document.getElementById('guest-camera-overlay');
+            if (cameraOverlay) {
+                cameraOverlay.style.position = 'fixed';
+                cameraOverlay.style.top = '7px';
+                cameraOverlay.style.left = '10px';
+                cameraOverlay.style.right = '10px';
+                cameraOverlay.style.bottom = '7px';
+                cameraOverlay.style.width = 'auto';
+                cameraOverlay.style.height = 'auto';
+                cameraOverlay.style.zIndex = '1';
+            }
+        });
+
+        ipcRenderer.on('exit-pip-mode', () => {
+            console.log('📹 Exiting PiP mode - restoring normal view');
+            // Restore all content
+            document.body.style.background = '';
+            document.body.style.overflow = '';
+
+            // Show all hidden children
+            const children = document.body.children;
+            for (let child of children) {
+                child.style.display = '';
+            }
         });
 
         console.log('✅ Toolbar mic/video IPC listeners registered');
