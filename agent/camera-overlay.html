@@ -49,7 +49,10 @@
 </head>
 
 <body>
-    <video id="video" autoplay playsinline muted></video>
+    <!-- Ultra-low latency video settings: disablePictureInPicture, low latency attributes -->
+    <video id="video" autoplay playsinline muted disablePictureInPicture 
+           style="pointer-events: none;"
+           preload="none"></video>
     <div class="label" id="label">Camera</div>
     <div id="loading">Initializing...</div>
 
@@ -68,111 +71,96 @@
             }
 
             if (type === 'local') {
-                // For local camera, directly request access
+                // For local camera, use getUserMedia directly
+                // This is the correct approach for showing user's own camera
                 try {
+                    console.log('📹 Requesting camera access for local overlay...');
                     const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { width: 320, height: 240 },
+                        video: { 
+                            width: { ideal: 320, max: 480 },
+                            height: { ideal: 240, max: 360 },
+                            frameRate: { ideal: 30, min: 15 }
+                        },
                         audio: false
                     });
+                    
                     video.srcObject = stream;
-                    video.play();
+                    await video.play();
                     loading.style.display = 'none';
                     console.log('✅ Local camera overlay initialized');
+                    
+                    // Monitor track for end
+                    const track = stream.getVideoTracks()[0];
+                    if (track) {
+                        track.onended = () => {
+                            console.log('📹 Local camera track ended');
+                            ipcRenderer.send('close-camera-overlay', 'local');
+                        };
+                    }
                 } catch (e) {
                     console.error('Failed to get local camera:', e);
-                    loading.textContent = 'Camera access denied';
-                    ipcRenderer.send('overlay-error', e.message);
+                    loading.textContent = 'Camera error';
+                    setTimeout(() => {
+                        ipcRenderer.send('close-camera-overlay', 'local');
+                    }, 2000);
                 }
             } else if (type === 'remote') {
-                // For remote camera, get stream from shared registry
-                loading.textContent = 'Waiting for stream...';
-                console.log('📹 Remote overlay waiting for stream from registry');
+                // For remote camera (guest's camera shown on host)
+                // Use stream-registry
+                loading.textContent = 'Waiting...';
+                console.log('📹 Remote overlay waiting for stream');
 
-                const streamRegistry = require('./stream-registry');
+                try {
+                    const streamRegistry = require('./stream-registry');
+                    
+                    let pollCount = 0;
+                    const pollInterval = setInterval(() => {
+                        pollCount++;
 
-                // Poll for stream in registry
-                let pollCount = 0;
-                const pollInterval = setInterval(() => {
-                    pollCount++;
+                        if (streamRegistry.hasStream('guest-camera')) {
+                            const stream = streamRegistry.getStream('guest-camera');
+                            if (stream && stream.getVideoTracks().length > 0) {
+                                const videoTrack = stream.getVideoTracks()[0];
+                                if (videoTrack.readyState === 'ended') {
+                                    clearInterval(pollInterval);
+                                    ipcRenderer.send('close-camera-overlay', 'remote');
+                                    return;
+                                }
 
-                    if (streamRegistry.hasStream('guest-camera')) {
-                        const stream = streamRegistry.getStream('guest-camera');
-
-                        if (stream && stream.getVideoTracks().length > 0) {
-                            const videoTrack = stream.getVideoTracks()[0];
-
-                            // Check if track is still alive
-                            if (videoTrack.readyState === 'ended') {
-                                console.log('📹 Stream track already ended - closing overlay');
+                                video.srcObject = stream;
+                                video.play().catch(e => console.error('Play error:', e));
+                                loading.style.display = 'none';
                                 clearInterval(pollInterval);
-                                ipcRenderer.send('close-camera-overlay', 'remote');
-                                return;
+                                console.log('✅ Guest camera stream connected');
+
+                                videoTrack.onended = () => {
+                                    ipcRenderer.send('close-camera-overlay', 'remote');
+                                };
                             }
+                        }
 
-                            console.log('✅ Found guest camera stream in registry');
-                            video.srcObject = stream;
-                            video.play().catch(e => console.error('Play error:', e));
-                            loading.style.display = 'none';
+                        if (pollCount > 100) {
                             clearInterval(pollInterval);
-
-                            // === TRACK LIFECYCLE: Close overlay when track ends ===
-                            videoTrack.onended = () => {
-                                console.log('📹 Remote camera track ENDED - requesting overlay close');
+                            loading.textContent = 'Unavailable';
+                            setTimeout(() => {
                                 ipcRenderer.send('close-camera-overlay', 'remote');
-                            };
-
-                            // Also monitor for track becoming inactive
-                            videoTrack.onmute = () => {
-                                console.log('📹 Remote camera track MUTED');
-                            };
+                            }, 1500);
                         }
-                    } else {
-                        // Check if poll timeout - stream might have been removed
-                        if (pollCount > 10 && loading.style.display !== 'none') {
-                            // Stream hasn't arrived in 5 seconds, check if it was deleted
-                            console.log('📹 Still waiting for stream...');
-                        }
-                    }
-
-                    // Stop polling after 60 seconds
-                    if (pollCount > 120) {
-                        clearInterval(pollInterval);
-                        loading.textContent = 'Stream unavailable';
-                        console.warn('⏱️ Timeout waiting for guest camera stream');
-                        // Close the overlay if stream never arrived
-                        setTimeout(() => {
-                            ipcRenderer.send('close-camera-overlay', 'remote');
-                        }, 2000);
-                    }
-                }, 500);
-
-                // Also periodically check if stream is still valid 
-                // This catches cases where track ended but onended didn't fire
-                const healthCheck = setInterval(() => {
-                    if (video.srcObject) {
-                        const tracks = video.srcObject.getVideoTracks();
-                        if (tracks.length === 0 || tracks[0].readyState === 'ended') {
-                            console.log('📹 Health check: stream ended - closing overlay');
-                            clearInterval(healthCheck);
-                            ipcRenderer.send('close-camera-overlay', 'remote');
-                        }
-                    }
-                }, 2000);
+                    }, 200);
+                } catch (e) {
+                    console.error('Stream registry error:', e);
+                    loading.textContent = 'Error';
+                }
             }
         });
 
-        // Expose function to set stream directly (if we can pass it)
-        window.setRemoteStream = function (stream) {
-            console.log('📹 setRemoteStream called with:', stream);
-            if (stream && stream.getVideoTracks().length > 0) {
-                video.srcObject = stream;
-                video.play().catch(e => console.error('Play error:', e));
-                loading.style.display = 'none';
-                console.log('✅ Remote stream set successfully');
-                return true;
+        // Handle window close
+        window.addEventListener('beforeunload', () => {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(t => t.stop());
+                video.srcObject = null;
             }
-            return false;
-        };
+        });
     </script>
 </body>
 

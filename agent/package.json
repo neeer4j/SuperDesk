@@ -31,9 +31,13 @@
       "toolbar.html",
       "viewer-popup.html",
       "viewer.html",
+      "camera-overlay.html",
+      "guest-camera-popup.html",
+      "host-camera-popup.html",
       "preload.js",
       "superdesk-webrtc.js",
       "supabaseClient.js",
+      "stream-registry.js",
       "modules/**/*",
       "assets/**/*",
       "package.json"

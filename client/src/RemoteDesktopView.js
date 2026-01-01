@@ -113,12 +113,36 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
     // Camera overlay callbacks
     client.on('remoteCameraStream', (cameraStream) => {
       console.log('📹 WEBAPP: Remote camera stream received');
-      setShowCameraOverlay(true);
-      if (cameraVideoRef.current) {
+      
+      // Function to set up camera video with retry
+      const setupCameraVideo = () => {
+        if (!cameraVideoRef.current) {
+          console.warn('📹 WEBAPP: Camera video element not ready, retrying...');
+          setTimeout(setupCameraVideo, 100);
+          return;
+        }
+        
         cameraVideoRef.current.srcObject = cameraStream;
+        
+        // Only show overlay when video actually has data
+        cameraVideoRef.current.onloadeddata = () => {
+          if (cameraVideoRef.current && cameraVideoRef.current.videoWidth > 0 && cameraVideoRef.current.videoHeight > 0) {
+            console.log('📹 WEBAPP: Camera video has data, showing overlay');
+            setShowCameraOverlay(true);
+            showToast('Host camera enabled', 'info', 2000);
+          }
+        };
+        
+        // Also listen for loadedmetadata as fallback
+        cameraVideoRef.current.onloadedmetadata = () => {
+          console.log('📹 WEBAPP: Camera video metadata loaded');
+          setShowCameraOverlay(true);
+        };
+        
         cameraVideoRef.current.play().catch(e => console.warn('Camera play error:', e));
-      }
-      showToast('Host camera enabled', 'info', 2000);
+      };
+      
+      setupCameraVideo();
     });
 
     client.on('remoteCameraOff', () => {
@@ -415,45 +439,45 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
         />
 
         {/* Remote Camera Overlay - shows host's webcam */}
-        {showCameraOverlay && (
+        {/* Always render video element so ref is available, control visibility with display */}
+        <div style={{
+          position: 'absolute',
+          bottom: '100px',
+          right: '24px',
+          width: '200px',
+          height: '150px',
+          background: '#000',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          zIndex: 10001,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          border: '2px solid rgba(139, 92, 246, 0.5)',
+          display: showCameraOverlay ? 'block' : 'none'
+        }}>
+          <video
+            ref={cameraVideoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
           <div style={{
             position: 'absolute',
-            bottom: '100px',
-            right: '24px',
-            width: '200px',
-            height: '150px',
-            background: '#000',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            zIndex: 10001,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-            border: '2px solid rgba(139, 92, 246, 0.5)'
+            bottom: '4px',
+            left: '4px',
+            fontSize: '10px',
+            color: 'white',
+            background: 'rgba(0, 0, 0, 0.6)',
+            padding: '2px 6px',
+            borderRadius: '4px'
           }}>
-            <video
-              ref={cameraVideoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
-              }}
-            />
-            <div style={{
-              position: 'absolute',
-              bottom: '4px',
-              left: '4px',
-              fontSize: '10px',
-              color: 'white',
-              background: 'rgba(0, 0, 0, 0.6)',
-              padding: '2px 6px',
-              borderRadius: '4px'
-            }}>
-              Host Camera
-            </div>
+            Remote Camera
           </div>
-        )}
+        </div>
 
         {/* Hidden audio element for remote mic playback */}
         <audio ref={micAudioRef} autoPlay style={{ display: 'none' }} />

@@ -345,15 +345,33 @@ class SuperDeskClient {
       await this.setupPeerConnection();
     }
 
-    await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-    const answer = await this.peerConnection.createAnswer();
-    await this.peerConnection.setLocalDescription(answer);
+    console.log('📨 WEBAPP: Received offer, signaling state:', this.peerConnection.signalingState);
 
-    this.socket.emit('answer', {
-      sessionId: this.sessionId,
-      targetId: data.from,
-      answer
-    });
+    // Handle glare condition - rollback if we have a local offer pending
+    if (this.peerConnection.signalingState === 'have-local-offer') {
+      console.log('⚠️ WEBAPP: Glare detected, rolling back local offer');
+      try {
+        await this.peerConnection.setLocalDescription({ type: 'rollback' });
+      } catch (e) {
+        console.warn('⚠️ WEBAPP: Rollback failed:', e.message);
+      }
+    }
+
+    // Accept offer if we're in stable state
+    if (this.peerConnection.signalingState === 'stable' || this.peerConnection.signalingState === 'have-remote-offer') {
+      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+      const answer = await this.peerConnection.createAnswer();
+      await this.peerConnection.setLocalDescription(answer);
+
+      this.socket.emit('answer', {
+        sessionId: this.sessionId,
+        targetId: data.from,
+        answer
+      });
+      console.log('📤 WEBAPP: Answer sent');
+    } else {
+      console.warn('⚠️ WEBAPP: Ignoring offer - wrong state:', this.peerConnection.signalingState);
+    }
   }
 
   async handleAnswer(data) {

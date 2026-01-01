@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Guest Camera</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .label {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            font-size: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+        }
+        .close-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .close-btn:hover {
+            background: rgba(255,0,0,0.7);
+        }
+        .waiting {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.7);
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <video id="video" autoplay playsinline muted></video>
+    <div class="label">Remote Camera</div>
+    <div class="waiting" id="waiting">Connecting...</div>
+    <button class="close-btn" onclick="window.close()">×</button>
+
+    <script>
+        const video = document.getElementById('video');
+        const waiting = document.getElementById('waiting');
+        
+        // Get stream from opener window (parent that called window.open)
+        function checkForStream() {
+            if (window.opener && window.opener.superdeskState) {
+                const stream = window.opener.superdeskState.guestCameraStream;
+                if (stream && stream.active && stream.getVideoTracks().length > 0) {
+                    console.log('✅ Guest camera stream found from window.opener!');
+                    video.srcObject = stream;
+                    video.play().catch(e => console.error('Play error:', e));
+                    waiting.style.display = 'none';
+                    
+                    // Monitor track for end
+                    const track = stream.getVideoTracks()[0];
+                    track.onended = () => {
+                        console.log('Guest camera track ended');
+                        window.close();
+                    };
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Try immediately
+        if (!checkForStream()) {
+            // Retry every 100ms for up to 10 seconds
+            let attempts = 0;
+            const maxAttempts = 100;
+            
+            const interval = setInterval(() => {
+                attempts++;
+                if (checkForStream() || attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    if (attempts >= maxAttempts) {
+                        console.log('❌ Guest camera stream not available after timeout');
+                        waiting.textContent = 'Stream unavailable';
+                        setTimeout(() => window.close(), 2000);
+                    }
+                }
+            }, 100);
+        }
+        
+        // Close when opener closes
+        setInterval(() => {
+            if (!window.opener || window.opener.closed) {
+                console.log('Opener closed, closing popup');
+                window.close();
+            }
+            // Also close if stream ends
+            if (video.srcObject && !video.srcObject.active) {
+                console.log('Stream ended, closing popup');
+                window.close();
+            }
+        }, 500);
+        
+        // Handle beforeunload
+        window.addEventListener('beforeunload', () => {
+            if (video.srcObject) {
+                video.srcObject = null;
+            }
+        });
+    </script>
+</body>
+</html>

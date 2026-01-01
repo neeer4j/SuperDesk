@@ -23,6 +23,20 @@ app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEnc
 // Ignore GPU blocklist to ensure hardware decoding works
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 
+// ==================== LOW LATENCY VIDEO CALL OPTIMIZATION ====================
+// Disable vsync for lower latency frame delivery
+app.commandLine.appendSwitch('disable-frame-rate-limit');
+// Disable software compositing to reduce latency
+app.commandLine.appendSwitch('disable-software-rasterizer');
+// Enable hardware overlay for faster video rendering
+app.commandLine.appendSwitch('enable-hardware-overlays');
+// Reduce WebRTC jitter buffer for lower latency
+app.commandLine.appendSwitch('force-fieldtrials', 'WebRTC-Audio-MinimizeResamplingOnMobile/Enabled/');
+// Disable background tab throttling to keep video calls smooth
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+
 // Configure nut-js for instant mouse movement (no animation)
 mouse.config.autoDelayMs = 0;
 mouse.config.mouseSpeed = 10000; // Very fast movement
@@ -1044,20 +1058,35 @@ function showLocalCameraOverlay() {
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
+    resizable: true,  // Allow resizing for user preference
+    minimizable: false,  // Prevent minimizing - keeps visible always
+    closable: true,
+    movable: true,
+    focusable: false,  // Don't steal focus from other apps
+    hasShadow: true,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      backgroundThrottling: false  // Keep video playing when not focused
     }
   });
 
+  // Maximum always-on-top priority - visible even over fullscreen apps
   localCameraOverlay.setAlwaysOnTop(true, 'screen-saver');
+  localCameraOverlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  
+  // CRITICAL: Exclude camera overlay from screen capture so it doesn't appear in shared screen
+  localCameraOverlay.setContentProtection(true);
+  
+  // Prevent the window from being hidden when main app is minimized
+  localCameraOverlay.setSkipTaskbar(true);
+  
   localCameraOverlay.loadFile(path.join(__dirname, 'camera-overlay.html'));
 
   localCameraOverlay.webContents.on('did-finish-load', () => {
     localCameraOverlay.webContents.send('init-overlay', {
       type: 'local',
-      label: 'You',
+      label: 'My Camera',
       mirror: true
     });
   });
@@ -1066,17 +1095,32 @@ function showLocalCameraOverlay() {
     localCameraOverlay = null;
   });
 
-  console.log('📹 Local camera overlay created');
+  console.log('📹 Local camera overlay created (always-on-top, visible on all workspaces)');
 }
 
 function hideLocalCameraOverlay() {
   if (localCameraOverlay && !localCameraOverlay.isDestroyed()) {
-    localCameraOverlay.close();
+    try {
+      // Stop any media streams in the overlay before closing
+      localCameraOverlay.webContents.executeJavaScript(`
+        const video = document.getElementById('video');
+        if (video && video.srcObject) {
+          video.srcObject.getTracks().forEach(t => t.stop());
+          video.srcObject = null;
+        }
+      `).catch(() => {});
+      localCameraOverlay.close();
+    } catch (e) {
+      console.warn('📹 Error closing local camera overlay:', e.message);
+    }
     localCameraOverlay = null;
   }
+  console.log('📹 Local camera overlay hidden');
 }
 
 function showRemoteCameraOverlay() {
+  // Create a proper BrowserWindow for guest camera with content protection
+  // This ensures the guest's camera is NOT captured in the screen share
   if (remoteCameraOverlay && !remoteCameraOverlay.isDestroyed()) {
     remoteCameraOverlay.show();
     return;
@@ -1085,44 +1129,55 @@ function showRemoteCameraOverlay() {
   const { width, height } = electronScreen.getPrimaryDisplay().workAreaSize;
 
   remoteCameraOverlay = new BrowserWindow({
-    width: 200,
-    height: 150,
-    x: width - 220,
-    y: height - 170,
+    width: 240,
+    height: 180,
+    x: width - 260,
+    y: 60,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
+    resizable: true,
+    minimizable: false,
+    closable: true,
+    movable: true,
+    focusable: false,
+    hasShadow: true,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      backgroundThrottling: false
     }
   });
 
+  // Maximum always-on-top priority - visible even over fullscreen apps and when minimized
   remoteCameraOverlay.setAlwaysOnTop(true, 'screen-saver');
-  remoteCameraOverlay.loadFile(path.join(__dirname, 'camera-overlay.html'));
-
-  remoteCameraOverlay.webContents.on('did-finish-load', () => {
-    remoteCameraOverlay.webContents.send('init-overlay', {
-      type: 'remote',
-      label: 'Guest',
-      mirror: false
-    });
-  });
+  remoteCameraOverlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  
+  // CRITICAL: Exclude from screen capture so guest doesn't see their own camera
+  remoteCameraOverlay.setContentProtection(true);
+  
+  remoteCameraOverlay.setSkipTaskbar(true);
+  
+  remoteCameraOverlay.loadFile(path.join(__dirname, 'guest-camera-popup.html'));
 
   remoteCameraOverlay.on('closed', () => {
     remoteCameraOverlay = null;
   });
 
-  console.log('📹 Remote camera overlay created');
+  console.log('📹 Remote/Guest camera overlay created (content-protected, always-on-top)');
 }
 
 function hideRemoteCameraOverlay() {
   if (remoteCameraOverlay && !remoteCameraOverlay.isDestroyed()) {
-    remoteCameraOverlay.close();
+    try {
+      remoteCameraOverlay.close();
+    } catch (e) {
+      console.warn('📹 Error closing remote camera overlay:', e.message);
+    }
     remoteCameraOverlay = null;
   }
+  console.log('📹 Remote camera overlay hidden');
 }
 
 // IPC handlers for overlays

@@ -139,18 +139,19 @@
 
 <body>
     <!-- Note: Start unmuted to allow audio playback, speaker button controls volume -->
-    <video id="vid" autoplay playsinline></video>
+    <!-- Ultra-low latency video settings -->
+    <video id="vid" autoplay playsinline disablePictureInPicture preload="none"></video>
 
     <!-- Camera overlay for remote peer's webcam -->
     <div id="camera-overlay">
-        <video id="camera-vid" autoplay playsinline muted></video>
-        <div class="label">Remote</div>
+        <video id="camera-vid" autoplay playsinline muted disablePictureInPicture preload="none"></video>
+        <div class="label">Remote Camera</div>
     </div>
 
     <!-- Local camera overlay (user's own camera) -->
     <div id="local-camera-overlay">
-        <video id="local-camera-vid" autoplay playsinline muted></video>
-        <div class="label">You</div>
+        <video id="local-camera-vid" autoplay playsinline muted disablePictureInPicture preload="none"></video>
+        <div class="label">My Camera</div>
     </div>
 
     <div id="bar">
@@ -287,7 +288,7 @@
         const localCameraOverlay = document.getElementById('local-camera-overlay');
         const localCameraVid = document.getElementById('local-camera-vid');
 
-        // === MESSAGE LISTENER for immediate camera-off events (Discord-style) ===
+        // === MESSAGE LISTENER for immediate camera events (Discord-style) ===
         window.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'camera-off') {
                 console.log('📹 Received camera-off message - hiding overlay immediately');
@@ -296,6 +297,10 @@
                     cameraOverlay.style.display = 'none';
                     cameraVid.srcObject = null;
                 }
+            } else if (event.data && event.data.type === 'host-camera-available') {
+                console.log('📹 Received host-camera-available message - checking stream');
+                // Immediately check for host camera stream
+                checkCameraOverlays();
             }
         });
 
@@ -305,49 +310,69 @@
             const state = window.opener.superdeskState;
 
             // === LOCAL CAMERA (user's own camera) ===
+            // Only show for GUEST - HOST has IPC overlay window instead
             const localVideoStream = state.videoStream;
-            if (localVideoStream && localVideoStream.active) {
-                // User has their own camera enabled - show local overlay
+            const shouldShowLocalCamera = !state.isHost && localVideoStream && localVideoStream.active;
+            
+            if (shouldShowLocalCamera) {
+                // GUEST has their camera enabled - show local overlay
                 if (localCameraVid.srcObject !== localVideoStream) {
                     localCameraVid.srcObject = localVideoStream;
                     localCameraOverlay.style.display = 'block';
                     localCameraVid.play().catch(e => console.warn('Local camera play error:', e));
-                    console.log('📹 Local camera overlay shown in viewer');
+                    console.log('📹 GUEST: Local camera overlay shown in viewer');
                 }
             } else {
-                // User's camera is off - IMMEDIATELY hide (Discord-style)
+                // Hide local camera overlay
                 if (localCameraOverlay.style.display !== 'none') {
                     localCameraOverlay.style.display = 'none';
                     localCameraVid.srcObject = null;
-                    console.log('📹 Local camera overlay hidden');
                 }
             }
 
             // === REMOTE CAMERA (peer's camera) ===
-            // Check for remoteCameraTrackId (GUEST viewing HOST's camera)
-            // OR guestCameraTrackId (HOST viewing GUEST's camera)
+            // GUEST sees HOST's camera, HOST sees GUEST's camera
             const remoteCameraTrackId = state.remoteCameraTrackId;
             const guestCameraTrackId = state.guestCameraTrackId;
-
-            // Try to get the remote camera video element from opener
-            // Could be either "remote-camera-video" (guest side) or "guest-camera-video" (host side)
-            let openerCameraVid = window.opener.document.getElementById('remote-camera-video');
-            if (!openerCameraVid) {
-                openerCameraVid = window.opener.document.getElementById('guest-camera-video');
+            
+            // PRIORITY: Check for direct stream references FIRST (more reliable)
+            // hostCameraStream = GUEST viewing HOST's camera
+            // guestCameraStream = HOST viewing GUEST's camera
+            const hostCameraStream = state.hostCameraStream;
+            const guestCameraStream = state.guestCameraStream;
+            
+            // Get the appropriate stream based on role
+            let remoteCameraStream = null;
+            
+            // If we're GUEST (isHost === false), we want to see HOST's camera
+            // If we're HOST (isHost === true), we want to see GUEST's camera
+            if (!state.isHost && hostCameraStream && hostCameraStream.active) {
+                // GUEST viewing HOST's camera
+                remoteCameraStream = hostCameraStream;
+                console.log('📹 GUEST: Using hostCameraStream');
+            } else if (state.isHost && guestCameraStream && guestCameraStream.active) {
+                // HOST viewing GUEST's camera
+                remoteCameraStream = guestCameraStream;
+                console.log('📹 HOST: Using guestCameraStream');
             }
 
-            // Check BOTH: state variable OR actual video element with stream
-            const hasRemoteCameraByState = remoteCameraTrackId || guestCameraTrackId;
-            const hasRemoteCameraByElement = openerCameraVid && openerCameraVid.srcObject && openerCameraVid.srcObject.active;
-            const hasRemoteCamera = hasRemoteCameraByState || hasRemoteCameraByElement;
+            // Check if we have a valid remote camera stream
+            const hasRemoteCamera = remoteCameraStream && remoteCameraStream.active;
 
-            if (hasRemoteCamera && openerCameraVid && openerCameraVid.srcObject) {
-                // Copy the camera stream to our overlay
-                if (cameraVid.srcObject !== openerCameraVid.srcObject) {
-                    cameraVid.srcObject = openerCameraVid.srcObject;
-                    cameraOverlay.style.display = 'block';
+            if (hasRemoteCamera && remoteCameraStream) {
+                // Set the camera stream to our overlay
+                if (cameraVid.srcObject !== remoteCameraStream) {
+                    cameraVid.srcObject = remoteCameraStream;
+                    // DON'T show overlay immediately - wait for video to have data
                     cameraVid.play().catch(e => console.warn('Remote camera play error:', e));
-                    console.log('📹 Remote camera overlay shown in viewer');
+                    console.log('📹 Remote camera stream set, waiting for video data...');
+                }
+                // Only show overlay if video actually has dimensions (real data)
+                if (cameraVid.videoWidth > 0 && cameraVid.videoHeight > 0) {
+                    if (cameraOverlay.style.display !== 'block') {
+                        cameraOverlay.style.display = 'block';
+                        console.log('📹 Remote camera overlay shown (video has data:', cameraVid.videoWidth, 'x', cameraVid.videoHeight, ')');
+                    }
                 }
             } else {
                 // Remote camera is off - IMMEDIATELY hide (Discord-style)
@@ -359,8 +384,8 @@
             }
         }
 
-        // Poll for camera overlays every 200ms (faster detection)
-        setInterval(checkCameraOverlays, 200);
+        // Poll for camera overlays every 100ms (faster detection for snappy response)
+        setInterval(checkCameraOverlays, 100);
 
         // === MIC AUDIO POLLING ===
         // Ensure remote mic audio plays in this viewer window
@@ -402,8 +427,8 @@
             }
         }
 
-        // Poll for mic audio every 500ms
-        setInterval(checkMicAudio, 500);
+        // Poll for mic audio every 250ms (faster for snappy audio pickup)
+        setInterval(checkMicAudio, 250);
 
         // Check opener state and detect host type
         function checkOpenerState() {

@@ -460,26 +460,89 @@
                 peerConnection = new RTCPeerConnection(config);
 
                 peerConnection.ontrack = (event) => {
-                    console.log('📺 Received track:', event.track.kind, 'id:', event.track.id);
+                    console.log('📺 Received track:', event.track.kind, 'id:', event.track.id, 'label:', event.track.label);
 
-                    // Check if this is the camera track
-                    if (event.track.kind === 'video' && remoteCameraTrackId === event.track.id) {
-                        console.log('📹 Camera track received, showing in overlay');
-                        const cameraVideo = document.getElementById('remote-camera-video');
-                        const overlay = document.getElementById('remote-camera-overlay');
-                        if (cameraVideo && overlay) {
-                            cameraVideo.srcObject = event.streams[0] || new MediaStream([event.track]);
-                            cameraVideo.play().catch(e => console.error('Camera play error:', e));
-                            overlay.style.display = 'block';
-                        }
-                        return;
-                    }
-
-                    // Main video (screen share)
+                    // Handle VIDEO tracks
                     if (event.track.kind === 'video') {
+                        // Check if this is the camera track using multiple detection methods:
+                        // 1. Direct ID match from camera-state signal
+                        const isKnownCameraTrack = remoteCameraTrackId === event.track.id;
+                        // 2. Track label contains camera-related keywords
+                        const isLabeledAsCamera = event.track.label && (
+                            event.track.label.toLowerCase().includes('camera') ||
+                            event.track.label.toLowerCase().includes('webcam') ||
+                            event.track.label.toLowerCase().includes('facetime')
+                        );
+                        // 3. We already have a screen share video - this must be camera (second video track)
+                        const hasExistingScreenShare = video.srcObject && video.srcObject.getVideoTracks().length > 0;
+
+                        console.log('📹 Camera detection check:', {
+                            trackId: event.track.id,
+                            remoteCameraTrackId,
+                            isKnownCameraTrack,
+                            isLabeledAsCamera,
+                            hasExistingScreenShare,
+                            trackLabel: event.track.label
+                        });
+
+                        const isCameraTrack = isKnownCameraTrack || isLabeledAsCamera || hasExistingScreenShare;
+
+                        if (isCameraTrack) {
+                            console.log('📹 Camera track detected, preparing overlay');
+                            
+                            // Set remoteCameraTrackId if not already set (race condition fix)
+                            if (!remoteCameraTrackId) {
+                                remoteCameraTrackId = event.track.id;
+                                console.log('📹 Set remoteCameraTrackId from incoming track');
+                            }
+                            
+                            const cameraVideo = document.getElementById('remote-camera-video');
+                            const overlay = document.getElementById('remote-camera-overlay');
+                            if (cameraVideo && overlay) {
+                                cameraVideo.srcObject = event.streams[0] || new MediaStream([event.track]);
+                                // DON'T show overlay immediately - wait for actual video data
+                                overlay.style.display = 'none';
+                                
+                                // Show only when video has data
+                                cameraVideo.onloadeddata = () => {
+                                    if (cameraVideo.videoWidth > 0 && cameraVideo.videoHeight > 0) {
+                                        overlay.style.display = 'block';
+                                        console.log('📹 Camera overlay visible (has data:', cameraVideo.videoWidth, 'x', cameraVideo.videoHeight, ')');
+                                    }
+                                };
+                                
+                                cameraVideo.play().catch(e => console.error('Camera play error:', e));
+                                console.log('📹 Camera stream set, waiting for video data...');
+                            }
+                            
+                            // Handle track ended - hide overlay immediately
+                            event.track.onended = () => {
+                                console.log('📹 Camera track ENDED - hiding overlay');
+                                remoteCameraTrackId = null;
+                                if (overlay) {
+                                    overlay.style.display = 'none';
+                                    cameraVideo.srcObject = null;
+                                }
+                            };
+                            
+                            return;
+                        }
+
+                        // This is the screen share video (first video track)
+                        console.log('📺 Screen share video track received');
                         video.srcObject = event.streams[0];
                         hideWaitingOverlay();
                         detectHostType();
+                        return;
+                    }
+
+                    // Handle AUDIO tracks
+                    if (event.track.kind === 'audio') {
+                        console.log('🔊 Audio track received');
+                        // Add audio to main video element
+                        if (video.srcObject) {
+                            video.srcObject.addTrack(event.track);
+                        }
                     }
                 };
 

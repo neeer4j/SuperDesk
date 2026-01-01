@@ -311,6 +311,23 @@ io.on('connection', (socket) => {
     socket.to(sessionId).emit('screen-share-stopped');
   });
 
+  // Camera and microphone state events - relay to other peers in session
+  socket.on('camera-state', (data) => {
+    console.log('📹 Camera state:', data.enabled ? 'ON' : 'OFF', 'session:', data.sessionId);
+    socket.to(data.sessionId).emit('camera-state', data);
+  });
+
+  socket.on('mic-state', (data) => {
+    console.log('🎤 Mic state:', data.enabled ? 'ON' : 'OFF', 'session:', data.sessionId);
+    socket.to(data.sessionId).emit('mic-state', data);
+  });
+
+  // Renegotiation request - relay from guest to host
+  socket.on('request-renegotiation', (data) => {
+    console.log('🔄 Renegotiation requested:', data.reason, 'session:', data.sessionId);
+    socket.to(data.sessionId).emit('request-renegotiation', data);
+  });
+
   // Remote control events
   socket.on('mouse-event', (data) => {
     console.log('Mouse event:', data);
