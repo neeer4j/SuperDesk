@@ -403,6 +403,122 @@ runVideoCallTests();
 
 ---
 
+## Test Case 12: Screen Capture Exclusion (Content Protection)
+**Objective**: Verify camera overlay windows are excluded from screen capture/share
+
+### Test Steps:
+1. Start SuperDesk Agent as host
+2. Join session from guest (web browser)
+3. Enable host's camera - verify camera overlay appears
+4. Observe the guest's screen share view
+5. Verify guest does NOT see the camera overlay in the screen share
+6. Enable guest's camera (check both overlays)
+
+### Expected Results:
+- ✅ Host's camera overlay is NOT visible in guest's screen share view
+- ✅ Guest cannot see their own camera reflected back through screen share
+- ✅ Guest camera overlay (on host) is also excluded from capture
+- ✅ Only the desktop content is shared, not the overlay windows
+
+### Verification Points:
+```javascript
+// main.js camera overlay window options
+setContentProtection(true)  // Prevents window from being captured
+
+// BrowserWindow configuration
+alwaysOnTop: true,
+focusable: false,
+skipTaskbar: true,
+frame: false
+```
+
+### Technical Details:
+The `setContentProtection(true)` Electron API tells the OS to exclude the window from screen capture, screen recording, and screen sharing. This is the same technique used by DRM video players.
+
+---
+
+## Test Case 13: Camera Overlay Minimize/Close Controls
+**Objective**: Verify camera overlays have working minimize and close functionality
+
+### Test Steps:
+1. Start video call with camera enabled
+2. Locate the minimize button (─) on camera overlay header
+3. Click minimize - verify overlay collapses to title bar only
+4. Click restore (□) - verify overlay expands back to full size
+5. Click close button (×) - verify overlay closes completely
+6. Re-enable camera - verify overlay reappears
+
+### Expected Results:
+- ✅ Minimize button collapses overlay to ~35-40px height (header only)
+- ✅ Restore button expands overlay back to original size
+- ✅ Close button hides the overlay completely
+- ✅ Video continues playing in minimized state
+- ✅ All buttons have hover effects matching app theme
+
+### Verification Points:
+```javascript
+// camera-overlay.html, guest-camera-popup.html
+minimizeBtn.addEventListener('click', () => {
+    ipcRenderer.send('resize-camera-overlay', 'minimize')
+})
+
+// main.js IPC handler
+ipcMain.on('resize-camera-overlay', (event, action) => {
+    senderWindow.setBounds({ height: action === 'minimize' ? 40 : 150 })
+})
+```
+
+---
+
+## Test Case 14: Camera Overlay Theme Consistency
+**Objective**: Verify camera overlays match the SuperDesk app purple/green gradient theme
+
+### Test Steps:
+1. Observe local camera overlay styling
+2. Observe remote camera overlay styling
+3. Compare colors and effects to main app UI
+4. Check hover states on buttons
+
+### Expected Results:
+- ✅ Local camera overlay has purple gradient accent (rgba(139, 92, 246, ...))
+- ✅ Remote camera overlay has green gradient accent (rgba(16, 185, 129, ...))
+- ✅ Dark background with gradient (rgba(17, 24, 39, ...) to rgba(31, 41, 55, ...))
+- ✅ Glassmorphism-style with subtle shadows and glows
+- ✅ Smooth animations (300ms transitions)
+- ✅ Status badges with pulsing indicator dots
+- ✅ Header bar with emoji icons (🎥 / 📷)
+- ✅ Control buttons with rounded corners and hover effects
+
+### CSS Verification:
+```css
+/* Purple theme for local/host camera */
+border: 2px solid rgba(139, 92, 246, 0.6);
+box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+
+/* Green theme for remote/guest camera */
+border: 2px solid rgba(16, 185, 129, 0.6);
+box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+```
+
+---
+
+## Test Case 15: Camera Overlay in Viewer Popup Window
+**Objective**: Verify themed camera overlays work correctly in viewer-popup.html
+
+### Test Steps:
+1. Start session and open viewer popup window
+2. Enable camera - verify themed overlay appears
+3. Test minimize/close buttons in popup viewer
+4. Verify both local and remote camera overlays in popup
+
+### Expected Results:
+- ✅ Camera overlays in popup match main app theme
+- ✅ Minimize/restore buttons work in popup context
+- ✅ Close buttons properly clean up stream references
+- ✅ Overlays positioned correctly (local: bottom-left, remote: bottom-right)
+
+---
+
 ## Known Issues & Limitations
 
 1. **Browser Compatibility**: Some features require Chromium-based browsers

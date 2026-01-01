@@ -6,34 +6,113 @@
         * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            width: 200px;
-            height: 150px;
-            background: #000;
+            width: 100%;
+            height: 100%;
+            background: transparent;
             overflow: hidden;
-            border-radius: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .overlay-container {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(13, 13, 20, 0.95), rgba(20, 20, 35, 0.95));
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid rgba(139, 92, 246, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 
+                        0 0 0 1px rgba(139, 92, 246, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
             cursor: move;
             -webkit-app-region: drag;
+        }
+
+        .overlay-container:hover {
+            border-color: rgba(139, 92, 246, 0.6);
+        }
+
+        .video-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
         }
 
         video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            border-radius: 14px;
         }
 
+        /* Control bar - appears on hover */
+        .control-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 4px 8px;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .overlay-container:hover .control-bar {
+            opacity: 1;
+        }
+
+        .control-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .control-btn.minimize:hover {
+            background: rgba(251, 191, 36, 0.5);
+        }
+
+        .control-btn.close:hover {
+            background: rgba(239, 68, 68, 0.7);
+        }
+
+        /* Label at bottom */
         .label {
             position: absolute;
-            bottom: 4px;
-            left: 4px;
-            font-size: 10px;
+            bottom: 8px;
+            left: 8px;
+            font-size: 11px;
             color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.8), rgba(99, 102, 241, 0.8));
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
             -webkit-app-region: no-drag;
         }
 
@@ -42,29 +121,109 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: white;
+            color: rgba(255, 255, 255, 0.7);
             font-size: 12px;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-top-color: rgba(139, 92, 246, 1);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Minimized state */
+        .minimized {
+            height: 32px !important;
+        }
+
+        .minimized .video-wrapper,
+        .minimized .label,
+        .minimized #loading {
+            display: none;
+        }
+
+        .minimized .control-bar {
+            opacity: 1;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(99, 102, 241, 0.3));
+            height: 100%;
+            justify-content: space-between;
+            padding: 4px 12px;
+        }
+
+        .minimized .control-bar::before {
+            content: attr(data-label);
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
         }
     </style>
 </head>
 
 <body>
-    <!-- Ultra-low latency video settings: disablePictureInPicture, low latency attributes -->
-    <video id="video" autoplay playsinline muted disablePictureInPicture 
-           style="pointer-events: none;"
-           preload="none"></video>
-    <div class="label" id="label">Camera</div>
-    <div id="loading">Initializing...</div>
+    <div class="overlay-container" id="container">
+        <div class="control-bar" id="controlBar" data-label="My Camera">
+            <button class="control-btn minimize" id="minimizeBtn" title="Minimize">─</button>
+            <button class="control-btn close" id="closeBtn" title="Close">×</button>
+        </div>
+        <div class="video-wrapper">
+            <video id="video" autoplay playsinline muted disablePictureInPicture preload="none"></video>
+        </div>
+        <div class="label" id="label">My Camera</div>
+        <div id="loading">
+            <div class="loading-spinner"></div>
+            Initializing...
+        </div>
+    </div>
 
     <script>
         const { ipcRenderer } = require('electron');
         const video = document.getElementById('video');
         const loading = document.getElementById('loading');
+        const container = document.getElementById('container');
+        const controlBar = document.getElementById('controlBar');
+        const minimizeBtn = document.getElementById('minimizeBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        const labelEl = document.getElementById('label');
+
+        let isMinimized = false;
+
+        // Minimize toggle
+        minimizeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isMinimized = !isMinimized;
+            container.classList.toggle('minimized', isMinimized);
+            minimizeBtn.textContent = isMinimized ? '□' : '─';
+            minimizeBtn.title = isMinimized ? 'Restore' : 'Minimize';
+            
+            // Notify main process to resize window
+            ipcRenderer.send('resize-camera-overlay', isMinimized ? 'minimize' : 'restore');
+        });
+
+        // Close button
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Stop camera stream
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(t => t.stop());
+                video.srcObject = null;
+            }
+            ipcRenderer.send('close-camera-overlay', 'local');
+        });
 
         // Listen for initialization
         ipcRenderer.on('init-overlay', async (event, data) => {
             const { type, label, mirror } = data;
-            document.getElementById('label').textContent = label;
+            labelEl.textContent = label;
+            controlBar.setAttribute('data-label', label);
 
             if (mirror) {
                 video.style.transform = 'scaleX(-1)';
@@ -72,7 +231,6 @@
 
             if (type === 'local') {
                 // For local camera, use getUserMedia directly
-                // This is the correct approach for showing user's own camera
                 try {
                     console.log('📹 Requesting camera access for local overlay...');
                     const stream = await navigator.mediaDevices.getUserMedia({
@@ -99,15 +257,14 @@
                     }
                 } catch (e) {
                     console.error('Failed to get local camera:', e);
-                    loading.textContent = 'Camera error';
+                    loading.innerHTML = '<div style="color: #ef4444;">Camera unavailable</div>';
                     setTimeout(() => {
                         ipcRenderer.send('close-camera-overlay', 'local');
                     }, 2000);
                 }
             } else if (type === 'remote') {
                 // For remote camera (guest's camera shown on host)
-                // Use stream-registry
-                loading.textContent = 'Waiting...';
+                loading.innerHTML = '<div class="loading-spinner"></div>Waiting for stream...';
                 console.log('📹 Remote overlay waiting for stream');
 
                 try {
@@ -141,7 +298,7 @@
 
                         if (pollCount > 100) {
                             clearInterval(pollInterval);
-                            loading.textContent = 'Unavailable';
+                            loading.innerHTML = '<div style="color: #ef4444;">Stream unavailable</div>';
                             setTimeout(() => {
                                 ipcRenderer.send('close-camera-overlay', 'remote');
                             }, 1500);
@@ -149,7 +306,7 @@
                     }, 200);
                 } catch (e) {
                     console.error('Stream registry error:', e);
-                    loading.textContent = 'Error';
+                    loading.innerHTML = '<div style="color: #ef4444;">Error</div>';
                 }
             }
         });

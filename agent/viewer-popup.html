@@ -68,20 +68,81 @@
             display: none;
         }
 
-        /* Camera overlay for host's webcam */
+        /* Camera overlay for host's webcam - Themed Design */
         #camera-overlay {
             position: fixed;
             bottom: 20px;
             right: 20px;
             width: 200px;
-            height: 150px;
-            background: #000;
+            height: 170px;
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(31, 41, 55, 0.95));
             border-radius: 12px;
             overflow: hidden;
             z-index: 1000;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            border: 2px solid rgba(139, 92, 246, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(139, 92, 246, 0.2);
+            border: 2px solid rgba(139, 92, 246, 0.6);
             display: none;
+            flex-direction: column;
+        }
+
+        #camera-overlay .cam-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.3), rgba(124, 58, 237, 0.2));
+            border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        #camera-overlay .cam-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 0.5px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #camera-overlay .cam-title::before {
+            content: '🎥';
+            margin-right: 6px;
+            font-size: 12px;
+        }
+
+        #camera-overlay .cam-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        #camera-overlay .cam-btn {
+            width: 22px;
+            height: 22px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        #camera-overlay .cam-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        #camera-overlay .cam-btn.close-btn:hover {
+            background: rgba(239, 68, 68, 0.8);
+        }
+
+        #camera-overlay .cam-video-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+            overflow: hidden;
         }
 
         #camera-overlay video {
@@ -90,20 +151,107 @@
             object-fit: cover;
         }
 
-        /* Local camera overlay (user's own camera) */
+        #camera-overlay .status-badge {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            font-size: 9px;
+            font-weight: 500;
+            color: white;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(124, 58, 237, 0.9));
+            padding: 3px 8px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #camera-overlay .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #a78bfa;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        /* Local camera overlay (user's own camera) - Green Themed */
         #local-camera-overlay {
             position: fixed;
             bottom: 20px;
             left: 70px;
-            width: 160px;
-            height: 120px;
-            background: #000;
+            width: 180px;
+            height: 155px;
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(31, 41, 55, 0.95));
             border-radius: 12px;
             overflow: hidden;
             z-index: 1001;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            border: 2px solid rgba(16, 185, 129, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(16, 185, 129, 0.2);
+            border: 2px solid rgba(16, 185, 129, 0.6);
             display: none;
+            flex-direction: column;
+        }
+
+        #local-camera-overlay .cam-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.2));
+            border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        #local-camera-overlay .cam-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 0.5px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #local-camera-overlay .cam-title::before {
+            content: '📷';
+            margin-right: 6px;
+            font-size: 12px;
+        }
+
+        #local-camera-overlay .cam-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        #local-camera-overlay .cam-btn {
+            width: 22px;
+            height: 22px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        #local-camera-overlay .cam-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        #local-camera-overlay .cam-btn.close-btn:hover {
+            background: rgba(239, 68, 68, 0.8);
+        }
+
+        #local-camera-overlay .cam-video-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+            overflow: hidden;
         }
 
         #local-camera-overlay video {
@@ -113,26 +261,39 @@
             transform: scaleX(-1);
         }
 
-        #local-camera-overlay .label {
+        #local-camera-overlay .status-badge {
             position: absolute;
-            bottom: 4px;
-            left: 4px;
-            font-size: 10px;
+            bottom: 8px;
+            left: 8px;
+            font-size: 9px;
+            font-weight: 500;
             color: white;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 2px 6px;
-            border-radius: 4px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
+            padding: 3px 8px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        #camera-overlay .label {
-            position: absolute;
-            bottom: 4px;
-            left: 4px;
-            font-size: 10px;
-            color: white;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 2px 6px;
-            border-radius: 4px;
+        #local-camera-overlay .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .cam-overlay-minimized .cam-video-container {
+            display: none;
         }
     </style>
 </head>
@@ -144,14 +305,32 @@
 
     <!-- Camera overlay for remote peer's webcam -->
     <div id="camera-overlay">
-        <video id="camera-vid" autoplay playsinline muted disablePictureInPicture preload="none"></video>
-        <div class="label">Remote Camera</div>
+        <div class="cam-header">
+            <span class="cam-title">Remote Camera</span>
+            <div class="cam-controls">
+                <button class="cam-btn minimize-btn" title="Minimize">─</button>
+                <button class="cam-btn close-btn" title="Close">×</button>
+            </div>
+        </div>
+        <div class="cam-video-container">
+            <video id="camera-vid" autoplay playsinline muted disablePictureInPicture preload="none"></video>
+            <div class="status-badge">Remote Camera</div>
+        </div>
     </div>
 
     <!-- Local camera overlay (user's own camera) -->
     <div id="local-camera-overlay">
-        <video id="local-camera-vid" autoplay playsinline muted disablePictureInPicture preload="none"></video>
-        <div class="label">My Camera</div>
+        <div class="cam-header">
+            <span class="cam-title">My Camera</span>
+            <div class="cam-controls">
+                <button class="cam-btn minimize-btn" title="Minimize">─</button>
+                <button class="cam-btn close-btn" title="Close">×</button>
+            </div>
+        </div>
+        <div class="cam-video-container">
+            <video id="local-camera-vid" autoplay playsinline muted disablePictureInPicture preload="none"></video>
+            <div class="status-badge">My Camera</div>
+        </div>
     </div>
 
     <div id="bar">
@@ -235,6 +414,63 @@
         let lastClick = 0;
         let hostIsMobile = false;
 
+        // === CAMERA OVERLAY CONTROLS ===
+        // Remote camera overlay controls
+        const remoteCamMinBtn = cameraOverlay.querySelector('.minimize-btn');
+        const remoteCamCloseBtn = cameraOverlay.querySelector('.close-btn');
+        let remoteCamMinimized = false;
+
+        remoteCamMinBtn.addEventListener('click', () => {
+            remoteCamMinimized = !remoteCamMinimized;
+            if (remoteCamMinimized) {
+                cameraOverlay.classList.add('cam-overlay-minimized');
+                cameraOverlay.style.height = '35px';
+                remoteCamMinBtn.textContent = '□';
+                remoteCamMinBtn.title = 'Restore';
+            } else {
+                cameraOverlay.classList.remove('cam-overlay-minimized');
+                cameraOverlay.style.height = '170px';
+                remoteCamMinBtn.textContent = '─';
+                remoteCamMinBtn.title = 'Minimize';
+            }
+        });
+
+        remoteCamCloseBtn.addEventListener('click', () => {
+            cameraOverlay.style.display = 'none';
+            cameraVid.srcObject = null;
+        });
+
+        // Local camera overlay controls
+        const localCameraOverlay = document.getElementById('local-camera-overlay');
+        const localCameraVid = document.getElementById('local-camera-vid');
+        const localCamMinBtn = localCameraOverlay.querySelector('.minimize-btn');
+        const localCamCloseBtn = localCameraOverlay.querySelector('.close-btn');
+        let localCamMinimized = false;
+
+        localCamMinBtn.addEventListener('click', () => {
+            localCamMinimized = !localCamMinimized;
+            if (localCamMinimized) {
+                localCameraOverlay.classList.add('cam-overlay-minimized');
+                localCameraOverlay.style.height = '35px';
+                localCamMinBtn.textContent = '□';
+                localCamMinBtn.title = 'Restore';
+            } else {
+                localCameraOverlay.classList.remove('cam-overlay-minimized');
+                localCameraOverlay.style.height = '155px';
+                localCamMinBtn.textContent = '─';
+                localCamMinBtn.title = 'Minimize';
+            }
+        });
+
+        localCamCloseBtn.addEventListener('click', () => {
+            localCameraOverlay.style.display = 'none';
+            localCameraVid.srcObject = null;
+            // Also disable camera in parent if user closes overlay
+            if (window.opener && window.opener.superdeskState) {
+                window.opener.superdeskState.videoStream = null;
+            }
+        });
+
         // Initialize buttons - control is OFF by default
         if (!controlOn) ctrlBtn.classList.remove('on');
         if (speakerOn) spkBtn.classList.add('on');
@@ -285,8 +521,7 @@
         }
 
         // Check for camera overlays - poll the opener's state for BOTH local and remote cameras
-        const localCameraOverlay = document.getElementById('local-camera-overlay');
-        const localCameraVid = document.getElementById('local-camera-vid');
+        // (localCameraOverlay and localCameraVid declared above with controls)
 
         // === MESSAGE LISTENER for immediate camera events (Discord-style) ===
         window.addEventListener('message', (event) => {
@@ -318,7 +553,7 @@
                 // GUEST has their camera enabled - show local overlay
                 if (localCameraVid.srcObject !== localVideoStream) {
                     localCameraVid.srcObject = localVideoStream;
-                    localCameraOverlay.style.display = 'block';
+                    localCameraOverlay.style.display = 'flex';
                     localCameraVid.play().catch(e => console.warn('Local camera play error:', e));
                     console.log('📹 GUEST: Local camera overlay shown in viewer');
                 }
@@ -369,8 +604,8 @@
                 }
                 // Only show overlay if video actually has dimensions (real data)
                 if (cameraVid.videoWidth > 0 && cameraVid.videoHeight > 0) {
-                    if (cameraOverlay.style.display !== 'block') {
-                        cameraOverlay.style.display = 'block';
+                    if (cameraOverlay.style.display !== 'flex') {
+                        cameraOverlay.style.display = 'flex';
                         console.log('📹 Remote camera overlay shown (video has data:', cameraVid.videoWidth, 'x', cameraVid.videoHeight, ')');
                     }
                 }

@@ -1,72 +1,200 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Host Camera</title>
+    <title>Remote Camera</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             width: 100%;
             height: 100%;
+            background: transparent;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .overlay-container {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(31, 41, 55, 0.95));
+            border-radius: 12px;
+            border: 2px solid rgba(16, 185, 129, 0.6);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(16, 185, 129, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .control-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.2));
+            border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+            -webkit-app-region: drag;
+        }
+        .title {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .title::before {
+            content: '🎥';
+            font-size: 12px;
+        }
+        .controls {
+            display: flex;
+            gap: 6px;
+            -webkit-app-region: no-drag;
+        }
+        .control-btn {
+            width: 22px;
+            height: 22px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: scale(1.1);
+        }
+        .control-btn.close:hover {
+            background: rgba(239, 68, 68, 0.8);
+        }
+        .video-container {
+            flex: 1;
+            position: relative;
             background: #000;
             overflow: hidden;
-            border-radius: 12px;
         }
         video {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-        .label {
+        .status-badge {
             position: absolute;
-            bottom: 4px;
-            left: 4px;
-            font-size: 10px;
+            bottom: 8px;
+            left: 8px;
+            font-size: 9px;
+            font-weight: 500;
             color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: Arial, sans-serif;
-        }
-        .close-btn {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 20px;
-            height: 20px;
-            background: rgba(0,0,0,0.5);
-            border: none;
-            border-radius: 50%;
-            color: white;
-            font-size: 12px;
-            cursor: pointer;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
+            padding: 3px 8px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
-        .close-btn:hover {
-            background: rgba(255,0,0,0.7);
+        .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
-        .waiting {
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loading {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: rgba(255,255,255,0.7);
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(16, 185, 129, 0.2);
+            border-top-color: rgba(16, 185, 129, 0.8);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+        }
+        .minimized .video-container {
+            display: none;
+        }
+        .minimized {
+            height: 40px !important;
         }
     </style>
 </head>
 <body>
-    <video id="video" autoplay playsinline muted></video>
-    <div class="label">Remote Camera</div>
-    <div class="waiting" id="waiting">Connecting...</div>
-    <button class="close-btn" onclick="window.close()">×</button>
+    <div class="overlay-container" id="container">
+        <div class="control-bar">
+            <span class="title">Remote Camera</span>
+            <div class="controls">
+                <button class="control-btn minimize" id="minimizeBtn" title="Minimize">─</button>
+                <button class="control-btn close" id="closeBtn" title="Close">×</button>
+            </div>
+        </div>
+        <div class="video-container">
+            <video id="video" autoplay playsinline muted></video>
+            <div class="status-badge" id="statusBadge" style="display: none;">Remote Camera</div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <span class="loading-text">Connecting...</span>
+            </div>
+        </div>
+    </div>
 
     <script>
         const video = document.getElementById('video');
-        const waiting = document.getElementById('waiting');
+        const loading = document.getElementById('loading');
+        const statusBadge = document.getElementById('statusBadge');
+        const container = document.getElementById('container');
+        const minimizeBtn = document.getElementById('minimizeBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        
+        let isMinimized = false;
+        
+        // Minimize/restore functionality
+        minimizeBtn.addEventListener('click', () => {
+            isMinimized = !isMinimized;
+            if (isMinimized) {
+                container.classList.add('minimized');
+                minimizeBtn.textContent = '□';
+                minimizeBtn.title = 'Restore';
+                if (window.ipcRenderer) {
+                    window.ipcRenderer.send('resize-camera-overlay', 'minimize');
+                }
+            } else {
+                container.classList.remove('minimized');
+                minimizeBtn.textContent = '─';
+                minimizeBtn.title = 'Minimize';
+                if (window.ipcRenderer) {
+                    window.ipcRenderer.send('resize-camera-overlay', 'restore');
+                }
+            }
+        });
+        
+        // Close functionality
+        closeBtn.addEventListener('click', () => {
+            window.close();
+        });
         
         // Get stream from opener window (parent that called window.open)
         function checkForStream() {
@@ -76,7 +204,8 @@
                     console.log('✅ Host camera stream found from window.opener!');
                     video.srcObject = stream;
                     video.play().catch(e => console.error('Play error:', e));
-                    waiting.style.display = 'none';
+                    loading.style.display = 'none';
+                    statusBadge.style.display = 'flex';
                     
                     // Monitor track for end
                     const track = stream.getVideoTracks()[0];
@@ -102,7 +231,7 @@
                     clearInterval(interval);
                     if (attempts >= maxAttempts) {
                         console.log('❌ Host camera stream not available after timeout');
-                        waiting.textContent = 'Stream unavailable';
+                        loading.querySelector('.loading-text').textContent = 'Stream unavailable';
                         setTimeout(() => window.close(), 2000);
                     }
                 }
