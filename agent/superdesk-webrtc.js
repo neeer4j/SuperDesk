@@ -1237,11 +1237,13 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 window.superdeskState.guestCameraStream = cameraStream;
                 
                 guestVideo.srcObject = cameraStream;
-                // Only show overlay when video has actual data
+                // Only open popup when video has actual data
+                // NOTE: We do NOT show the in-page overlay - only the popup window is used
                 guestVideo.onloadeddata = () => {
                     if (guestVideo.videoWidth > 0 && guestVideo.videoHeight > 0) {
-                        guestCameraOverlay.style.display = 'block';
-                        console.log('📹 HOST: Guest camera in-page overlay visible (' + guestVideo.videoWidth + 'x' + guestVideo.videoHeight + ')');
+                        // Don't show in-page overlay - popup handles it
+                        // guestCameraOverlay.style.display = 'block';
+                        console.log('📹 HOST: Guest camera ready (' + guestVideo.videoWidth + 'x' + guestVideo.videoHeight + ') - using popup only');
                         
                         // === POPUP WINDOW: Create floating window that stays on top ===
                         // main.js intercepts this popup via did-create-window and applies setContentProtection(true)
