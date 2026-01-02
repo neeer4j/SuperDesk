@@ -302,6 +302,26 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ==================== FILE TRANSFER SIGNALING ====================
+  // These handlers relay WebRTC signaling for the file-only peer connection
+  
+  socket.on('file-offer', (payload) => {
+    const { sessionId, offer } = payload;
+    console.log('📁 File offer received, relaying to session:', sessionId);
+    socket.to(sessionId).emit('file-offer', { offer, from: socket.id });
+  });
+
+  socket.on('file-answer', (payload) => {
+    const { sessionId, answer } = payload;
+    console.log('📁 File answer received, relaying to session:', sessionId);
+    socket.to(sessionId).emit('file-answer', { answer, from: socket.id });
+  });
+
+  socket.on('file-ice-candidate', (payload) => {
+    const { sessionId, candidate } = payload;
+    socket.to(sessionId).emit('file-ice-candidate', { candidate, from: socket.id });
+  });
+
   // Screen sharing events
   socket.on('start-screen-share', (sessionId) => {
     socket.to(sessionId).emit('screen-share-started');
