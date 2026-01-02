@@ -1244,7 +1244,8 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                         console.log('📹 HOST: Guest camera in-page overlay visible (' + guestVideo.videoWidth + 'x' + guestVideo.videoHeight + ')');
                         
                         // === POPUP WINDOW: Create floating window that stays on top ===
-                        // Open AFTER video has confirmed data
+                        // main.js intercepts this popup via did-create-window and applies setContentProtection(true)
+                        // This ensures guest camera is NOT captured in screen share
                         if (!window.superdeskState.guestCameraPopup || window.superdeskState.guestCameraPopup.closed) {
                             console.log('📹 HOST: Opening guest camera popup window...');
                             const popupWidth = 240;
@@ -1262,7 +1263,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                                 
                                 if (popup) {
                                     window.superdeskState.guestCameraPopup = popup;
-                                    console.log('✅ HOST: Guest camera popup window opened successfully!');
+                                    console.log('✅ HOST: Guest camera popup window opened (content protection applied by main.js)!');
                                 } else {
                                     console.warn('❌ HOST: Could not open popup window (blocked?)');
                                 }

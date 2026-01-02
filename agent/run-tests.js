@@ -86,6 +86,7 @@ console.log('');
 console.log('7. CONTENT PROTECTION (CAMERA EXCLUDED FROM SCREEN SHARE)');
 test('setContentProtection on local camera', main.includes('localCameraOverlay.setContentProtection(true)'));
 test('setContentProtection on remote camera', main.includes('remoteCameraOverlay.setContentProtection(true)'));
+test('Guest camera popup content protection in did-create-window', main.includes("details.url.includes('guest-camera-popup')") && main.includes('childWindow.setContentProtection(true)'));
 console.log('');
 
 // Test 8: Server-side Camera Signal Relay

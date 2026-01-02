@@ -69,6 +69,7 @@
         const waiting = document.getElementById('waiting');
         
         // Get stream from opener window (parent that called window.open)
+        // main.js applies setContentProtection(true) to this popup via did-create-window
         function checkForStream() {
             if (window.opener && window.opener.superdeskState) {
                 const stream = window.opener.superdeskState.guestCameraStream;

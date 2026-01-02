@@ -683,11 +683,22 @@ function createWindow() {
     };
   });
 
-  // After a popup is created, remove its menu
-  mainWindow.webContents.on('did-create-window', (childWindow) => {
-    console.log('📺 [Popup Created] Removing menu bar...');
+  // After a popup is created, configure it
+  mainWindow.webContents.on('did-create-window', (childWindow, details) => {
+    console.log('📺 [Popup Created] URL:', details.url);
     childWindow.setMenu(null);
     childWindow.setMenuBarVisibility(false);
+    
+    // CRITICAL: Apply content protection to guest camera popup
+    // This prevents the guest from seeing their own camera in the host's screen share
+    if (details.url && details.url.includes('guest-camera-popup')) {
+      console.log('📹 [Guest Camera Popup] Applying content protection...');
+      childWindow.setContentProtection(true);
+      childWindow.setAlwaysOnTop(true, 'screen-saver');
+      childWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      childWindow.setSkipTaskbar(true);
+      console.log('✅ [Guest Camera Popup] Content protection ENABLED - excluded from screen capture');
+    }
   });
 }
 
