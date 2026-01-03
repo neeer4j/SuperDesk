@@ -1401,16 +1401,14 @@ async function setupWebRTCReceiver(socket, sessionId) {
 
     console.log('✅ GUEST ICE configuration complete');
 
-    // Setup file transfer DataChannel receiver (GUEST receives DataChannel created by HOST)
-    if (window.fileTransfer && typeof window.fileTransfer.setupReceiver === 'function') {
-        console.log('📁 GUEST: Setting up file transfer DataChannel receiver...');
-        window.fileTransfer.setupReceiver(peerConnection);
-    }
+    // NOTE: File transfer DataChannel is handled in the unified ondatachannel handler below
+    // DO NOT call window.fileTransfer.setupReceiver() separately as it would be overwritten
 
-    // Listen for data channels (includes 'input' channel with handshake from Android)
+    // Listen for data channels (includes 'input' channel AND 'fileTransfer' channel)
     peerConnection.ondatachannel = (event) => {
         console.log('📱 GUEST: Data channel received:', event.channel.label);
 
+        // Handle INPUT channel (for remote control handshake from Android)
         if (event.channel.label === 'input') {
             const inputChannel = event.channel;
 
@@ -1454,6 +1452,48 @@ async function setupWebRTCReceiver(socket, sessionId) {
 
             // Store for popup access
             window.superdeskState.inputDataChannel = inputChannel;
+        }
+        
+        // Handle FILE TRANSFER channel
+        if (event.channel.label === 'fileTransfer' || event.channel.label === 'files' || event.channel.label === 'file-transfer') {
+            console.log('📁 GUEST: File transfer DataChannel received:', event.channel.label);
+            
+            // CRITICAL: Set binary type for ArrayBuffer transfer
+            event.channel.binaryType = 'arraybuffer';
+            
+            // Setup the channel handlers from file-transfer.js module
+            if (window.fileTransferState) {
+                window.fileTransferState.dataChannel = event.channel;
+                
+                event.channel.onopen = () => {
+                    console.log('📁 GUEST: File transfer DataChannel OPEN - ready for file transfer');
+                    // Show file transfer UI when channel is ready
+                    if (typeof showFileTransferUI === 'function') {
+                        showFileTransferUI();
+                    }
+                };
+                
+                event.channel.onclose = () => {
+                    console.log('📁 GUEST: File transfer DataChannel CLOSED');
+                };
+                
+                event.channel.onerror = (error) => {
+                    console.error('📁 GUEST: File transfer DataChannel error:', error);
+                };
+                
+                event.channel.onmessage = (msgEvent) => {
+                    // Forward to file-transfer.js message handler
+                    if (typeof handleDataChannelMessage === 'function') {
+                        handleDataChannelMessage(msgEvent.data);
+                    } else {
+                        console.warn('📁 GUEST: handleDataChannelMessage not found');
+                    }
+                };
+                
+                console.log('✅ GUEST: File transfer DataChannel connected and configured');
+            } else {
+                console.error('📁 GUEST: fileTransferState not available');
+            }
         }
     };
 

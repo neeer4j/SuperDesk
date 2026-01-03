@@ -714,6 +714,9 @@ window.fileTransfer = {
     rejectOffer: rejectFileOffer,
     setEnabled: setFileTransferEnabled,
     getState: () => window.fileTransferState,
+    handleMessage: handleDataChannelMessage,  // Export message handler for external use
+    showUI: showFileTransferUI,               // Export UI show function
+    hideUI: hideFileTransferUI,               // Export UI hide function
     // Check if file transfer is available (data channel open OR guest connected via session)
     get isConnected() {
         const state = window.fileTransferState;
@@ -728,5 +731,10 @@ window.fileTransfer = {
         return false;
     }
 };
+
+// Also expose functions globally for direct access from superdesk-webrtc.js
+window.handleDataChannelMessage = handleDataChannelMessage;
+window.showFileTransferUI = showFileTransferUI;
+window.hideFileTransferUI = hideFileTransferUI;
 
 console.log('✅ File Transfer Module loaded');

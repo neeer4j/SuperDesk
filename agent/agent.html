@@ -8800,8 +8800,13 @@
             }
 
             const files = event.dataTransfer.files;
-            if (files.length > 0 && typeof sendFile === 'function') {
-                await sendFile(files[0]);
+            if (files.length > 0 && window.fileTransfer && typeof window.fileTransfer.sendFile === 'function') {
+                await window.fileTransfer.sendFile(files[0]);
+            } else {
+                console.error('📁 File transfer module not available');
+                if (window.superdeskModal) {
+                    window.superdeskModal.error('File transfer not available. Please wait for connection.', 'Error');
+                }
             }
         }
 

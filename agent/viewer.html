@@ -356,7 +356,32 @@
         let sessionId = null;
         let peerConnection = null;
         let inputDataChannel = null;
+        let fileTransferChannel = null;
         let remoteCameraTrackId = null;
+
+        // ==================== FILE TRANSFER STATE ====================
+        const fileTransferState = {
+            sendingInProgress: false,
+            receivingInProgress: false,
+            currentFile: null,
+            receivedChunks: [],
+            bytesReceived: 0,
+            bytesSent: 0,
+            expectedFileSize: 0,
+            expectedFileName: '',
+            pendingOffer: null,
+            autoAccept: false
+        };
+
+        const CHUNK_SIZE = 16 * 1024; // 16KB chunks
+        const MESSAGE_TYPES = {
+            FILE_OFFER: 'file-offer',
+            FILE_ACCEPT: 'file-accept',
+            FILE_REJECT: 'file-reject',
+            FILE_CHUNK: 'file-chunk',
+            FILE_EOF: 'file-eof',
+            FILE_CANCEL: 'file-cancel'
+        };
 
         // Elements
         const video = document.getElementById('remote-video');
@@ -551,6 +576,12 @@
                     if (event.channel.label === 'input') {
                         inputDataChannel = event.channel;
                         setupInputChannel();
+                    } else if (event.channel.label === 'fileTransfer' || event.channel.label === 'files' || event.channel.label === 'file-transfer') {
+                        // Handle file transfer data channel
+                        console.log('📁 File transfer DataChannel connected:', event.channel.label);
+                        event.channel.binaryType = 'arraybuffer';
+                        fileTransferChannel = event.channel;
+                        setupFileTransferChannel(event.channel);
                     }
                 };
 
@@ -893,7 +924,11 @@
         fileDropArea.addEventListener('click', async () => {
             const result = await ipcRenderer.invoke('open-file-dialog');
             if (result.success) {
-                sendFile(result);
+                // Create a File object from the result
+                const uint8Array = new Uint8Array(result.data);
+                const blob = new Blob([uint8Array]);
+                const file = new File([blob], result.fileName, { type: 'application/octet-stream' });
+                sendFile(file);
             }
         });
 
@@ -912,13 +947,321 @@
             // Handle dropped files
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                // Read and send file
+                sendFile(files[0]);
             }
         });
 
-        function sendFile(fileData) {
-            // TODO: Implement file sending via data channel
-            console.log('📤 Sending file:', fileData.fileName);
+        // ==================== FILE TRANSFER FUNCTIONS ====================
+
+        function setupFileTransferChannel(channel) {
+            channel.onopen = () => {
+                console.log('📁 File transfer DataChannel OPEN');
+                // Show file transfer button as active
+                fileTransferBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            };
+
+            channel.onclose = () => {
+                console.log('📁 File transfer DataChannel CLOSED');
+                fileTransferBtn.style.background = '';
+            };
+
+            channel.onerror = (error) => {
+                console.error('📁 File transfer DataChannel error:', error);
+            };
+
+            channel.onmessage = (event) => {
+                handleFileTransferMessage(event.data);
+            };
+        }
+
+        function handleFileTransferMessage(data) {
+            // Check if it's binary data (file chunk)
+            if (data instanceof ArrayBuffer) {
+                handleFileChunk(data);
+                return;
+            }
+
+            // Parse JSON message
+            try {
+                const message = JSON.parse(data);
+                switch (message.type) {
+                    case MESSAGE_TYPES.FILE_OFFER:
+                        handleFileOffer(message);
+                        break;
+                    case MESSAGE_TYPES.FILE_ACCEPT:
+                        startSendingChunks();
+                        break;
+                    case MESSAGE_TYPES.FILE_REJECT:
+                        handleFileReject();
+                        break;
+                    case MESSAGE_TYPES.FILE_EOF:
+                        handleFileEOF(message);
+                        break;
+                    case MESSAGE_TYPES.FILE_CANCEL:
+                        handleFileCancel();
+                        break;
+                }
+            } catch (e) {
+                console.error('📁 Failed to parse file transfer message:', e);
+            }
+        }
+
+        function handleFileOffer(offer) {
+            console.log('📁 Received file offer:', offer.name, 'Size:', formatFileSize(offer.size));
+            fileTransferState.pendingOffer = offer;
+
+            // Auto-accept or show confirmation
+            if (fileTransferState.autoAccept) {
+                acceptFileOffer();
+            } else {
+                // Show confirmation dialog
+                const accept = confirm(`Incoming file: ${offer.name} (${formatFileSize(offer.size)})\n\nAccept?`);
+                if (accept) {
+                    acceptFileOffer();
+                } else {
+                    rejectFileOffer();
+                }
+            }
+        }
+
+        function acceptFileOffer() {
+            const offer = fileTransferState.pendingOffer;
+            if (!offer) return;
+
+            console.log('📁 Accepting file offer:', offer.name);
+            fileTransferState.receivingInProgress = true;
+            fileTransferState.receivedChunks = [];
+            fileTransferState.bytesReceived = 0;
+            fileTransferState.expectedFileSize = offer.size;
+            fileTransferState.expectedFileName = offer.name;
+            fileTransferState.pendingOffer = null;
+
+            // Send accept message
+            if (fileTransferChannel && fileTransferChannel.readyState === 'open') {
+                fileTransferChannel.send(JSON.stringify({ type: MESSAGE_TYPES.FILE_ACCEPT }));
+            }
+
+            // Show receive progress
+            updateReceiveProgress(0, 'Receiving...');
+        }
+
+        function rejectFileOffer() {
+            console.log('📁 Rejecting file offer');
+            if (fileTransferChannel && fileTransferChannel.readyState === 'open') {
+                fileTransferChannel.send(JSON.stringify({ type: MESSAGE_TYPES.FILE_REJECT }));
+            }
+            fileTransferState.pendingOffer = null;
+        }
+
+        function handleFileChunk(data) {
+            if (!fileTransferState.receivingInProgress) {
+                console.warn('📁 Received chunk but not expecting file');
+                return;
+            }
+
+            fileTransferState.receivedChunks.push(new Uint8Array(data));
+            fileTransferState.bytesReceived += data.byteLength;
+
+            const progress = (fileTransferState.bytesReceived / fileTransferState.expectedFileSize) * 100;
+            updateReceiveProgress(progress, 'Receiving...');
+        }
+
+        function handleFileEOF(message) {
+            console.log('📁 File transfer complete, assembling file...');
+
+            // Combine all chunks
+            const totalLength = fileTransferState.receivedChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+            const combined = new Uint8Array(totalLength);
+            let offset = 0;
+
+            for (const chunk of fileTransferState.receivedChunks) {
+                combined.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            console.log('📁 File assembled:', totalLength, 'bytes');
+
+            // Create blob and save
+            const blob = new Blob([combined]);
+            saveReceivedFile(blob, fileTransferState.expectedFileName);
+
+            updateReceiveProgress(100, 'Complete!');
+
+            // Reset state
+            setTimeout(() => {
+                fileTransferState.receivingInProgress = false;
+                fileTransferState.receivedChunks = [];
+                fileTransferState.bytesReceived = 0;
+                hideReceiveProgress();
+            }, 2000);
+        }
+
+        function handleFileReject() {
+            console.log('📁 File transfer rejected by peer');
+            fileTransferState.sendingInProgress = false;
+            fileTransferState.currentFile = null;
+            hideSendProgress();
+            alert('File transfer was rejected by the remote user.');
+        }
+
+        function handleFileCancel() {
+            console.log('📁 File transfer cancelled by peer');
+            fileTransferState.receivingInProgress = false;
+            fileTransferState.receivedChunks = [];
+            hideReceiveProgress();
+        }
+
+        async function sendFile(file) {
+            if (!fileTransferChannel || fileTransferChannel.readyState !== 'open') {
+                console.error('📁 Cannot send file: No file transfer channel available');
+                alert('File transfer not available. Please wait for connection.');
+                return;
+            }
+
+            if (fileTransferState.sendingInProgress) {
+                alert('A file transfer is already in progress.');
+                return;
+            }
+
+            console.log('📁 Sending file offer:', file.name, 'Size:', file.size);
+
+            fileTransferState.currentFile = file;
+            fileTransferState.bytesSent = 0;
+
+            // Send file offer
+            const offer = {
+                type: MESSAGE_TYPES.FILE_OFFER,
+                name: file.name,
+                size: file.size,
+                mimeType: file.type || 'application/octet-stream'
+            };
+
+            fileTransferChannel.send(JSON.stringify(offer));
+            updateSendProgress(0, 'Waiting for acceptance...');
+        }
+
+        async function startSendingChunks() {
+            const file = fileTransferState.currentFile;
+            if (!file) {
+                console.error('📁 No file to send');
+                return;
+            }
+
+            fileTransferState.sendingInProgress = true;
+            fileTransferState.bytesSent = 0;
+
+            console.log('📁 Starting chunk transfer:', file.name);
+            updateSendProgress(0, 'Sending...');
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+
+                let offset = 0;
+                while (offset < uint8Array.length) {
+                    const chunk = uint8Array.slice(offset, offset + CHUNK_SIZE);
+
+                    // Wait for buffer to clear if needed
+                    while (fileTransferChannel.bufferedAmount > 1024 * 1024) {
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+
+                    fileTransferChannel.send(chunk.buffer);
+                    offset += chunk.length;
+                    fileTransferState.bytesSent = offset;
+
+                    const progress = (fileTransferState.bytesSent / file.size) * 100;
+                    updateSendProgress(progress, 'Sending...');
+
+                    // Small delay to prevent blocking
+                    if (offset % (CHUNK_SIZE * 10) === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1));
+                    }
+                }
+
+                // Send EOF marker
+                const eofMessage = {
+                    type: MESSAGE_TYPES.FILE_EOF,
+                    name: file.name,
+                    size: file.size,
+                    totalBytes: fileTransferState.bytesSent
+                };
+                fileTransferChannel.send(JSON.stringify(eofMessage));
+
+                console.log('✅ File transfer complete:', fileTransferState.bytesSent, 'bytes sent');
+                updateSendProgress(100, 'Complete!');
+
+                setTimeout(() => {
+                    fileTransferState.sendingInProgress = false;
+                    fileTransferState.currentFile = null;
+                    hideSendProgress();
+                }, 2000);
+
+            } catch (error) {
+                console.error('📁 Error sending file:', error);
+                fileTransferState.sendingInProgress = false;
+                alert('Failed to send file: ' + error.message);
+            }
+        }
+
+        async function saveReceivedFile(blob, fileName) {
+            console.log('📁 Saving file:', fileName);
+
+            try {
+                const arrayBuffer = await blob.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+
+                const result = await ipcRenderer.invoke('save-file-dialog', {
+                    defaultPath: fileName,
+                    data: Array.from(uint8Array)
+                });
+
+                if (result.success) {
+                    console.log('✅ File saved:', result.path);
+                } else if (!result.cancelled) {
+                    throw new Error(result.error || 'Unknown error');
+                }
+            } catch (error) {
+                console.error('📁 Error saving file:', error);
+                alert('Failed to save file: ' + error.message);
+            }
+        }
+
+        function updateSendProgress(percent, status) {
+            const progressEl = document.getElementById('send-progress');
+            const barEl = document.getElementById('send-progress-bar');
+            const statusEl = document.getElementById('send-status');
+
+            if (progressEl) progressEl.style.display = 'block';
+            if (barEl) barEl.style.width = percent + '%';
+            if (statusEl) statusEl.textContent = status + ' ' + Math.round(percent) + '%';
+        }
+
+        function hideSendProgress() {
+            const progressEl = document.getElementById('send-progress');
+            if (progressEl) progressEl.style.display = 'none';
+        }
+
+        function updateReceiveProgress(percent, status) {
+            const progressEl = document.getElementById('receive-progress');
+            const barEl = document.getElementById('receive-progress-bar');
+            const statusEl = document.getElementById('receive-status');
+
+            if (progressEl) progressEl.style.display = 'block';
+            if (barEl) barEl.style.width = percent + '%';
+            if (statusEl) statusEl.textContent = status + ' ' + Math.round(percent) + '%';
+        }
+
+        function hideReceiveProgress() {
+            const progressEl = document.getElementById('receive-progress');
+            if (progressEl) progressEl.style.display = 'none';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
         }
 
         // Handle window close
