@@ -121,41 +121,94 @@ html {
 }
 
 /* Mobile Navbar Overrides */
-@media (max-width: 1024px) {
-  .portfolio-nav {
-    gap: 20px;
-    padding: 12px 20px;
-    top: 20px;
-    width: 90%;
-  }
-}
+/* Mobile/Responsive Navbar Overrides */
 
-@media (max-width: 768px) {
+/* Intermediate breakpoint (Tablet/Zoomed Desktop): Keep items visible but squeezed */
+@media (max-width: 960px) {
   .portfolio-nav {
-    flex-direction: row;
-    justify-content: space-between;
-    padding: 10px 16px;
-    gap: 10px;
-    top: 10px;
-    width: 95%;
-    border-radius: 16px;
+    gap: 16px;
+    padding: 10px 20px;
+    width: auto;
+    max-width: 98%;
+    top: 20px;
   }
 
   .portfolio-nav-links {
-    display: none;
-    /* Hide links on mobile for simplicity, or implement hamburger */
+    gap: 20px;
+  }
+}
+
+/* Smaller Tablet / Large Phone Landscape */
+@media (max-width: 768px) {
+  .portfolio-nav {
+    padding: 10px 16px;
+    gap: 12px;
   }
 
-  .portfolio-nav-buttons a span {
-    display: none;
-    /* Hide text in buttons, show only icon? Or keep simplified */
+  .portfolio-nav-links {
+    gap: 12px;
   }
 
-  /* Simplify buttons text */
-  .portfolio-nav-buttons a {
+  .portfolio-nav-links a {
     font-size: 13px !important;
-    padding: 8px 10px !important;
   }
+
+  .portfolio-nav-buttons a {
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+  }
+
+  .portfolio-nav-buttons {
+    gap: 8px;
+  }
+}
+
+/* Mobile Layout (< 640px) */
+@media (max-width: 640px) {
+  .portfolio-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 12px 16px;
+    gap: 12px;
+    top: 16px;
+    width: 92%;
+    border-radius: 20px;
+  }
+
+  /* Fix Logo on Mobile */
+  .portfolio-nav-logo {
+    height: 18px; /* Restrict height */
+    width: auto;
+    display: block;
+  }
+
+  /* On true mobile portrait, we likely still need to hide the nav links 
+     to make space for the main CTA buttons, or move them.
+     For now, we'll keep the buttons (main actions) and hide links 
+     unless user requested ALL things visible even on mobile portrait?
+     "everything should be visible at every zooms" -> usually desktop context.
+     "in the mobile its not properl" -> separate concern.
+  */
+  .portfolio-nav-links {
+    display: none; /* Still hide generic links on tiny screens to prioritize Actions */
+  }
+
+  .portfolio-nav-buttons {
+    width: 100%;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .portfolio-nav-buttons a {
+    flex: 1;
+    justify-content: center;
+    font-size: 12px !important;
+    white-space: nowrap;
+    padding: 8px 12px !important;
+  }
+  
+  /* Hide the icon in buttons on mobile to save space if needed, 
+     but flex 1 might handle it. */
 }
 
 /* Hero Section */

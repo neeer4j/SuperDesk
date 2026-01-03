@@ -283,7 +283,7 @@ export default function Home() {
 
                     {/* Get Android App Button */}
                     <a
-                        href="https://github.com/neeer4j/SuperDesk-Android/releases/download/v1.0.0-alpha/SuperDesk.alpha.v1.0.0.apk"
+                        href="https://github.com/neeer4j/SuperDesk-Mobile/releases/download/v1.1/SuperDesk.Android.v1.1.apk"
                         download
                         style={{
                             color: 'rgba(255,255,255,0.7)',
