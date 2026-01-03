@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
@@ -197,6 +197,28 @@ export default function Home() {
     const { darkMode, toggleDarkMode } = useTheme();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [navHidden, setNavHidden] = useState(false);
+    const lastScrollY = useRef(0);
+
+    // Hide navbar on scroll down, show on scroll up (mobile only)
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.innerWidth > 640) {
+                setNavHidden(false);
+                return;
+            }
+            const currentScrollY = window.scrollY;
+            if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
+                setNavHidden(true);
+            } else {
+                setNavHidden(false);
+            }
+            lastScrollY.current = currentScrollY;
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const handleAppNavigation = (e) => {
         e.preventDefault();
@@ -214,25 +236,48 @@ export default function Home() {
             </AnimatePresence>
 
             {/* Navbar */}
-            <nav className="portfolio-nav">
+            <nav 
+                className={`portfolio-nav ${navHidden ? 'nav-hidden' : ''}`}
+                style={{
+                    position: 'fixed',
+                    top: '24px',
+                    left: '50%',
+                    transform: navHidden ? 'translateX(-50%) translateY(-100%)' : 'translateX(-50%)',
+                    zIndex: 100,
+                    padding: '10px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(13, 13, 20, 0.95)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    borderRadius: '999px',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    gap: '20px',
+                    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)',
+                    transition: 'transform 0.3s ease, opacity 0.3s ease',
+                    opacity: navHidden ? 0 : 1,
+                }}
+            >
                 {/* Logo */}
                 <Link to="/" style={{
                     display: 'flex',
                     alignItems: 'center',
                     textDecoration: 'none',
+                    flexShrink: 0,
                 }}>
                     <img
                         src={superdeskLogoText}
                         alt="SuperDesk"
-                        className="portfolio-nav-logo"
+                        style={{ height: '20px', width: 'auto' }}
                     />
                 </Link>
 
                 {/* Nav Links */}
                 <div className="portfolio-nav-links">
-                    <a href="#about" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '15px', fontWeight: 500 }}>About</a>
-                    <a href="#features" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '15px', fontWeight: 500 }}>Features</a>
-                    <a href="https://github.com/neeer4j/SuperDesk" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '15px', fontWeight: 500 }}>GitHub</a>
+                    <a href="#about" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '13px', fontWeight: 500, lineHeight: 1 }}>About</a>
+                    <a href="#features" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '13px', fontWeight: 500, lineHeight: 1 }}>Features</a>
+                    <a href="https://github.com/neeer4j/SuperDesk" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '13px', fontWeight: 500, lineHeight: 1 }}>GitHub</a>
                 </div>
 
                 {/* Right side */}
@@ -244,12 +289,13 @@ export default function Home() {
                         style={{
                             color: 'rgba(255,255,255,0.7)',
                             textDecoration: 'none',
-                            fontSize: '15px',
+                            fontSize: '13px',
                             fontWeight: 500,
-                            padding: '8px 12px',
+                            padding: '6px 8px',
                             transition: 'all 0.2s',
                             cursor: 'pointer',
                             whiteSpace: 'nowrap',
+                            lineHeight: 1,
                         }}
                     >
                         <span>Web App</span>
@@ -262,19 +308,20 @@ export default function Home() {
                         style={{
                             color: 'rgba(255,255,255,0.7)',
                             textDecoration: 'none',
-                            fontSize: '15px',
+                            fontSize: '13px',
                             fontWeight: 500,
-                            padding: '8px 12px',
+                            padding: '6px 8px',
                             transition: 'all 0.2s',
                             cursor: 'pointer',
                             whiteSpace: 'nowrap',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
+                            gap: '5px',
+                            lineHeight: 1,
                         }}
                     >
                         <span>Get Desktop App</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -288,19 +335,20 @@ export default function Home() {
                         style={{
                             color: 'rgba(255,255,255,0.7)',
                             textDecoration: 'none',
-                            fontSize: '15px',
+                            fontSize: '13px',
                             fontWeight: 500,
-                            padding: '8px 12px',
+                            padding: '6px 8px',
                             transition: 'all 0.2s',
                             cursor: 'pointer',
                             whiteSpace: 'nowrap',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
+                            gap: '5px',
+                            lineHeight: 1,
                         }}
                     >
                         <span>Get Android App</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
                             <line x1="12" y1="18" x2="12.01" y2="18"></line>
                         </svg>

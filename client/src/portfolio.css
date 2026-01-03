@@ -75,140 +75,153 @@ html {
 /* Navbar */
 .portfolio-nav {
   position: fixed;
-  top: 30px;
+  top: 24px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
-  padding: 12px 32px;
+  padding: 10px 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background-color: rgba(13, 13, 20, 0.8);
-  backdrop-filter: blur(12px);
-  border-radius: 50px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  width: auto;
-  min-width: 60%;
-  gap: 60px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  max-width: 95%;
-  transition: all 0.3s ease;
+  justify-content: center;
+  background: rgba(13, 13, 20, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-/* Navbar Logo - Prevents distortion at different zoom levels */
+/* Navbar Logo */
 .portfolio-nav-logo {
-  height: 24px;
+  height: 20px;
   width: auto;
-  min-height: 20px;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transform: translateZ(0);
   flex-shrink: 0;
 }
 
 .portfolio-nav-links {
   display: flex;
   align-items: center;
-  gap: 40px;
+  gap: 20px;
+}
+
+.portfolio-nav-links a {
+  font-size: 13px !important;
+  color: rgba(255,255,255,0.75) !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
 }
 
 .portfolio-nav-buttons {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 4px;
+}
+
+.portfolio-nav-buttons a {
+  font-size: 13px !important;
+  padding: 6px 8px !important;
+  color: rgba(255,255,255,0.75) !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.portfolio-nav-buttons a svg {
+  width: 11px;
+  height: 11px;
 }
 
 /* Mobile Navbar Overrides */
-/* Mobile/Responsive Navbar Overrides */
 
-/* Intermediate breakpoint (Tablet/Zoomed Desktop): Keep items visible but squeezed */
-@media (max-width: 960px) {
-  .portfolio-nav {
-    gap: 16px;
-    padding: 10px 20px;
-    width: auto;
-    max-width: 98%;
-    top: 20px;
-  }
-
-  .portfolio-nav-links {
-    gap: 20px;
-  }
+/* Shrink at smaller viewports */
+@media (max-width: 1100px) {
+  .portfolio-nav { gap: 16px; padding: 10px 16px; }
+  .portfolio-nav-links { gap: 16px; }
+  .portfolio-nav-links a { font-size: 12px !important; }
+  .portfolio-nav-buttons a { font-size: 12px !important; padding: 5px 6px !important; }
+  .portfolio-nav-logo { height: 18px; }
 }
 
-/* Smaller Tablet / Large Phone Landscape */
-@media (max-width: 768px) {
-  .portfolio-nav {
-    padding: 10px 16px;
-    gap: 12px;
-  }
+@media (max-width: 900px) {
+  .portfolio-nav { gap: 12px; padding: 8px 14px; }
+  .portfolio-nav-links { gap: 12px; }
+  .portfolio-nav-links a { font-size: 11px !important; }
+  .portfolio-nav-buttons a { font-size: 11px !important; padding: 4px 5px !important; }
+  .portfolio-nav-buttons { gap: 2px; }
+  .portfolio-nav-logo { height: 16px; }
+  .portfolio-nav-buttons a svg { width: 9px; height: 9px; }
+}
 
-  .portfolio-nav-links {
-    gap: 12px;
-  }
-
-  .portfolio-nav-links a {
-    font-size: 13px !important;
-  }
-
-  .portfolio-nav-buttons a {
-    font-size: 12px !important;
-    padding: 6px 10px !important;
-  }
-
-  .portfolio-nav-buttons {
-    gap: 8px;
-  }
+@media (max-width: 750px) {
+  .portfolio-nav { gap: 10px; padding: 8px 12px; }
+  .portfolio-nav-links { gap: 8px; }
+  .portfolio-nav-links a { font-size: 10px !important; }
+  .portfolio-nav-buttons a { font-size: 10px !important; padding: 4px !important; }
+  .portfolio-nav-logo { height: 14px; }
 }
 
 /* Mobile Layout (< 640px) */
 @media (max-width: 640px) {
   .portfolio-nav {
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 12px 16px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
     gap: 12px;
     top: 16px;
-    width: 92%;
-    border-radius: 20px;
+    left: 16px;
+    right: 16px;
+    transform: none;
+    width: auto;
+    border-radius: 16px;
+    height: 44px;
+    max-width: none;
   }
 
   /* Fix Logo on Mobile */
   .portfolio-nav-logo {
-    height: 18px; /* Restrict height */
+    height: 16px;
+    min-height: 16px;
+    max-height: 16px;
     width: auto;
     display: block;
   }
 
-  /* On true mobile portrait, we likely still need to hide the nav links 
-     to make space for the main CTA buttons, or move them.
-     For now, we'll keep the buttons (main actions) and hide links 
-     unless user requested ALL things visible even on mobile portrait?
-     "everything should be visible at every zooms" -> usually desktop context.
-     "in the mobile its not properl" -> separate concern.
-  */
+  /* Hide nav links on small mobile to prioritize action buttons */
   .portfolio-nav-links {
-    display: none; /* Still hide generic links on tiny screens to prioritize Actions */
+    display: none;
   }
 
   .portfolio-nav-buttons {
-    width: 100%;
-    justify-content: center;
-    gap: 8px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 6px;
+    width: auto;
   }
 
   .portfolio-nav-buttons a {
-    flex: 1;
-    justify-content: center;
-    font-size: 12px !important;
+    font-size: 10px !important;
+    padding: 6px 8px !important;
     white-space: nowrap;
-    padding: 8px 12px !important;
+    flex: none;
   }
-  
-  /* Hide the icon in buttons on mobile to save space if needed, 
-     but flex 1 might handle it. */
+
+  /* Hide icons on mobile buttons to save space */
+  .portfolio-nav-buttons a svg {
+    display: none;
+  }
+
+  /* Hide navbar on scroll down */
+  .portfolio-nav.nav-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
 }
 
 /* Hero Section */
@@ -303,14 +316,21 @@ html {
 
 .portfolio-about-image {
   flex-shrink: 0;
-  width: 260px;
+  width: 220px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
 
 .portfolio-about-image img {
   width: 100%;
+  max-width: 180px;
   height: auto;
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  margin: 0 auto;
 }
 
 .portfolio-about-text {
@@ -348,7 +368,8 @@ html {
   }
 
   .portfolio-about-image {
-    width: 200px;
+    width: 180px;
+    padding: 12px;
   }
 
   .portfolio-about-container h2 {
@@ -366,7 +387,8 @@ html {
   }
 
   .portfolio-about-image {
-    width: 160px;
+    width: 150px;
+    padding: 10px;
   }
 
   .portfolio-about-container h2 {
