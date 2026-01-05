@@ -130,6 +130,49 @@ html {
   gap: 4px !important;
 }
 
+/* Mobile navbar - Override inline styles with !important */
+@media (max-width: 640px) {
+  .portfolio-nav {
+    left: 12px !important;
+    right: 12px !important;
+    transform: none !important;
+    padding: 10px 12px !important;
+    gap: 6px !important;
+    top: 12px !important;
+    width: auto !important;
+  }
+  
+  .portfolio-nav-logo {
+    height: 14px !important;
+  }
+  
+  .portfolio-nav-links {
+    gap: 4px !important;
+  }
+  
+  .portfolio-nav-links a {
+    font-size: 9px !important;
+  }
+  
+  .portfolio-nav-buttons {
+    gap: 3px !important;
+  }
+  
+  .portfolio-nav-buttons a {
+    font-size: 9px !important;
+    padding: 4px 5px !important;
+  }
+  
+  .portfolio-nav-buttons svg {
+    width: 8px !important;
+    height: 8px !important;
+  }
+  
+  .portfolio-nav.nav-hidden {
+    transform: translateY(-100%) !important;
+  }
+}
+
 .portfolio-nav-buttons a svg {
   width: 11px;
   height: 11px;

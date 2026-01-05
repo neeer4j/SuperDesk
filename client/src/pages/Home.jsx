@@ -245,29 +245,7 @@ export default function Home() {
             </AnimatePresence>
 
             {/* Navbar */}
-            <nav 
-                className={`portfolio-nav ${navHidden ? 'nav-hidden' : ''}`}
-                style={{
-                    position: 'fixed',
-                    top: '24px',
-                    left: '50%',
-                    transform: navHidden ? 'translateX(-50%) translateY(-100%)' : 'translateX(-50%)',
-                    zIndex: 100,
-                    padding: '10px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(13, 13, 20, 0.95)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    borderRadius: '999px',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    gap: '20px',
-                    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)',
-                    transition: 'transform 0.3s ease, opacity 0.3s ease',
-                    opacity: navHidden ? 0 : 1,
-                }}
-            >
+            <nav className={`portfolio-nav ${navHidden ? 'nav-hidden' : ''}`}>
                 {/* Logo */}
                 <Link to="/" style={{
                     display: 'flex',
@@ -278,57 +256,26 @@ export default function Home() {
                     <img
                         src={superdeskLogoText}
                         alt="SuperDesk"
-                        style={{ height: '20px', width: 'auto' }}
+                        className="portfolio-nav-logo"
                     />
                 </Link>
 
                 {/* Nav Links */}
                 <div className="portfolio-nav-links">
-                    <a href="#about" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '13px', fontWeight: 500, lineHeight: 1 }}>About</a>
-                    <a href="#features" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '13px', fontWeight: 500, lineHeight: 1 }}>Features</a>
-                    <a href="https://github.com/neeer4j/SuperDesk" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '13px', fontWeight: 500, lineHeight: 1 }}>GitHub</a>
+                    <a href="#about">About</a>
+                    <a href="#features">Features</a>
+                    <a href="https://github.com/neeer4j/SuperDesk" target="_blank" rel="noopener noreferrer">GitHub</a>
                 </div>
 
                 {/* Right side */}
                 <div className="portfolio-nav-buttons">
                     {/* Web App Button */}
-                    <a
-                        href="/app"
-                        onClick={handleAppNavigation}
-                        style={{
-                            color: 'rgba(255,255,255,0.7)',
-                            textDecoration: 'none',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            padding: '6px 8px',
-                            transition: 'all 0.2s',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            lineHeight: 1,
-                        }}
-                    >
+                    <a href="/app" onClick={handleAppNavigation}>
                         <span>Web App</span>
                     </a>
 
                     {/* Get Desktop App Button */}
-                    <a
-                        href="https://github.com/neeer4j/SuperDesk/releases/download/v1.2.0-alpha/SuperDesk.Agent.Setup.1.2.0.exe"
-                        download
-                        style={{
-                            color: 'rgba(255,255,255,0.7)',
-                            textDecoration: 'none',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            padding: '6px 8px',
-                            transition: 'all 0.2s',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            lineHeight: 1,
-                        }}
-                    >
+                    <a href="https://github.com/neeer4j/SuperDesk/releases/download/v1.2.0-alpha/SuperDesk.Agent.Setup.1.2.0.exe" download>
                         <span>Get Desktop App</span>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -338,24 +285,7 @@ export default function Home() {
                     </a>
 
                     {/* Get Android App Button */}
-                    <a
-                        href="https://github.com/neeer4j/SuperDesk-Mobile/releases/download/v1.1/SuperDesk.Android.v1.1.apk"
-                        download
-                        style={{
-                            color: 'rgba(255,255,255,0.7)',
-                            textDecoration: 'none',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            padding: '6px 8px',
-                            transition: 'all 0.2s',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            lineHeight: 1,
-                        }}
-                    >
+                    <a href="https://github.com/neeer4j/SuperDesk-Mobile/releases/download/v1.1/SuperDesk.Android.v1.1.apk" download>
                         <span>Get Android App</span>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
