@@ -59,6 +59,7 @@
             right: 0;
             top: 0;
             cursor: grab;
+            overflow: hidden;
         }
 
         .toolbar-container:active {
@@ -113,6 +114,8 @@
             align-items: center;
             gap: 6px;
             padding: 0 8px 0 0;
+            flex-shrink: 0;
+            margin-left: auto;
         }
 
         .sharing-badge {
@@ -247,6 +250,133 @@
             transform: translateY(0);
             pointer-events: auto;
         }
+        
+        /* File Offer Section - expands inside toolbar with smooth animation */
+        /* The toolbar buttons stay fixed, this section slides in from the left */
+        .file-offer-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(59, 130, 246, 0.25));
+            border-radius: 8px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            overflow: hidden;
+            flex-shrink: 0;
+            /* Start collapsed */
+            width: 0;
+            padding: 0;
+            margin: 0;
+            opacity: 0;
+            /* Smooth spring-like easing for a polished feel */
+            transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        padding 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        margin 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        opacity 0.3s ease-out,
+                        border-color 0.3s ease;
+            will-change: width, padding, margin, opacity;
+        }
+        
+        .file-offer-section.show {
+            width: 250px;
+            padding: 8px 12px;
+            margin-right: 10px;
+            opacity: 1;
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        
+        /* Subtle glow effect when showing */
+        .file-offer-section.show::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), transparent);
+            border-radius: 8px;
+            pointer-events: none;
+        }
+        
+        .file-offer-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .file-offer-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .file-offer-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+        
+        .file-offer-size {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .file-offer-buttons {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        
+        .file-offer-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-app-region: no-drag;
+            transform-origin: center;
+        }
+        
+        .file-offer-btn.accept {
+            background: #10b981;
+            color: white;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+        
+        .file-offer-btn.accept:hover {
+            background: #059669;
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
+        .file-offer-btn.accept:active {
+            transform: scale(0.95);
+        }
+        
+        .file-offer-btn.reject {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+        
+        .file-offer-btn.reject:hover {
+            background: #ef4444;
+            color: white;
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .file-offer-btn.reject:active {
+            transform: scale(0.95);
+        }
 
         .guest-popup::after {
             content: '';
@@ -327,6 +457,19 @@
         </button>
 
         <div class="toolbar-buttons">
+            <!-- File Offer Section (expands when file is offered) -->
+            <div class="file-offer-section" id="fileOfferSection">
+                <span class="file-offer-icon">📁</span>
+                <div class="file-offer-info">
+                    <span class="file-offer-name" id="fileOfferName">file.txt</span>
+                    <span class="file-offer-size" id="fileOfferSize">0 KB</span>
+                </div>
+                <div class="file-offer-buttons">
+                    <button class="file-offer-btn accept" id="acceptFileBtn">✓ Accept</button>
+                    <button class="file-offer-btn reject" id="rejectFileBtn">✗</button>
+                </div>
+            </div>
+            
             <div class="sharing-badge">
                 <span class="sharing-dot"></span>
                 <span>SHARING</span>
@@ -400,6 +543,13 @@
         const guestPopup = document.getElementById('guestPopup');
         const guestAvatar = document.getElementById('guestAvatar');
         const guestName = document.getElementById('guestName');
+        const fileOfferSection = document.getElementById('fileOfferSection');
+        const fileOfferName = document.getElementById('fileOfferName');
+        const fileOfferSize = document.getElementById('fileOfferSize');
+        const acceptFileBtn = document.getElementById('acceptFileBtn');
+        const rejectFileBtn = document.getElementById('rejectFileBtn');
+        
+        let pendingFileOffer = null;
 
         // Request latest guest info from main process on load
         ipcRenderer.send('toolbar-request-guest-info');
@@ -611,6 +761,92 @@
             videoActive = isActive;
             videoBtn.classList.toggle('active', videoActive);
             videoBtn.title = videoActive ? 'Camera On' : 'Toggle Camera';
+        });
+        
+        // ==================== FILE OFFER HANDLING ====================
+        
+        let fileOfferAnimating = false;
+        let fileOfferVisible = false;
+        
+        function showFileOffer(offer) {
+            if (fileOfferAnimating || fileOfferVisible) return;
+            fileOfferAnimating = true;
+            fileOfferVisible = true;
+            
+            pendingFileOffer = offer;
+            fileOfferName.textContent = offer.fileName || offer.name || 'Unknown';
+            fileOfferSize.textContent = offer.fileSizeFormatted || formatFileSize(offer.fileSize || offer.size || 0);
+            
+            // Request toolbar window resize FIRST with expanded flag
+            ipcRenderer.send('toolbar-resize', { collapsed: false, edge: currentEdge, expanded: true });
+            
+            // Wait a tiny bit for window resize to start, then animate content
+            // This creates a smooth synchronized effect
+            setTimeout(() => {
+                fileOfferSection.classList.add('show');
+                // Animation complete after CSS transition
+                setTimeout(() => {
+                    fileOfferAnimating = false;
+                }, 400); // Match CSS transition duration
+            }, 50);
+            
+            console.log('[Toolbar] Showing file offer:', offer);
+        }
+        
+        function hideFileOffer() {
+            if (fileOfferAnimating || !fileOfferVisible) return;
+            fileOfferAnimating = true;
+            
+            pendingFileOffer = null;
+            
+            // First animate the content out smoothly
+            fileOfferSection.classList.remove('show');
+            
+            // Wait for content animation to complete, then resize toolbar window
+            setTimeout(() => {
+                ipcRenderer.send('toolbar-resize', { collapsed, edge: currentEdge, expanded: false });
+                fileOfferVisible = false;
+                fileOfferAnimating = false;
+            }, 400); // Match CSS transition duration
+            
+            console.log('[Toolbar] Hiding file offer');
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+        
+        // Accept file button
+        acceptFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('[Toolbar] Accept file clicked');
+            ipcRenderer.send('toolbar-file-accept');
+            hideFileOffer();
+            showToast('✓ File accepted');
+        });
+        
+        // Reject file button
+        rejectFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('[Toolbar] Reject file clicked');
+            ipcRenderer.send('toolbar-file-reject');
+            hideFileOffer();
+            showToast('File rejected');
+        });
+        
+        // Listen for file offers from main process
+        ipcRenderer.on('show-file-offer', (event, offer) => {
+            console.log('[Toolbar] Received file offer:', offer);
+            showFileOffer(offer);
+        });
+        
+        // Listen for file offer cancellation
+        ipcRenderer.on('hide-file-offer', () => {
+            console.log('[Toolbar] File offer cancelled');
+            hideFileOffer();
         });
 
         console.log('[Toolbar] Initialized successfully');

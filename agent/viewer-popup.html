@@ -395,6 +395,68 @@
     <div id="status">Control ON</div>
 
     <script>
+        // ==================== TOAST NOTIFICATION UTILITY ====================
+        function showToast(message, type = 'info', duration = 4000) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 99999;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(container);
+            }
+            
+            const toast = document.createElement('div');
+            const colors = {
+                success: { bg: '#10b981', icon: '✓' },
+                error: { bg: '#ef4444', icon: '✗' },
+                warning: { bg: '#f59e0b', icon: '⚠' },
+                info: { bg: '#3b82f6', icon: 'ℹ' }
+            };
+            const c = colors[type] || colors.info;
+            
+            toast.style.cssText = `
+                background: ${c.bg};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                pointer-events: auto;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: toastIn 0.3s ease;
+            `;
+            toast.innerHTML = `<span>${c.icon}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            
+            if (!document.getElementById('toast-styles')) {
+                const style = document.createElement('style');
+                style.id = 'toast-styles';
+                style.textContent = `
+                    @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+                    @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            setTimeout(() => {
+                toast.style.animation = 'toastOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+        
+        // ==================== ORIGINAL SCRIPT ====================
         const vid = document.getElementById('vid');
         const ctrlBtn = document.getElementById('ctrl');
         const micBtn = document.getElementById('mic');
@@ -502,8 +564,8 @@
         // Listen for session-ended events from HOST
         if (window.opener && window.opener.superdeskState && window.opener.superdeskState.socket) {
             window.opener.superdeskState.socket.on('session-ended', () => {
-                alert('The host has ended the session.');
-                window.close();
+                showToast('The host has ended the session.', 'info');
+                setTimeout(() => window.close(), 2000);
             });
             console.log('📡 Listening for session-ended events');
         }
@@ -846,15 +908,15 @@
                 // Notify opener to end the session
                 if (window.opener && typeof window.opener.endSession === 'function') {
                     window.opener.endSession();
-                    alert('Session ended successfully.');
+                    showToast('Session ended successfully.', 'success');
                 } else if (window.opener && window.opener.superdeskState && window.opener.superdeskState.socket) {
                     // Fallback: emit session-ended via socket
                     window.opener.superdeskState.socket.emit('session-ended', {
                         sessionId: window.opener.superdeskState.sessionId
                     });
-                    alert('Session ended successfully.');
+                    showToast('Session ended successfully.', 'success');
                 }
-                window.close();
+                setTimeout(() => window.close(), 1500);
             }
         });
 

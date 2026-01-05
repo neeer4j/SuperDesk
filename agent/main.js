@@ -54,10 +54,12 @@ let localCameraOverlay = null;  // Host's own camera overlay
 let remoteCameraOverlay = null; // Guest's camera overlay
 let toolbarEdge = 'right'; // 'top', 'right', 'bottom', 'left'
 let toolbarCollapsed = false;
+let toolbarExpanded = false; // When file offer is shown
 let lastGuestInfo = null;
 
 const TOOLBAR_WIDTH = 412; // Increased from 328 for mic/video buttons
 const TOOLBAR_COLLAPSED_WIDTH = 64;
+const TOOLBAR_EXPANDED_WIDTH = 580; // Width when file offer is shown
 const TOOLBAR_HEIGHT = 52;
 const TOOLBAR_BOTTOM_MARGIN = 60;
 
@@ -473,7 +475,7 @@ function createToolbarWindow() {
   return toolbarWindow;
 }
 
-function repositionToolbar(collapsed = false, edge = 'right') {
+function repositionToolbar(collapsed = false, edge = 'right', expanded = false) {
   if (!toolbarWindow || toolbarWindow.isDestroyed()) return;
 
   const { width: screenW, height: screenH } = electronScreen.getPrimaryDisplay().workAreaSize;
@@ -481,43 +483,100 @@ function repositionToolbar(collapsed = false, edge = 'right') {
 
   toolbarEdge = edge;
   toolbarCollapsed = collapsed;
+  toolbarExpanded = expanded;
+
+  // Determine width based on state: expanded > normal > collapsed
+  const getWidth = () => {
+    if (expanded) return TOOLBAR_EXPANDED_WIDTH;
+    if (collapsed) return TOOLBAR_COLLAPSED_WIDTH;
+    return TOOLBAR_WIDTH;
+  };
+
+  const targetWidth = getWidth();
+  const currentBounds = toolbarWindow.getBounds();
 
   switch (edge) {
     case 'top':
-      width = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+      width = targetWidth;
       height = TOOLBAR_HEIGHT;
       x = screenW - width;
       y = 0;
       break;
     case 'bottom':
-      width = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+      width = targetWidth;
       height = TOOLBAR_HEIGHT;
       x = screenW - width;
       y = screenH - TOOLBAR_HEIGHT;
       break;
     case 'left':
-      width = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+      width = targetWidth;
       height = TOOLBAR_HEIGHT;
       x = 0;
       y = screenH - TOOLBAR_BOTTOM_MARGIN;
       break;
     case 'right':
     default:
-      width = collapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_WIDTH;
+      width = targetWidth;
       height = TOOLBAR_HEIGHT;
       x = screenW - width;
       y = screenH - TOOLBAR_BOTTOM_MARGIN;
       break;
   }
 
-  toolbarWindow.setBounds({ x, y, width, height });
+  // Smooth animated resize using multiple small steps
+  // This creates a smoother visual effect than a single setBounds call
+  const animateResize = () => {
+    const startBounds = toolbarWindow.getBounds();
+    const targetBounds = { x, y, width, height };
+    const steps = 8; // Number of animation steps
+    const duration = 150; // Total animation duration in ms
+    const stepTime = duration / steps;
+    let currentStep = 0;
+
+    // Use easeOutCubic for smooth deceleration
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    const animate = () => {
+      if (toolbarWindow.isDestroyed()) return;
+      
+      currentStep++;
+      const progress = easeOutCubic(currentStep / steps);
+      
+      const newBounds = {
+        x: Math.round(startBounds.x + (targetBounds.x - startBounds.x) * progress),
+        y: Math.round(startBounds.y + (targetBounds.y - startBounds.y) * progress),
+        width: Math.round(startBounds.width + (targetBounds.width - startBounds.width) * progress),
+        height: targetBounds.height
+      };
+      
+      try {
+        toolbarWindow.setBounds(newBounds);
+      } catch (err) {
+        console.warn('[Toolbar] Animation setBounds failed:', err);
+      }
+      
+      if (currentStep < steps) {
+        setTimeout(animate, stepTime);
+      }
+    };
+
+    // Start animation
+    if (Math.abs(startBounds.width - targetBounds.width) > 10) {
+      animate();
+    } else {
+      // Skip animation for small changes
+      toolbarWindow.setBounds(targetBounds);
+    }
+  };
+
+  animateResize();
 
   // Notify renderer of edge change
   if (toolbarWindow && !toolbarWindow.isDestroyed()) {
     toolbarWindow.webContents.send('toolbar-edge-updated', { edge });
   }
 
-  console.log(`[Toolbar] Repositioned to ${edge}, collapsed: ${collapsed}, bounds: ${JSON.stringify({ x, y, width, height })}`);
+  console.log(`[Toolbar] Repositioned to ${edge}, collapsed: ${collapsed}, expanded: ${expanded}, target width: ${width}`);
 }
 
 function snapToEdge(screenX, screenY) {
@@ -752,9 +811,9 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.on('toolbar-resize', (_event, { collapsed, edge } = {}) => {
+  ipcMain.on('toolbar-resize', (_event, { collapsed, edge, expanded } = {}) => {
     const targetEdge = edge || toolbarEdge || 'right';
-    repositionToolbar(!!collapsed, targetEdge);
+    repositionToolbar(!!collapsed, targetEdge, !!expanded);
   });
 
   ipcMain.on('toolbar-dragging', (_event, { x, y }) => {
@@ -883,6 +942,39 @@ app.whenReady().then(() => {
     }
   });
 
+  // ==================== TOOLBAR FILE OFFER HANDLERS ====================
+  // Forward file offer to toolbar for inline display
+  ipcMain.on('show-toolbar-file-offer', (event, fileData) => {
+    console.log('📁 [Toolbar] Show file offer:', fileData);
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.webContents.send('show-file-offer', fileData);
+    }
+  });
+
+  // Hide file offer in toolbar
+  ipcMain.on('hide-toolbar-file-offer', () => {
+    console.log('📁 [Toolbar] Hide file offer');
+    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+      toolbarWindow.webContents.send('hide-file-offer');
+    }
+  });
+
+  // Handle accept from toolbar - forward to main window
+  ipcMain.on('toolbar-file-accept', () => {
+    console.log('✅ [Toolbar] File accepted from toolbar');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('file-offer-accepted-from-toolbar');
+    }
+  });
+
+  // Handle reject from toolbar - forward to main window
+  ipcMain.on('toolbar-file-reject', () => {
+    console.log('❌ [Toolbar] File rejected from toolbar');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('file-offer-rejected-from-toolbar');
+    }
+  });
+
   // ==================== VIEWER WINDOW IPC HANDLERS ====================
   // Open the separate viewer window for remote desktop viewing
   ipcMain.on('open-viewer', (event, sessionData) => {
@@ -976,6 +1068,55 @@ app.whenReady().then(() => {
       });
 
       notification.show();
+    }
+  });
+
+  // Handle file offer notification - shows native notification but does NOT open the app
+  // The toolbar handles file offers inline, so we just show a notification for user awareness
+  ipcMain.on('show-file-offer-notification', (event, { title, body, fileName, fileSize, fileSizeFormatted }) => {
+    console.log('📁 [Main] File offer notification received:', fileName);
+    
+    if (Notification.isSupported()) {
+      const notification = new Notification({
+        title: title || '📁 Incoming File',
+        body: body || `${fileName} (${fileSizeFormatted})`,
+        icon: path.join(__dirname, 'assets', 'icon.png'),
+        silent: false
+      });
+
+      // Only bring window to front if user CLICKS the notification
+      notification.on('click', () => {
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      });
+
+      notification.show();
+    }
+    
+    // Flash taskbar to get user attention without opening the app
+    if (mainWindow) {
+      mainWindow.flashFrame(true);
+      setTimeout(() => {
+        mainWindow.flashFrame(false);
+      }, 3000);
+    }
+  });
+
+  // Handle bring-window-to-front IPC
+  ipcMain.on('bring-window-to-front', () => {
+    console.log('📁 [Main] Bringing window to front');
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      // Briefly set always on top to ensure it's visible
+      mainWindow.setAlwaysOnTop(true);
+      setTimeout(() => {
+        mainWindow.setAlwaysOnTop(false);
+      }, 100);
     }
   });
 

@@ -184,6 +184,10 @@ async function initializeSocket() {
 
             showNotification('Guest Connected', 'A user has joined your session');
             enableShareButton();
+            
+            // Preload sources in background for instant start sharing
+            console.log('🚀 Preloading sources for faster sharing...');
+            preloadSources().catch(err => console.warn('Source preload failed:', err));
 
             // Setup file-only connection for file transfer without screen share
             console.log('📁 Setting up file-only connection for immediate file transfer...');
@@ -2491,43 +2495,112 @@ window.availableSources = {
     screens: [],
     windows: [],
     selected: null,
-    currentTab: 'screens'
+    currentTab: 'screens',
+    cached: false,
+    cacheTimestamp: 0
 };
+
+// Preload sources in background to speed up start sharing
+let preloadSourcesPromise = null;
+
+async function preloadSources() {
+    // Don't preload if already cached and recent (within 10 seconds)
+    const now = Date.now();
+    if (window.availableSources.cached && (now - window.availableSources.cacheTimestamp) < 10000) {
+        return window.availableSources;
+    }
+    
+    try {
+        if (!window.appControls || !window.appControls.getDesktopSources) {
+            return null;
+        }
+
+        // Use smaller thumbnails for faster loading
+        const sources = await window.appControls.getDesktopSources({
+            types: ['screen', 'window'],
+            thumbnailSize: { width: 200, height: 150 } // Reduced from 300x200
+        });
+
+        window.availableSources.screens = sources.filter(s => s.id.startsWith('screen:'));
+        window.availableSources.windows = sources.filter(s => s.id.startsWith('window:'));
+        window.availableSources.cached = true;
+        window.availableSources.cacheTimestamp = now;
+        
+        console.log('✅ Sources preloaded:', sources.length, 'total');
+        return window.availableSources;
+    } catch (error) {
+        console.warn('Preload sources failed:', error);
+        return null;
+    }
+}
 
 async function startScreenShare() {
     if (!window.superdeskState.guestConnected) {
         if (window.superdeskModal) {
             window.superdeskModal.warning('No guest connected yet. Please wait for someone to join your session.', 'No Guest Connected');
         }
+        // Re-enable button
+        const btn = document.getElementById('start-share-btn');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Start Screen Share';
+        }
         return;
     }
 
     try {
-        // Get available sources using exposed API from preload
-        if (!window.appControls || !window.appControls.getDesktopSources) {
-            throw new Error('Desktop capture API not available. Please restart the app.');
+        // Check if sources are already cached and recent
+        const now = Date.now();
+        const cacheValid = window.availableSources.cached && 
+                          (now - window.availableSources.cacheTimestamp) < 10000;
+        
+        let sources;
+        if (cacheValid) {
+            // Use cached sources for instant response
+            console.log('✅ Using cached sources');
+            sources = [...window.availableSources.screens, ...window.availableSources.windows];
+        } else {
+            // Get fresh sources
+            if (!window.appControls || !window.appControls.getDesktopSources) {
+                throw new Error('Desktop capture API not available. Please restart the app.');
+            }
+
+            sources = await window.appControls.getDesktopSources({
+                types: ['screen', 'window'],
+                thumbnailSize: { width: 200, height: 150 } // Smaller for speed
+            });
+
+            if (sources.length === 0) {
+                throw new Error('No screen sources available');
+            }
+
+            // Update cache
+            window.availableSources.screens = sources.filter(s => s.id.startsWith('screen:'));
+            window.availableSources.windows = sources.filter(s => s.id.startsWith('window:'));
+            window.availableSources.cached = true;
+            window.availableSources.cacheTimestamp = now;
         }
 
-        const sources = await window.appControls.getDesktopSources({
-            types: ['screen', 'window'],
-            thumbnailSize: { width: 300, height: 200 }
-        });
-
-        if (sources.length === 0) {
-            throw new Error('No screen sources available');
-        }
-
-        // Separate screens and windows
-        window.availableSources.screens = sources.filter(s => s.id.startsWith('screen:'));
-        window.availableSources.windows = sources.filter(s => s.id.startsWith('window:'));
-
-        // Show source selection modal
+        // Show source selection modal immediately
         showSourceSelectionModal();
+        
+        // Re-enable button with original text
+        const btn = document.getElementById('start-share-btn');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Start Screen Share';
+        }
 
     } catch (error) {
         console.error('Failed to start screen share:', error);
         if (window.superdeskModal) {
             window.superdeskModal.error('Failed to start screen sharing: ' + error.message, 'Screen Share Error');
+        }
+        // Re-enable button
+        const btn = document.getElementById('start-share-btn');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Start Screen Share';
         }
     }
 }
@@ -2567,12 +2640,34 @@ function renderSources(tab) {
         return;
     }
 
-    sourceList.innerHTML = sources.map((source, index) => `
-        <div class="source-item" data-source-id="${source.id}" onclick="selectSourceAndConfirm('${source.id}')">
-            <img src="${source.thumbnail.toDataURL()}" class="source-thumbnail" alt="${source.name}">
-            <div class="source-name">${source.name}</div>
-        </div>
-    `).join('');
+    // Use DocumentFragment for faster DOM updates
+    const fragment = document.createDocumentFragment();
+    
+    sources.forEach((source, index) => {
+        const div = document.createElement('div');
+        div.className = 'source-item';
+        div.dataset.sourceId = source.id;
+        div.onclick = () => selectSourceAndConfirm(source.id);
+        
+        const img = document.createElement('img');
+        img.className = 'source-thumbnail';
+        img.alt = source.name;
+        // Convert thumbnail asynchronously to avoid blocking
+        requestAnimationFrame(() => {
+            img.src = source.thumbnail.toDataURL();
+        });
+        
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'source-name';
+        nameDiv.textContent = source.name;
+        
+        div.appendChild(img);
+        div.appendChild(nameDiv);
+        fragment.appendChild(div);
+    });
+    
+    sourceList.innerHTML = '';
+    sourceList.appendChild(fragment);
 }
 
 function selectSource(sourceId) {

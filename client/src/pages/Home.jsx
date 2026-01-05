@@ -9,7 +9,7 @@ import superdeskShowcase from '../assets/suppm.png';
 import superdeskHeroMockup from '../assets/supipad.png';
 
 // Loading Overlay Component
-const LoadingOverlay = () => (
+const LoadingOverlay = React.memo(() => (
     <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -59,10 +59,10 @@ const LoadingOverlay = () => (
             fontFamily: 'monospace',
         }}>Initializing Environment...</p>
     </motion.div>
-);
+));
 
 // Typewriter effect component
-const TypewriterText = ({ lines, typingSpeed = 80, delayBetweenLines = 300 }) => {
+const TypewriterText = React.memo(({ lines, typingSpeed = 80, delayBetweenLines = 300 }) => {
     const [displayedLines, setDisplayedLines] = useState([]);
     const [currentLineIndex, setCurrentLineIndex] = useState(0);
     const [currentCharIndex, setCurrentCharIndex] = useState(0);
@@ -136,7 +136,7 @@ const TypewriterText = ({ lines, typingSpeed = 80, delayBetweenLines = 300 }) =>
             ))}
         </div>
     );
-};
+});
 
 // Icons matching Figma design
 const FeatureIcons = {
@@ -202,18 +202,27 @@ export default function Home() {
 
     // Hide navbar on scroll down, show on scroll up (mobile only)
     useEffect(() => {
+        let ticking = false;
+        
         const handleScroll = () => {
-            if (window.innerWidth > 640) {
-                setNavHidden(false);
-                return;
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    if (window.innerWidth > 640) {
+                        setNavHidden(false);
+                        ticking = false;
+                        return;
+                    }
+                    const currentScrollY = window.scrollY;
+                    if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
+                        setNavHidden(true);
+                    } else {
+                        setNavHidden(false);
+                    }
+                    lastScrollY.current = currentScrollY;
+                    ticking = false;
+                });
+                ticking = true;
             }
-            const currentScrollY = window.scrollY;
-            if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
-                setNavHidden(true);
-            } else {
-                setNavHidden(false);
-            }
-            lastScrollY.current = currentScrollY;
         };
 
         window.addEventListener('scroll', handleScroll, { passive: true });

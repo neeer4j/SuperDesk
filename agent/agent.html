@@ -1267,22 +1267,41 @@
             flex-direction: column;
             align-items: center;
             gap: 4px;
-            transition: all 0.2s ease;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .start-sharing-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .start-sharing-btn:hover::before {
+            left: 100%;
         }
 
         .start-sharing-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
+            transform: translateY(-2px) scale(1.02);
             box-shadow: 0 6px 28px rgba(139, 92, 246, 0.4);
         }
 
         .start-sharing-btn:active:not(:disabled) {
-            transform: translateY(0);
+            transform: translateY(0) scale(0.98);
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .start-sharing-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.6;
             cursor: not-allowed;
+            background: linear-gradient(135deg, #6b46c1, #4c51bf);
         }
 
         .start-sharing-btn .btn-icon {
@@ -6267,15 +6286,32 @@
             if (startShareBtn) {
                 startShareBtn.addEventListener('click', () => {
                     const btn = document.getElementById('start-share-btn');
+                    
+                    // Immediate visual feedback
+                    btn.style.opacity = '0.7';
+                    btn.style.transform = 'scale(0.98)';
+                    setTimeout(() => {
+                        btn.style.opacity = '';
+                        btn.style.transform = '';
+                    }, 150);
+                    
                     if (window.superdeskState && window.superdeskState.sharingActive) {
                         // Stop sharing
                         if (window.stopScreenShare) {
                             window.stopScreenShare();
                         }
                     } else {
-                        // Start sharing
+                        // Start sharing - show loading state immediately
+                        btn.disabled = true;
+                        const originalText = btn.textContent;
+                        btn.textContent = 'Loading...';
+                        
                         if (window.startScreenShare) {
-                            window.startScreenShare();
+                            window.startScreenShare().catch(err => {
+                                console.error('Start share failed:', err);
+                                btn.disabled = false;
+                                btn.textContent = originalText;
+                            });
                         }
                     }
                 });
@@ -8858,6 +8894,26 @@
                     }
                 });
 
+                // Handle file offer accepted from toolbar
+                ipcRenderer.on('file-offer-accepted-from-toolbar', () => {
+                    console.log('✅ File offer accepted from toolbar');
+                    if (window.fileTransfer && window.fileTransfer.acceptOffer) {
+                        window.fileTransfer.acceptOffer();
+                    }
+                    // Hide the modal in case it's showing
+                    hideFileOfferModal();
+                });
+
+                // Handle file offer rejected from toolbar
+                ipcRenderer.on('file-offer-rejected-from-toolbar', () => {
+                    console.log('❌ File offer rejected from toolbar');
+                    if (window.fileTransfer && window.fileTransfer.rejectOffer) {
+                        window.fileTransfer.rejectOffer();
+                    }
+                    // Hide the modal in case it's showing
+                    hideFileOfferModal();
+                });
+
                 console.log('✅ Toolbar IPC listeners registered');
             } catch (e) {
                 console.warn('Could not set up toolbar IPC listeners:', e);
@@ -8960,6 +9016,11 @@
             if (iconEl) iconEl.textContent = getFileIcon(offer.name);
 
             if (modal) modal.style.display = 'flex';
+            
+            // Request main process to bring window to front (important when minimized)
+            if (window.appControls && window.appControls.ipcSend) {
+                window.appControls.ipcSend('bring-window-to-front');
+            }
         };
 
         // Hide file offer modal

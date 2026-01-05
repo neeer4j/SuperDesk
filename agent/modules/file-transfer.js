@@ -347,27 +347,58 @@ function handleFileOffer(offer) {
  */
 function showFileTransferNotification(offer) {
     const fileSize = formatFileSize(offer.size);
+    const fileData = {
+        title: '📁 Incoming File Transfer',
+        body: `${offer.name} (${fileSize})`,
+        fileName: offer.name,
+        fileSize: offer.size,
+        fileSizeFormatted: fileSize
+    };
 
-    // Use Electron's IPC to show native notification
-    if (window.require) {
+    // Use Electron's IPC to show in toolbar AND native notification
+    if (window.appControls && window.appControls.ipcSend) {
+        // Send to toolbar for inline display (primary)
+        window.appControls.ipcSend('show-toolbar-file-offer', fileData);
+        console.log('📤 Sent file offer to toolbar');
+        
+        // Also send native notification as backup
+        window.appControls.ipcSend('show-file-offer-notification', fileData);
+        console.log('📤 Sent file offer notification to main process');
+    } else if (window.require) {
+        // Fallback to direct IPC
         try {
             const { ipcRenderer } = window.require('electron');
-            ipcRenderer.send('show-notification', {
-                title: '📁 Incoming File Transfer',
-                body: `${offer.name} (${fileSize})`,
-                onClick: 'file-transfer'
-            });
+            ipcRenderer.send('show-toolbar-file-offer', fileData);
+            ipcRenderer.send('show-file-offer-notification', fileData);
         } catch (e) {
             console.log('📁 Could not show native notification:', e);
         }
     }
 
-    // Fallback to web notification API
+    // Also use web notification API as backup
     if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Incoming File Transfer', {
+        const notification = new Notification('Incoming File Transfer', {
             body: `${offer.name} (${fileSize})`,
-            icon: 'assets/icon.png'
+            icon: 'assets/icon.png',
+            requireInteraction: true // Keep notification visible until user interacts
         });
+        
+        // Click notification to bring window to front
+        notification.onclick = () => {
+            if (window.appControls && window.appControls.ipcSend) {
+                window.appControls.ipcSend('bring-window-to-front');
+            }
+            notification.close();
+        };
+    }
+    
+    // Play notification sound
+    try {
+        const audio = new Audio('assets/notification.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(() => {});
+    } catch (e) {
+        // Ignore audio errors
     }
 }
 
@@ -649,8 +680,21 @@ function showFileOfferDialog(offer) {
 }
 
 function hideFileOfferDialog() {
+    // Hide the in-app modal
     if (typeof window.hideFileOfferModal === 'function') {
         window.hideFileOfferModal();
+    }
+    
+    // Also hide the toolbar file offer section
+    if (window.appControls && window.appControls.ipcSend) {
+        window.appControls.ipcSend('hide-toolbar-file-offer');
+    } else if (window.require) {
+        try {
+            const { ipcRenderer } = window.require('electron');
+            ipcRenderer.send('hide-toolbar-file-offer');
+        } catch (e) {
+            // Ignore
+        }
     }
 }
 

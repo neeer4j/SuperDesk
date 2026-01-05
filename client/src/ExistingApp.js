@@ -4,6 +4,7 @@ import config, { fetchIceServers } from './config';
 import './App.css';
 import LandingPage from './LandingPage';
 import FeaturesPage from './FeaturesPage';
+import notify from './utils/notifications';
 
 // Material UI imports
 import { 
@@ -289,7 +290,7 @@ function App() {
       // Screen sharing event handlers
       newSocket.on('screen-share-requested', (data) => {
         const { requesterId } = data;
-        alert(`Screen share requested by ${requesterId}`);
+        notify.info(`Screen share requested by ${requesterId}`);
       });
 
       // Guest joined - host needs to send offer
@@ -333,20 +334,20 @@ function App() {
       });
 
       newSocket.on('screen-share-approved', () => {
-        alert('Screen share request approved! Host can start sharing.');
+        notify.success('Screen share request approved! Host can start sharing.');
       });
 
       newSocket.on('screen-share-denied', () => {
-        alert('Screen share request was denied.');
+        notify.warning('Screen share request was denied.');
         setScreenShareRequested(false);
       });
 
       newSocket.on('screen-share-started', () => {
-        alert('Host started screen sharing!');
+        notify.success('Host started screen sharing!');
       });
 
       newSocket.on('screen-share-stopped', () => {
-        alert('Host stopped screen sharing.');
+        notify.info('Host stopped screen sharing.');
       });
 
   socketRef.current = newSocket;
@@ -395,26 +396,26 @@ function App() {
 
       newSocket.on('session-joined', (id) => {
       console.log('✅ Successfully joined session:', id);
-      alert(`Successfully joined session: ${id}`);
+      notify.success(`Successfully joined session: ${id}`);
     });
 
       newSocket.on('session-error', (error) => {
       console.error('❌ Session error:', error);
-      alert(`Session error: ${error}`);
+      notify.error(`Session error: ${error}`);
     });
 
       newSocket.on('user-joined', (userId) => {
       console.log('👤 User joined session:', userId);
-      alert('Another user joined the session!');
+      notify.info('Another user joined the session!');
     });
 
       newSocket.on('user-left', (userId) => {
       console.log('👤 User left session:', userId);
-      alert('User left the session');
+      notify.info('User left the session');
     });
 
       newSocket.on('session-ended', () => {
-      alert('Session has been ended by the host');
+      notify.warning('Session has been ended by the host');
       // Clean up
       setSessionId('');
       setJoinSessionId('');
@@ -436,18 +437,18 @@ function App() {
       newSocket.on('remote-control-enabled', () => {
       setRemoteControlEnabled(true);
       if (isHostRef.current) {
-        alert('Guest remote control enabled. You can disable it any time from the dashboard.');
+        notify.success('Guest remote control enabled. You can disable it any time from the dashboard.');
       } else {
-        alert('Remote control has been enabled by the host');
+        notify.success('Remote control has been enabled by the host');
       }
     });
 
       newSocket.on('remote-control-disabled', () => {
       setRemoteControlEnabled(false);
       if (isHostRef.current) {
-        alert('Guest remote control disabled.');
+        notify.info('Guest remote control disabled.');
       } else {
-        alert('Remote control has been disabled by the host');
+        notify.info('Remote control has been disabled by the host');
       }
     });
 
@@ -684,7 +685,7 @@ function App() {
       dataChannel.onopen = () => {
         console.log('Data channel opened (guest side)');
         setDataChannel(dataChannel);
-        alert('Connected! File transfer and remote control available.');
+        notify.success('Connected! File transfer and remote control available.');
       };
       
       dataChannel.onclose = () => {
@@ -694,7 +695,7 @@ function App() {
       
       dataChannel.onerror = (error) => {
         console.error('Data channel error (guest side):', error);
-        alert('Data channel error: ' + error.message);
+        notify.error('Data channel error: ' + error.message);
       };
       
       dataChannel.onmessage = handleDataChannelMessage;
@@ -764,7 +765,7 @@ function App() {
       dataChannel.onopen = () => {
         console.log('Data channel opened (host side)');
         setDataChannel(dataChannel);
-        alert('Data channel ready! File transfer and remote control available.');
+        notify.success('Data channel ready! File transfer and remote control available.');
       };
       dataChannel.onclose = () => {
         console.log('Data channel closed (host side)');
@@ -772,13 +773,13 @@ function App() {
       };
       dataChannel.onerror = (error) => {
         console.error('Data channel error (host side):', error);
-        alert('Data channel error: ' + error.message);
+        notify.error('Data channel error: ' + error.message);
       };
       dataChannel.onmessage = handleDataChannelMessage;
 
       // Handle when user stops sharing (browser stop button)
       stream.getVideoTracks()[0].onended = () => {
-        alert('Screen sharing ended. Session will be terminated.');
+        notify.warning('Screen sharing ended. Session will be terminated.');
         endSession();
       };
       const hostVideoTrack = stream.getVideoTracks()[0];
@@ -1328,6 +1329,7 @@ function App() {
               stageIndex++;
             } else {
               clearInterval(window.progressInterval);
+              window.progressInterval = null;
             }
           }, 800);
           
@@ -1498,6 +1500,7 @@ function App() {
         // Clear the progress animation interval
         if (popup.progressInterval) {
           clearInterval(popup.progressInterval);
+          popup.progressInterval = null;
         }
         
         // Update progress to 100% and show success
@@ -1563,10 +1566,11 @@ function App() {
       }
 
       // Playback watchdog: if ICE is connected but the video stays paused/no frames, reattempt play
+      let watchdog = null;
       try {
         let attempts = 0;
         const maxAttempts = 5; // ~10s total
-        const watchdog = setInterval(() => {
+        watchdog = setInterval(() => {
           attempts++;
           const ready = popupVideo.readyState; // 0-4
           const paused = popupVideo.paused;
@@ -1592,6 +1596,11 @@ function App() {
           }
         }, 2000);
       } catch(e) { /* noop */ }
+      
+      // Store watchdog for cleanup
+      if (popup && watchdog) {
+        popup.watchdogInterval = watchdog;
+      }
     }
 
     // Handle popup messages
@@ -1647,6 +1656,22 @@ function App() {
     };
 
     window.addEventListener('message', handlePopupMessage);
+    
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      window.removeEventListener('message', handlePopupMessage);
+      // Clean up popup intervals
+      if (popup && !popup.closed) {
+        if (popup.progressInterval) {
+          clearInterval(popup.progressInterval);
+          popup.progressInterval = null;
+        }
+        if (popup.watchdogInterval) {
+          clearInterval(popup.watchdogInterval);
+          popup.watchdogInterval = null;
+        }
+      }
+    };
   }, [
     disableRemoteControl,
     enableRemoteControl,
