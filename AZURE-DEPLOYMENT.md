@@ -78,11 +78,11 @@ git push origin main
    - **Configuration** → **Application settings**
    - Add:
    ```
-   AZURE_WEBPUBSUB_CONNECTION_STRING = Endpoint=https://superdesk-socketio.webpubsub.azure.com;AccessKey=REDACTED_SECRET;Version=1.0;
+   AZURE_WEBPUBSUB_CONNECTION_STRING = [Your connection string from Azure Portal → Web PubSub → Keys]
    
    NODE_ENV = production
    PORT = 8080
-   CLIENT_URL = https://super-desk-client.vercel.app
+   CLIENT_URL = https://superdesk.co.in
    ```
    - Click **Save**
 

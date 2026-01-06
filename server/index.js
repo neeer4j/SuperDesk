@@ -173,8 +173,7 @@ const io = new Server(server, {
 // Use Azure Web PubSub for Socket.IO
 useAzureSocketIO(io, {
   hub: "superdesk_hub", // Hub name for organizing connections
-  connectionString: process.env.AZURE_WEBPUBSUB_CONNECTION_STRING || 
-    "Endpoint=https://superdesk-socketio.webpubsub.azure.com;AccessKey=REDACTED_SECRET;Version=1.0;"
+  connectionString: process.env.AZURE_WEBPUBSUB_CONNECTION_STRING
 });
 
 app.use(express.json());

@@ -44,7 +44,7 @@ Click **+ New application setting** and add each:
 
 ```
 Name: AZURE_WEBPUBSUB_CONNECTION_STRING
-Value: Endpoint=https://superdesk-socketio.webpubsub.azure.com;AccessKey=REDACTED_SECRET;Version=1.0;
+Value: [Get from Azure Portal → Web PubSub for Socket.IO → Keys → Primary Connection String]
 
 Name: NODE_ENV
 Value: production
