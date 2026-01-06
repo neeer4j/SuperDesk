@@ -10,7 +10,7 @@ window.superdeskState = {
     sharingActive: false,
     remoteControlEnabled: false,
     hostIsMobile: false, // Track if the host device is mobile (detected via video aspect ratio)
-    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://superdesk-7m7f.onrender.com'
+    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net'
 };
 
 // Test TURN connectivity - can be called from console for debugging

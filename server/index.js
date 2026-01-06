@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const { Server } = require('socket.io');
+const { useAzureSocketIO } = require('@azure/web-pubsub-socket.io');
 const cors = require('cors');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
@@ -135,6 +136,8 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "https://superdesk.co.in",
+  "https://www.superdesk.co.in",
   "https://super-desk-client.vercel.app",
   process.env.CLIENT_URL,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
@@ -154,7 +157,8 @@ const corsOptions = process.env.NODE_ENV === 'production' ? {
 // Configure CORS - more permissive to avoid ad blocker issues
 app.use(cors(corsOptions));
 
-const io = socketIo(server, {
+// Initialize Socket.IO with Azure Web PubSub
+const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production' ? true : allowedOrigins.filter(Boolean),
     methods: ["GET", "POST", "PUT", "DELETE"],
@@ -164,6 +168,13 @@ const io = socketIo(server, {
   transports: ['websocket', 'polling'],
   upgrade: true,
   rememberUpgrade: false
+});
+
+// Use Azure Web PubSub for Socket.IO
+useAzureSocketIO(io, {
+  hub: "superdesk_hub", // Hub name for organizing connections
+  connectionString: process.env.AZURE_WEBPUBSUB_CONNECTION_STRING || 
+    "Endpoint=https://superdesk-socketio.webpubsub.azure.com;AccessKey=REDACTED_SECRET;Version=1.0;"
 });
 
 app.use(express.json());
