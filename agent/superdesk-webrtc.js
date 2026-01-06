@@ -3548,6 +3548,11 @@ function stopScreenShare() {
         window.hideHostFloatingToolbar();
     }
 
+    // IMPORTANT: Stop all mic/video chat media to close camera windows
+    if (typeof stopAllChatMedia === 'function') {
+        stopAllChatMedia();
+    }
+
     console.log('✅ Screen sharing stopped and remote control disabled');
     showNotification('Sharing Stopped', 'Screen sharing has been stopped');
 }
