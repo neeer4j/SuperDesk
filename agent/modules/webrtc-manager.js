@@ -17,7 +17,7 @@ class WebRTCManager {
 
   async loadIceServers() {
     try {
-      const response = await fetch('https://superdesk-server.onrender.com/api/ice-servers');
+      const response = await fetch('https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net/api/webrtc-config');
       const data = await response.json();
       this.iceServers = data.iceServers || [];
       console.log('[WebRTC] Loaded ICE servers:', this.iceServers.length);
