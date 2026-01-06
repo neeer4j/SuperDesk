@@ -253,8 +253,10 @@
         
         /* File Offer Section - expands inside toolbar with smooth animation */
         /* The toolbar buttons stay fixed, this section slides in from the left */
+        /* TEMPORARILY HIDDEN - uncomment display: flex to re-enable */
         .file-offer-section {
-            display: flex;
+            display: none !important; /* Hidden for now */
+            /* display: flex; */
             align-items: center;
             gap: 10px;
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(59, 130, 246, 0.25));
@@ -769,6 +771,13 @@
         let fileOfferVisible = false;
         
         function showFileOffer(offer) {
+            // TEMPORARILY DISABLED - file offer UI is hidden
+            // Just store the offer but don't expand toolbar or show UI
+            pendingFileOffer = offer;
+            console.log('[Toolbar] File offer received (UI disabled):', offer);
+            return;
+            
+            /* Original code - re-enable when file offer UI is restored
             if (fileOfferAnimating || fileOfferVisible) return;
             fileOfferAnimating = true;
             fileOfferVisible = true;
@@ -791,6 +800,7 @@
             }, 50);
             
             console.log('[Toolbar] Showing file offer:', offer);
+            */
         }
         
         function hideFileOffer() {
