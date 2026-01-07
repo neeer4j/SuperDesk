@@ -1,3 +1,4 @@
+// SuperDesk Signaling Server - Deployed to Azure App Service
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -111,13 +112,13 @@ async function fetchCloudflareTurnServers(ttlSeconds = 3600) {
   }
 
   const data = await resp.json();
-  
+
   // Handle different response structures:
   // 1. TURN key API: { "iceServers": { "urls": [...], "username": "...", "credential": "..." } }
   // 2. Legacy Realtime: { "result": { "credentials": { ... } } }
   const result = data.result || data;
   const payload = result.credentials || result.iceServers || result;
-  
+
   const urls = payload.uris || payload.urls || payload.turn_urls || payload.ice_servers || [];
   const username = payload.username || payload.user || payload.auth?.username;
   const credential = payload.password || payload.credential || payload.auth?.password;
@@ -189,7 +190,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: FILE_TRANSFER.MAX_SIZE } // configurable limit via shared constants
 });
@@ -223,7 +224,7 @@ io.on('connection', (socket) => {
     do {
       sessionId = generateSessionId();
     } while (sessions.has(sessionId)); // Ensure uniqueness
-    
+
     sessions.set(sessionId, {
       id: sessionId,
       host: socket.id,
@@ -231,7 +232,7 @@ io.on('connection', (socket) => {
       created: new Date(),
       type: payload?.type || 'unknown'
     });
-    
+
     socket.join(sessionId);
     socket.emit('session-created', { sessionId });
     console.log(`Session created: ${sessionId} (Type: ${payload?.type || 'unknown'})`);
@@ -240,19 +241,19 @@ io.on('connection', (socket) => {
   socket.on('join-session', (sessionId) => {
     console.log(`Attempting to join session: ${sessionId} from socket: ${socket.id}`);
     const session = sessions.get(sessionId);
-    
+
     if (session) {
       session.clients.push(socket.id);
       socket.join(sessionId);
-      
+
       // Notify host about new joiner so they can send offer
-      socket.to(session.host).emit('guest-joined', { 
+      socket.to(session.host).emit('guest-joined', {
         guestId: socket.id,
-        sessionId 
+        sessionId
       });
-      
+
       socket.emit('session-joined', sessionId);
-      
+
       console.log(`✅ Client ${socket.id} successfully joined session ${sessionId}`);
       console.log(`Session now has: Host: ${session.host}, Clients: [${session.clients.join(', ')}]`);
     } else {
@@ -314,7 +315,7 @@ io.on('connection', (socket) => {
 
   // ==================== FILE TRANSFER SIGNALING ====================
   // These handlers relay WebRTC signaling for the file-only peer connection
-  
+
   socket.on('file-offer', (payload) => {
     const { sessionId, offer } = payload;
     console.log('📁 File offer received, relaying to session:', sessionId);
@@ -449,7 +450,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
-    
+
     // Clean up sessions
     for (const [sessionId, session] of sessions.entries()) {
       if (session.host === socket.id) {
@@ -491,7 +492,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
 app.get('/download/:filename', (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(__dirname, 'uploads', filename);
-  
+
   if (fs.existsSync(filePath)) {
     res.download(filePath);
   } else {
@@ -501,8 +502,8 @@ app.get('/download/:filename', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     activeSessions: sessions.size
   });
@@ -677,7 +678,7 @@ app.get('/sessions', (req, res) => {
     clientCount: session.clients.length,
     created: session.created
   }));
-  
+
   res.json({ sessions: sessionList });
 });
 
