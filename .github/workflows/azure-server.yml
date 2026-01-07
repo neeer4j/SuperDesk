@@ -88,5 +88,5 @@ jobs:
         package: ./server-package.zip
 
     - name: Azure Logout
-      run: az logout
+      run: az logout || true
       if: always()
