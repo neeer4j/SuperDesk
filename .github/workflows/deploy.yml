@@ -75,5 +75,5 @@ jobs:
       run: |
         echo "✅ SuperDesk deployment pipeline completed successfully!"
         echo "🌐 Vercel will auto-deploy the client"
-        echo "🚀 Railway will auto-deploy the server"
+        echo "🚀 Azure App Service will auto-deploy the server (see azure-server.yml)"
         echo "📋 Check deployment status at your dashboard"

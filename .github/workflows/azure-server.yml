@@ -1,0 +1,92 @@
+# GitHub Actions: Deploy Server to Azure App Service
+name: Deploy Server to Azure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/azure-server.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  AZURE_WEBAPP_NAME: supderdesk-fgasbfdze6bwbbav
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: server/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./server
+      run: npm ci --omit=dev
+
+    - name: Create deployment package
+      working-directory: ./server
+      run: |
+        # Create a clean package for deployment
+        mkdir -p ../deploy-package
+        cp -r node_modules ../deploy-package/
+        cp package.json ../deploy-package/
+        cp package-lock.json ../deploy-package/ 2>/dev/null || true
+        cp index.js ../deploy-package/
+        cp -r routes ../deploy-package/ 2>/dev/null || true
+        cp -r middleware ../deploy-package/ 2>/dev/null || true
+        cp -r utils ../deploy-package/ 2>/dev/null || true
+        # Create web.config for Azure IIS with WebSocket support
+        cat > ../deploy-package/web.config << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <system.webServer>
+            <webSocket enabled="true" />
+            <handlers>
+              <add name="iisnode" path="index.js" verb="*" modules="iisnode"/>
+            </handlers>
+            <rewrite>
+              <rules>
+                <rule name="NodeInspector" patternSyntax="ECMAScript" stopProcessing="true">
+                  <match url="^index.js\/debug[\/]?" />
+                </rule>
+                <rule name="StaticContent">
+                  <action type="Rewrite" url="public{REQUEST_URI}"/>
+                </rule>
+                <rule name="DynamicContent">
+                  <conditions>
+                    <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="True"/>
+                  </conditions>
+                  <action type="Rewrite" url="index.js"/>
+                </rule>
+              </rules>
+            </rewrite>
+            <iisnode watchedFiles="web.config;*.js" node_env="production" />
+          </system.webServer>
+        </configuration>
+        EOF
+        # Zip the package for deployment
+        cd ../deploy-package && zip -r ../server-package.zip .
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        package: ./server-package.zip
+
+    - name: Azure Logout
+      run: az logout
+      if: always()
