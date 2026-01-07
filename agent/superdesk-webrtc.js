@@ -10,7 +10,7 @@ window.superdeskState = {
     sharingActive: false,
     remoteControlEnabled: false,
     hostIsMobile: false, // Track if the host device is mobile (detected via video aspect ratio)
-    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net'
+    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://supderdesk.azurewebsites.net'
 };
 
 // Test TURN connectivity - can be called from console for debugging
@@ -184,7 +184,7 @@ async function initializeSocket() {
 
             showNotification('Guest Connected', 'A user has joined your session');
             enableShareButton();
-            
+
             // Preload sources in background for instant start sharing
             console.log('🚀 Preloading sources for faster sharing...');
             preloadSources().catch(err => console.warn('Source preload failed:', err));
@@ -808,13 +808,13 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         // Check if we already have a video transceiver that can receive
         const transceivers = peerConnection.getTransceivers();
         const hasVideoRecvTransceiver = transceivers.some(t => t.receiver.track?.kind === 'video' || (t.mid && t.direction?.includes('recv')));
-        
+
         if (!hasVideoRecvTransceiver) {
             // Add transceiver explicitly set to sendrecv for bidirectional video
             peerConnection.addTransceiver('video', { direction: 'sendrecv' });
             console.log('📹 HOST: Added video transceiver for receiving GUEST camera');
         }
-        
+
         // Similarly for audio
         const hasAudioRecvTransceiver = transceivers.some(t => t.receiver.track?.kind === 'audio' || (t.mid && t.direction?.includes('recv')));
         if (!hasAudioRecvTransceiver) {
@@ -1239,7 +1239,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
             if (guestVideo) {
                 // Store stream globally FIRST so popup can access it immediately
                 window.superdeskState.guestCameraStream = cameraStream;
-                
+
                 guestVideo.srcObject = cameraStream;
                 // Only open popup when video has actual data
                 // NOTE: We do NOT show the in-page overlay - only the popup window is used
@@ -1248,7 +1248,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                         // Don't show in-page overlay - popup handles it
                         // guestCameraOverlay.style.display = 'block';
                         console.log('📹 HOST: Guest camera ready (' + guestVideo.videoWidth + 'x' + guestVideo.videoHeight + ') - using popup only');
-                        
+
                         // === POPUP WINDOW: Create floating window that stays on top ===
                         // main.js intercepts this popup via did-create-window and applies setContentProtection(true)
                         // This ensures guest camera is NOT captured in screen share
@@ -1258,7 +1258,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                             const popupHeight = 180;
                             const left = window.screen.width - popupWidth - 20;
                             const top = 60;
-                            
+
                             // Add small delay to ensure stream is fully ready
                             setTimeout(() => {
                                 const popup = window.open(
@@ -1266,7 +1266,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                                     'guest-camera-popup',
                                     `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,alwaysOnTop=1`
                                 );
-                                
+
                                 if (popup) {
                                     window.superdeskState.guestCameraPopup = popup;
                                     console.log('✅ HOST: Guest camera popup window opened (content protection applied by main.js)!');
@@ -1457,18 +1457,18 @@ async function setupWebRTCReceiver(socket, sessionId) {
             // Store for popup access
             window.superdeskState.inputDataChannel = inputChannel;
         }
-        
+
         // Handle FILE TRANSFER channel
         if (event.channel.label === 'fileTransfer' || event.channel.label === 'files' || event.channel.label === 'file-transfer') {
             console.log('📁 GUEST: File transfer DataChannel received:', event.channel.label);
-            
+
             // CRITICAL: Set binary type for ArrayBuffer transfer
             event.channel.binaryType = 'arraybuffer';
-            
+
             // Setup the channel handlers from file-transfer.js module
             if (window.fileTransferState) {
                 window.fileTransferState.dataChannel = event.channel;
-                
+
                 event.channel.onopen = () => {
                     console.log('📁 GUEST: File transfer DataChannel OPEN - ready for file transfer');
                     // Show file transfer UI when channel is ready
@@ -1476,15 +1476,15 @@ async function setupWebRTCReceiver(socket, sessionId) {
                         showFileTransferUI();
                     }
                 };
-                
+
                 event.channel.onclose = () => {
                     console.log('📁 GUEST: File transfer DataChannel CLOSED');
                 };
-                
+
                 event.channel.onerror = (error) => {
                     console.error('📁 GUEST: File transfer DataChannel error:', error);
                 };
-                
+
                 event.channel.onmessage = (msgEvent) => {
                     // Forward to file-transfer.js message handler
                     if (typeof handleDataChannelMessage === 'function') {
@@ -1493,7 +1493,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
                         console.warn('📁 GUEST: handleDataChannelMessage not found');
                     }
                 };
-                
+
                 console.log('✅ GUEST: File transfer DataChannel connected and configured');
             } else {
                 console.error('📁 GUEST: fileTransferState not available');
@@ -1510,14 +1510,14 @@ async function setupWebRTCReceiver(socket, sessionId) {
         } else {
             window.superdeskState.remoteCameraTrackId = null;
             window.superdeskState.hostCameraStream = null;
-            
+
             // Close popup window if open
             if (window.superdeskState.hostCameraPopup && !window.superdeskState.hostCameraPopup.closed) {
                 window.superdeskState.hostCameraPopup.close();
                 window.superdeskState.hostCameraPopup = null;
                 console.log('📹 GUEST: Host camera popup closed');
             }
-            
+
             // IMMEDIATELY remove camera overlay when camera is turned off (Discord-style)
             const cameraOverlay = document.getElementById('remote-camera-overlay');
             if (cameraOverlay) {
@@ -1837,7 +1837,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 console.log('📹 GUEST: Remote camera track ENDED');
                 window.superdeskState.remoteCameraTrackId = null;
                 window.superdeskState.hostCameraStream = null;
-                
+
                 // Notify viewer-popup.html
                 if (window.viewerPopup && !window.viewerPopup.closed) {
                     try {
@@ -2509,7 +2509,7 @@ async function preloadSources() {
     if (window.availableSources.cached && (now - window.availableSources.cacheTimestamp) < 10000) {
         return window.availableSources;
     }
-    
+
     try {
         if (!window.appControls || !window.appControls.getDesktopSources) {
             return null;
@@ -2525,7 +2525,7 @@ async function preloadSources() {
         window.availableSources.windows = sources.filter(s => s.id.startsWith('window:'));
         window.availableSources.cached = true;
         window.availableSources.cacheTimestamp = now;
-        
+
         console.log('✅ Sources preloaded:', sources.length, 'total');
         return window.availableSources;
     } catch (error) {
@@ -2551,9 +2551,9 @@ async function startScreenShare() {
     try {
         // Check if sources are already cached and recent
         const now = Date.now();
-        const cacheValid = window.availableSources.cached && 
-                          (now - window.availableSources.cacheTimestamp) < 10000;
-        
+        const cacheValid = window.availableSources.cached &&
+            (now - window.availableSources.cacheTimestamp) < 10000;
+
         let sources;
         if (cacheValid) {
             // Use cached sources for instant response
@@ -2583,7 +2583,7 @@ async function startScreenShare() {
 
         // Show source selection modal immediately
         showSourceSelectionModal();
-        
+
         // Re-enable button with original text
         const btn = document.getElementById('start-share-btn');
         if (btn) {
@@ -2642,13 +2642,13 @@ function renderSources(tab) {
 
     // Use DocumentFragment for faster DOM updates
     const fragment = document.createDocumentFragment();
-    
+
     sources.forEach((source, index) => {
         const div = document.createElement('div');
         div.className = 'source-item';
         div.dataset.sourceId = source.id;
         div.onclick = () => selectSourceAndConfirm(source.id);
-        
+
         const img = document.createElement('img');
         img.className = 'source-thumbnail';
         img.alt = source.name;
@@ -2656,16 +2656,16 @@ function renderSources(tab) {
         requestAnimationFrame(() => {
             img.src = source.thumbnail.toDataURL();
         });
-        
+
         const nameDiv = document.createElement('div');
         nameDiv.className = 'source-name';
         nameDiv.textContent = source.name;
-        
+
         div.appendChild(img);
         div.appendChild(nameDiv);
         fragment.appendChild(div);
     });
-    
+
     sourceList.innerHTML = '';
     sourceList.appendChild(fragment);
 }
@@ -3911,7 +3911,7 @@ async function startVideoStream() {
         window.superdeskState.videoStream = stream;
 
         console.log('📹 Camera access granted');
-        
+
         // Register stream in stream-registry for camera-overlay.html to access
         try {
             const streamRegistry = require('./stream-registry');
@@ -3948,7 +3948,7 @@ async function startVideoStream() {
                 try {
                     const params = sender.getParameters();
                     if (!params.encodings) params.encodings = [{}];
-                    
+
                     params.encodings.forEach(encoding => {
                         // Set max bitrate for quick encoding (lower = faster encode)
                         encoding.maxBitrate = 1500000;  // 1.5 Mbps - fast encode
@@ -3958,10 +3958,10 @@ async function startVideoStream() {
                         // Scale down if needed for speed
                         encoding.scaleResolutionDownBy = 1.0;
                     });
-                    
+
                     // Apply degradation preference for low latency
                     params.degradationPreference = 'maintain-framerate';  // Prioritize FPS over resolution
-                    
+
                     await sender.setParameters(params);
                     console.log('📹 Low-latency sender parameters applied');
                 } catch (e) {
@@ -4030,7 +4030,7 @@ function stopVideoStream() {
         window.superdeskState.videoStream = null;
         window.superdeskState.cameraTrackId = null;
     }
-    
+
     // Remove from stream-registry
     try {
         const streamRegistry = require('./stream-registry');
