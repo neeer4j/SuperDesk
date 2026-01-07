@@ -10,7 +10,7 @@ window.superdeskState = {
     sharingActive: false,
     remoteControlEnabled: false,
     hostIsMobile: false, // Track if the host device is mobile (detected via video aspect ratio)
-    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net'
+    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://superdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net'
 };
 
 // Test TURN connectivity - can be called from console for debugging
@@ -142,8 +142,14 @@ async function initializeSocket() {
 
     return new Promise((resolve, reject) => {
         const socket = io(window.superdeskState.serverUrl, {
-            transports: ['websocket', 'polling'],
-            reconnection: true
+            transports: ['websocket'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            timeout: 20000,
+            upgrade: false,
+            forceNew: false,
+            path: '/socket.io/'
         });
 
         socket.on('connect', () => {
@@ -546,7 +552,10 @@ async function setupFileOnlyReceiver(socket, sessionId) {
 
 // Join session (Guest)
 async function joinSession(sessionId) {
-    if (!sessionId || sessionId.length !== 8) {
+    // Normalize session ID to uppercase (server generates uppercase IDs)
+    const normalizedSessionId = sessionId ? sessionId.toString().toUpperCase().trim() : '';
+    
+    if (!normalizedSessionId || normalizedSessionId.length !== 8) {
         if (window.superdeskModal) {
             window.superdeskModal.warning('Please enter a valid 8-character session ID', 'Invalid Session ID');
         }
@@ -555,7 +564,7 @@ async function joinSession(sessionId) {
 
     try {
         console.log('🔄 ========== JOINING SESSION ==========');
-        console.log('🔄 Session ID:', sessionId);
+        console.log('🔄 Session ID:', normalizedSessionId, '(original:', sessionId, ')');
         updateJoinButtonState('connecting');
 
         // Update placeholder to show connecting state
@@ -572,16 +581,16 @@ async function joinSession(sessionId) {
 
         const socket = await initializeSocket();
         window.superdeskState.isHost = false;
-        window.superdeskState.sessionId = sessionId;
+        window.superdeskState.sessionId = normalizedSessionId;
 
         // CRITICAL: Setup WebRTC receiver FIRST, then join
         // This ensures the 'offer' listener is ready before the host sends it
         console.log('🔄 Setting up WebRTC receiver BEFORE joining...');
-        await setupWebRTCReceiver(socket, sessionId);
+        await setupWebRTCReceiver(socket, normalizedSessionId);
         console.log('✅ WebRTC receiver ready');
 
         console.log('🔄 Now emitting join-session...');
-        socket.emit('join-session', sessionId);
+        socket.emit('join-session', normalizedSessionId);
         console.log('✅ Join request sent');
 
         console.log('✅ ========== JOIN COMPLETE ==========');

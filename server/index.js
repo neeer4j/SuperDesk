@@ -157,31 +157,74 @@ const allowedOrigins = [
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
 ];
 
-// In production, be more permissive to allow cross-device connections
-const corsOptions = process.env.NODE_ENV === 'production' ? {
-  origin: true, // Allow all origins in production for cross-device access
+// Custom origin validator for CORS - handles Electron apps and various deployment scenarios
+const corsOriginValidator = (origin, callback) => {
+  // Allow requests with no origin (Electron apps, mobile apps, curl, Postman, same-origin)
+  if (!origin || origin === 'null' || origin === 'file://') {
+    return callback(null, true);
+  }
+  // Allow all origins in production for cross-device access
+  if (process.env.NODE_ENV === 'production') {
+    return callback(null, true);
+  }
+  // In development, check against allowed origins
+  if (allowedOrigins.filter(Boolean).includes(origin)) {
+    return callback(null, true);
+  }
+  // Allow localhost variants
+  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    return callback(null, true);
+  }
+  return callback(null, true); // Be permissive to avoid connection issues
+};
+
+// CORS configuration
+const corsOptions = {
+  origin: corsOriginValidator,
   credentials: true,
-  optionsSuccessStatus: 200
-} : {
-  origin: allowedOrigins.filter(Boolean),
-  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   optionsSuccessStatus: 200
 };
 
-// Configure CORS - more permissive to avoid ad blocker issues
+// Apply CORS middleware
 app.use(cors(corsOptions));
+
+// Explicit handling for preflight OPTIONS requests (important for Azure App Service)
+app.options('*', cors(corsOptions));
+
+// Additional CORS headers middleware to ensure they're always set (Azure sometimes strips them)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  // Set CORS headers explicitly for all requests
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  
+  // Handle preflight immediately
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 // Initialize Socket.IO with Azure Web PubSub
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' ? true : allowedOrigins.filter(Boolean),
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: corsOriginValidator,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
     credentials: true
   },
   allowEIO3: true,
   transports: ['websocket', 'polling'],
   upgrade: true,
-  rememberUpgrade: false
+  rememberUpgrade: false,
+  // Additional Socket.IO settings for Azure compatibility
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  cookie: false
 });
 
 // Use Azure Web PubSub for Socket.IO (optional - works without it)
@@ -261,25 +304,27 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join-session', (sessionId) => {
-    console.log(`Attempting to join session: ${sessionId} from socket: ${socket.id}`);
-    const session = sessions.get(sessionId);
+    // Normalize session ID to uppercase (session IDs are generated as uppercase)
+    const normalizedSessionId = sessionId ? sessionId.toString().toUpperCase().trim() : '';
+    console.log(`Attempting to join session: ${normalizedSessionId} (original: ${sessionId}) from socket: ${socket.id}`);
+    const session = sessions.get(normalizedSessionId);
 
     if (session) {
       session.clients.push(socket.id);
-      socket.join(sessionId);
+      socket.join(normalizedSessionId);
 
       // Notify host about new joiner so they can send offer
       socket.to(session.host).emit('guest-joined', {
         guestId: socket.id,
-        sessionId
+        sessionId: normalizedSessionId
       });
 
-      socket.emit('session-joined', sessionId);
+      socket.emit('session-joined', normalizedSessionId);
 
-      console.log(`✅ Client ${socket.id} successfully joined session ${sessionId}`);
+      console.log(`✅ Client ${socket.id} successfully joined session ${normalizedSessionId}`);
       console.log(`Session now has: Host: ${session.host}, Clients: [${session.clients.join(', ')}]`);
     } else {
-      console.log(`❌ Session ${sessionId} not found. Available sessions:`, Array.from(sessions.keys()));
+      console.log(`❌ Session ${normalizedSessionId} not found. Available sessions:`, Array.from(sessions.keys()));
       socket.emit('session-error', 'Session not found');
     }
   });
@@ -689,6 +734,20 @@ app.get('/socket-test', (req, res) => {
     status: 'Socket.io server is running',
     endpoint: '/socket.io/',
     transports: ['websocket', 'polling'],
+    timestamp: new Date().toISOString()
+  });
+});
+
+// CORS test endpoint - helps debug CORS issues
+app.get('/cors-test', (req, res) => {
+  res.json({
+    status: 'CORS is working',
+    origin: req.headers.origin || 'no origin header',
+    method: req.method,
+    headers: {
+      'access-control-allow-origin': res.getHeader('Access-Control-Allow-Origin'),
+      'access-control-allow-credentials': res.getHeader('Access-Control-Allow-Credentials')
+    },
     timestamp: new Date().toISOString()
   });
 });
