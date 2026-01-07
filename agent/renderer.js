@@ -69,7 +69,7 @@ function connectToServer() {
   socket = io(SERVER_URL, {
     transports: ['websocket', 'polling']
   });
-  
+
   socket.on('connect', async () => {
     console.log('✅ Agent connected to server');
     updateStatus('Connected to server');
@@ -80,7 +80,7 @@ function connectToServer() {
     // Create a new session as HOST immediately so UI appears quickly
     socket.emit('create-session');
   });
-  
+
   socket.on('session-created', (payload) => {
     // Server currently sends a plain string; support both string and object
     sessionId = typeof payload === 'string' ? payload : payload?.sessionId;
@@ -88,25 +88,25 @@ function connectToServer() {
     updateStatus('Ready - Waiting for guest');
     displaySessionId(sessionId);
   });
-  
+
   // Server emits 'guest-joined' with { guestId, sessionId }
   socket.on('guest-joined', async (data) => {
     currentGuestId = data?.guestId || null;
     console.log('👤 Guest joined session:', currentGuestId);
     updateStatus('Guest connected! Click Start Screen Sharing');
   });
-  
+
   socket.on('offer', async (data) => {
     console.log('📨 Received offer from guest');
     await handleOffer(data);
   });
-  
+
   socket.on('answer', async (data) => {
     console.log('📨 ===== RECEIVED ANSWER FROM GUEST =====');
     console.log('Answer data:', data);
     await handleAnswer(data);
   });
-  
+
   socket.on('ice-candidate', async (data) => {
     console.log('📨 Received ICE candidate from guest');
     console.log('Current peer connection state:', peerConnection?.connectionState);
@@ -153,14 +153,14 @@ function connectToServer() {
       console.error('Renegotiation error:', e);
     }
   });
-  
+
   socket.on('disconnect', () => {
     console.log('❌ Disconnected from server');
     remoteControlEnabled = false;
     ipcRenderer.send('robot-set-enabled', false);
     updateStatus('Disconnected from server');
   });
-  
+
   socket.on('error', (error) => {
     console.error('Socket error:', error);
     updateStatus('Error: ' + error);
@@ -184,23 +184,23 @@ async function startScreenShare() {
       console.log('Already sharing screen');
       return;
     }
-    
+
     updateStatus('Getting screen sources...');
     document.getElementById('startBtn').disabled = true;
-    
+
     // Get desktop sources using IPC to communicate with main process
     const sources = await ipcRenderer.invoke('get-sources');
-    
+
     if (sources.length === 0) {
       throw new Error('No screen sources available');
     }
-    
+
     console.log('📺 Found screen sources:', sources.length);
     updateStatus('Capturing screen...');
-    
+
     // Get the first screen (primary display)
     const primarySource = sources[0];
-    
+
     // Create media stream from screen capture
     let stream;
     try {
@@ -235,11 +235,11 @@ async function startScreenShare() {
         throw e2;
       }
     }
-    
+
     localStream = stream;
     isSharing = true;
     ipcRenderer.send('robot-refresh-screen-size');
-    
+
     console.log('✅ Screen capture started');
     console.log('Stream tracks:', stream.getTracks());
     const vt = stream.getVideoTracks()[0];
@@ -259,10 +259,10 @@ async function startScreenShare() {
       vt.onunmute = () => console.log('Host video track unmuted');
     }
     updateStatus('Screen sharing active - Creating connection...');
-    
+
     // Create peer connection and add stream
     createPeerConnection();
-    
+
     // Add video track to peer connection
     let videoSender = null;
     stream.getTracks().forEach(track => {
@@ -302,21 +302,21 @@ async function startScreenShare() {
     } catch (e) {
       console.log('Codec/encoding preference not applied (non-fatal):', e);
     }
-    
+
     // Create and send offer
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
-    
+
     console.log('📤 Sending offer to guest');
     socket.emit('offer', {
       sessionId: sessionId,
       targetId: currentGuestId || undefined,
       offer: offer
     });
-    
+
     updateStatus('Waiting for guest to connect...');
     document.getElementById('stopBtn').disabled = false;
-    
+
   } catch (error) {
     console.error('❌ Screen share error:', error);
     updateStatus('Error: ' + error.message);
@@ -331,10 +331,10 @@ function createPeerConnection() {
     console.log('Peer connection already exists');
     return;
   }
-  
+
   console.log('Creating peer connection...');
   peerConnection = new RTCPeerConnection(iceServers);
-  
+
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
       console.log('📤 Sending ICE candidate');
@@ -348,7 +348,7 @@ function createPeerConnection() {
       console.log('✅ All ICE candidates have been sent');
     }
   };
-  
+
   peerConnection.onconnectionstatechange = () => {
     console.log('Connection state:', peerConnection.connectionState);
     console.log('Full connection details:', {
@@ -358,7 +358,7 @@ function createPeerConnection() {
       signalingState: peerConnection.signalingState
     });
     updateStatus('Connection: ' + peerConnection.connectionState);
-    
+
     if (peerConnection.connectionState === 'connected') {
       updateStatus('✅ Connected! Guest is viewing your screen');
     } else if (peerConnection.connectionState === 'failed') {
@@ -366,21 +366,21 @@ function createPeerConnection() {
       updateStatus('❌ Connection failed - trying to reconnect...');
     }
   };
-  
+
   peerConnection.oniceconnectionstatechange = () => {
     console.log('ICE connection state:', peerConnection.iceConnectionState);
     console.log('ICE gathering state:', peerConnection.iceGatheringState);
-    
+
     if (peerConnection.iceConnectionState === 'connected') {
       updateStatus('✅ Streaming desktop to guest');
-      
+
       // Start monitoring video stats
       const statsInterval = setInterval(async () => {
         if (!peerConnection || peerConnection.connectionState === 'closed') {
           clearInterval(statsInterval);
           return;
         }
-        
+
         try {
           const stats = await peerConnection.getStats();
           stats.forEach(report => {
@@ -402,7 +402,7 @@ function createPeerConnection() {
       updateStatus('❌ ICE connection failed');
     }
   };
-  
+
   console.log('✅ Peer connection created');
 }
 
@@ -412,19 +412,19 @@ async function handleOffer(data) {
     if (!peerConnection) {
       createPeerConnection();
     }
-    
+
     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-    
+
     // Create answer
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
-    
+
     console.log('📤 Sending answer');
     socket.emit('answer', {
       sessionId: sessionId,
       answer: answer
     });
-    
+
   } catch (error) {
     console.error('Error handling offer:', error);
     updateStatus('Error handling offer: ' + error.message);
@@ -438,12 +438,12 @@ async function handleAnswer(data) {
     console.log('Answer data:', data);
     console.log('Current peer connection state:', peerConnection?.connectionState);
     console.log('Current signaling state:', peerConnection?.signalingState);
-    
+
     if (!peerConnection) {
       console.error('❌ No peer connection to handle answer!');
       return;
     }
-    
+
     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
     console.log('✅ Answer set successfully');
     console.log('New signaling state:', peerConnection.signalingState);
@@ -477,14 +477,14 @@ async function handleIceCandidate(data) {
     console.log('Peer connection exists?', !!peerConnection);
     console.log('Remote description exists?', !!peerConnection?.remoteDescription);
     console.log('Signaling state:', peerConnection?.signalingState);
-    
+
     // If the remote description is not set, buffer the candidate
     if (!peerConnection || !peerConnection.remoteDescription) {
       console.log('⚠️ Remote description not set. Buffering ICE candidate. (Buffer size:', pendingIceCandidates.length + 1, ')');
       pendingIceCandidates.push(data.candidate);
       return;
     }
-    
+
     console.log('Attempting to add ICE candidate immediately...');
     await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
     console.log('✅ ICE candidate added successfully');
@@ -504,16 +504,16 @@ function stopScreenShare() {
     localStream.getTracks().forEach(track => track.stop());
     localStream = null;
   }
-  
+
   if (peerConnection) {
     peerConnection.close();
     peerConnection = null;
   }
-  
+
   isSharing = false;
   updateStatus('Screen sharing stopped');
   console.log('Screen sharing stopped');
-  
+
   document.getElementById('startBtn').disabled = false;
   document.getElementById('stopBtn').disabled = true;
 }
@@ -540,25 +540,25 @@ async function startScreenShareWithType(shareType = 'screen') {
       console.log('Already sharing screen');
       return;
     }
-    
+
     updateStatus('Getting sources...');
-    
+
     // Determine source types based on share type
     const sourceTypes = shareType === 'window' ? ['window'] : ['screen'];
-    
+
     // Get desktop sources
     const sources = await ipcRenderer.invoke('get-sources', sourceTypes);
-    
+
     if (sources.length === 0) {
       throw new Error(`No ${shareType} sources available`);
     }
-    
+
     console.log(`📺 Found ${shareType} sources:`, sources.length);
     updateStatus(`Capturing ${shareType}...`);
-    
+
     // Select the source (for now, use first one - can be enhanced with UI selection)
     const selectedSource = sources[0];
-    
+
     // Create media stream from capture
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
@@ -575,29 +575,29 @@ async function startScreenShareWithType(shareType = 'screen') {
         }
       }
     });
-    
+
     localStream = stream;
     isSharing = true;
     ipcRenderer.send('robot-refresh-screen-size');
-    
+
     console.log(`✅ ${shareType} capture started`);
     updateStatus(`${shareType.charAt(0).toUpperCase() + shareType.slice(1)} sharing active`);
-    
+
     // Create peer connection and add stream
     createPeerConnection();
-    
+
     stream.getTracks().forEach(track => {
       peerConnection.addTrack(track, stream);
     });
 
     // Continue with offer creation...
     await createAndSendOffer();
-    
+
     // Update UI
     document.getElementById('sharingStatus').textContent = 'Active';
     document.getElementById('stopBtn').disabled = false;
     document.getElementById('testBtn').disabled = true;
-    
+
   } catch (error) {
     console.error(`[Renderer] ${shareType} sharing error:`, error);
     updateStatus(`Error: ${error.message}`);
@@ -628,18 +628,18 @@ async function startTestPattern() {
     let t = 0;
     function draw() {
       ctx.fillStyle = '#222';
-      ctx.fillRect(0,0,width,height);
+      ctx.fillRect(0, 0, width, height);
       // color bars
-      const colors = ['#F44336','#FF9800','#FFEB3B','#4CAF50','#2196F3','#3F51B5','#9C27B0'];
+      const colors = ['#F44336', '#FF9800', '#FFEB3B', '#4CAF50', '#2196F3', '#3F51B5', '#9C27B0'];
       const barW = Math.ceil(width / colors.length);
       colors.forEach((c, i) => {
-        ctx.fillStyle = c; ctx.fillRect(i*barW, 0, barW, height/2);
+        ctx.fillStyle = c; ctx.fillRect(i * barW, 0, barW, height / 2);
       });
       // moving text
       ctx.fillStyle = 'white';
       ctx.font = '28px sans-serif';
-      ctx.fillText('SuperDesk Test Pattern', 40 + (Math.sin(t/10)*80), height/2 + 50);
-      ctx.fillText('Time: ' + new Date().toLocaleTimeString(), 40, height/2 + 90);
+      ctx.fillText('SuperDesk Test Pattern', 40 + (Math.sin(t / 10) * 80), height / 2 + 50);
+      ctx.fillText('Time: ' + new Date().toLocaleTimeString(), 40, height / 2 + 90);
       t++;
       requestAnimationFrame(draw);
     }
@@ -702,7 +702,7 @@ window.closeWindow = () => {
   }
 };
 
-window.showMainScreen = function() {
+window.showMainScreen = function () {
   const welcomeScreen = document.getElementById('welcomeScreen');
   const mainScreen = document.getElementById('mainScreen');
   if (!welcomeScreen || !mainScreen) return;

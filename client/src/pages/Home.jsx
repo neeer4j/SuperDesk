@@ -7,6 +7,12 @@ import superdeskLogoText from '../assets/superdeskmm.png';
 import superdeskLogoWhite from '../assets/superdeskw.png';
 import superdeskShowcase from '../assets/suppm.png';
 import superdeskHeroMockup from '../assets/supipad.png';
+import {
+    SiReact, SiNodedotjs, SiElectron,
+    SiSocketdotio, SiWebrtc, SiTailwindcss, SiGithub,
+    SiVercel, SiExpress, SiSupabase, SiFramer
+} from 'react-icons/si';
+import { VscAzure } from 'react-icons/vsc';
 
 // Loading Overlay Component
 const LoadingOverlay = React.memo(() => (
@@ -203,15 +209,10 @@ export default function Home() {
     // Hide navbar on scroll down, show on scroll up (mobile only)
     useEffect(() => {
         let ticking = false;
-        
+
         const handleScroll = () => {
             if (!ticking) {
                 window.requestAnimationFrame(() => {
-                    if (window.innerWidth > 640) {
-                        setNavHidden(false);
-                        ticking = false;
-                        return;
-                    }
                     const currentScrollY = window.scrollY;
                     if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
                         setNavHidden(true);
@@ -510,20 +511,63 @@ export default function Home() {
                                 The aim of SuperDesk is simple. To make remote access easy and reliable. To put privacy and control back in the hands of users. To build software that feels lightweight, honest, and human.
                             </p>
                             <p>
+
                                 SuperDesk is still evolving, and so are we as developers. If you are using it or supporting it in any way, you are already part of this journey. Thank you for being here.
                             </p>
 
-                            <div className="developers-signature">
-                                <p className="signature-names">Neeraj Venu and B Joniyal</p>
-                                <p className="signature-title">Developers of SuperDesk</p>
-                            </div>
+
                         </div>
                     </motion.div>
                 </div>
             </section>
 
-            {/* CTA Section */}
+            {/* Tech Stack Section */}
+            <section className="tech-stack-section">
+                <div className="section-title-container">
+                    <h2 className="section-title" style={{ color: '#ffffff' }}>Powered By</h2>
+                </div>
 
+                <div className="tech-grid">
+                    <div className="tech-item" title="React">
+                        <SiReact className="tech-icon react" />
+                    </div>
+                    <div className="tech-item" title="Node.js">
+                        <SiNodedotjs className="tech-icon node" />
+                    </div>
+                    <div className="tech-item" title="WebRTC">
+                        <SiWebrtc className="tech-icon webrtc" />
+                    </div>
+                    <div className="tech-item" title="Electron">
+                        <SiElectron className="tech-icon electron" />
+                    </div>
+                    <div className="tech-item" title="Socket.io">
+                        <SiSocketdotio className="tech-icon socket" />
+                    </div>
+                    <div className="tech-item" title="Express">
+                        <SiExpress className="tech-icon express" />
+                    </div>
+                    <div className="tech-item" title="GitHub">
+                        <SiGithub className="tech-icon github" />
+                    </div>
+                    <div className="tech-item" title="Tailwind CSS">
+                        <SiTailwindcss className="tech-icon tailwind" />
+                    </div>
+                    <div className="tech-item" title="Azure">
+                        <VscAzure className="tech-icon azure" />
+                    </div>
+                    <div className="tech-item" title="Supabase">
+                        <SiSupabase className="tech-icon supabase" />
+                    </div>
+                    <div className="tech-item" title="Framer Motion">
+                        <SiFramer className="tech-icon framer" />
+                    </div>
+                    <div className="tech-item" title="Vercel">
+                        <SiVercel className="tech-icon vercel" />
+                    </div>
+                </div>
+            </section>
+
+            {/* CTA Section */}
 
             {/* Footer */}
             <footer className="portfolio-footer">

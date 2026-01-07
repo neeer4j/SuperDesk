@@ -93,10 +93,11 @@ html {
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-/* Navbar Logo */
+/* Navbar Logo - Force fixed dimensions to prevent img rule override */
 .portfolio-nav-logo {
-  height: 20px;
-  width: auto;
+  height: 20px !important;
+  max-height: 20px !important;
+  width: auto !important;
   flex-shrink: 0;
 }
 
@@ -108,7 +109,7 @@ html {
 
 .portfolio-nav-links a {
   font-size: 13px !important;
-  color: rgba(255,255,255,0.75) !important;
+  color: rgba(255, 255, 255, 0.75) !important;
   text-decoration: none !important;
   font-weight: 500 !important;
 }
@@ -122,7 +123,7 @@ html {
 .portfolio-nav-buttons a {
   font-size: 13px !important;
   padding: 6px 8px !important;
-  color: rgba(255,255,255,0.75) !important;
+  color: rgba(255, 255, 255, 0.75) !important;
   text-decoration: none !important;
   font-weight: 500 !important;
   display: flex !important;
@@ -141,37 +142,54 @@ html {
     top: 12px !important;
     width: auto !important;
   }
-  
+
   .portfolio-nav-logo {
     height: 14px !important;
   }
-  
+
   .portfolio-nav-links {
     gap: 4px !important;
   }
-  
+
   .portfolio-nav-links a {
     font-size: 9px !important;
   }
-  
+
   .portfolio-nav-buttons {
     gap: 3px !important;
   }
-  
+
   .portfolio-nav-buttons a {
     font-size: 9px !important;
     padding: 4px 5px !important;
   }
-  
+
   .portfolio-nav-buttons svg {
     width: 8px !important;
     height: 8px !important;
   }
-  
+
+  .portfolio-nav-buttons svg {
+    width: 8px !important;
+    height: 8px !important;
+  }
+}
+
+/* Navbar hidden state - Global application */
+/* Navbar hidden state - Global application */
+.portfolio-nav.nav-hidden {
+  transform: translate(-50%, -100%) !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* On mobile, reset horizontal translate since it's not centered via transform */
+@media (max-width: 640px) {
   .portfolio-nav.nav-hidden {
     transform: translateY(-100%) !important;
   }
 }
+
 
 .portfolio-nav-buttons a svg {
   width: 11px;
@@ -182,29 +200,84 @@ html {
 
 /* Shrink at smaller viewports */
 @media (max-width: 1100px) {
-  .portfolio-nav { gap: 16px; padding: 10px 16px; }
-  .portfolio-nav-links { gap: 16px; }
-  .portfolio-nav-links a { font-size: 12px !important; }
-  .portfolio-nav-buttons a { font-size: 12px !important; padding: 5px 6px !important; }
-  .portfolio-nav-logo { height: 18px; }
+  .portfolio-nav {
+    gap: 16px;
+    padding: 10px 16px;
+  }
+
+  .portfolio-nav-links {
+    gap: 16px;
+  }
+
+  .portfolio-nav-links a {
+    font-size: 12px !important;
+  }
+
+  .portfolio-nav-buttons a {
+    font-size: 12px !important;
+    padding: 5px 6px !important;
+  }
+
+  .portfolio-nav-logo {
+    height: 18px;
+  }
 }
 
 @media (max-width: 900px) {
-  .portfolio-nav { gap: 12px; padding: 8px 14px; }
-  .portfolio-nav-links { gap: 12px; }
-  .portfolio-nav-links a { font-size: 11px !important; }
-  .portfolio-nav-buttons a { font-size: 11px !important; padding: 4px 5px !important; }
-  .portfolio-nav-buttons { gap: 2px; }
-  .portfolio-nav-logo { height: 16px; }
-  .portfolio-nav-buttons a svg { width: 9px; height: 9px; }
+  .portfolio-nav {
+    gap: 12px;
+    padding: 8px 14px;
+  }
+
+  .portfolio-nav-links {
+    gap: 12px;
+  }
+
+  .portfolio-nav-links a {
+    font-size: 11px !important;
+  }
+
+  .portfolio-nav-buttons a {
+    font-size: 11px !important;
+    padding: 4px 5px !important;
+  }
+
+  .portfolio-nav-buttons {
+    gap: 2px;
+  }
+
+  .portfolio-nav-logo {
+    height: 16px;
+  }
+
+  .portfolio-nav-buttons a svg {
+    width: 9px;
+    height: 9px;
+  }
 }
 
 @media (max-width: 750px) {
-  .portfolio-nav { gap: 10px; padding: 8px 12px; }
-  .portfolio-nav-links { gap: 8px; }
-  .portfolio-nav-links a { font-size: 10px !important; }
-  .portfolio-nav-buttons a { font-size: 10px !important; padding: 4px !important; }
-  .portfolio-nav-logo { height: 14px; }
+  .portfolio-nav {
+    gap: 10px;
+    padding: 8px 12px;
+  }
+
+  .portfolio-nav-links {
+    gap: 8px;
+  }
+
+  .portfolio-nav-links a {
+    font-size: 10px !important;
+  }
+
+  .portfolio-nav-buttons a {
+    font-size: 10px !important;
+    padding: 4px !important;
+  }
+
+  .portfolio-nav-logo {
+    height: 14px;
+  }
 }
 
 /* Mobile Layout (< 640px) */
@@ -262,7 +335,7 @@ html {
 
   /* Hide navbar on scroll down */
   .portfolio-nav.nav-hidden {
-    transform: translateY(-100%);
+    transform: translateY(-5px);
     opacity: 0;
   }
 }
@@ -570,5 +643,218 @@ html {
 @media (max-width: 640px) {
   .portfolio-footer {
     padding: 32px 20px;
+  }
+}
+
+/* Tech Stack Section */
+.tech-stack-section {
+  padding: 6rem 2rem;
+  background: rgba(13, 13, 20, 0.4);
+  position: relative;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.section-title-container {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.tech-stack-section .section-title {
+  color: #ffffff !important;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+}
+
+.tech-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.tech-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  cursor: default;
+  transition: transform 0.3s ease;
+  position: relative;
+  /* For tooltip */
+}
+
+/* Tooltip on hover */
+.tech-item:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+  pointer-events: none;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    bottom: -35px;
+  }
+}
+
+.tech-item:hover {
+  transform: translateY(-5px);
+}
+
+.tech-icon {
+  font-size: 3.5rem;
+  /* Increased opacity for visibility */
+  transition: all 0.3s ease;
+}
+
+/* Icon Colors - Default */
+.tech-icon.react {
+  color: #61DAFB;
+}
+
+.tech-icon.node {
+  color: #339933;
+}
+
+.tech-icon.webrtc {
+  color: #333333;
+  background: white;
+  border-radius: 50%;
+  padding: 6px;
+}
+
+.tech-icon.electron {
+  color: #47848F;
+}
+
+.tech-icon.socket {
+  color: #ffffff;
+}
+
+.tech-icon.express {
+  color: #ffffff;
+}
+
+.tech-icon.github {
+  color: #ffffff;
+}
+
+.tech-icon.tailwind {
+  color: #06B6D4;
+}
+
+.tech-icon.azure {
+  color: #0078D4;
+}
+
+.tech-icon.vercel {
+  color: #ffffff;
+}
+
+.tech-icon.supabase {
+  color: #3ECF8E;
+}
+
+.tech-icon.framer {
+  color: #0055FF;
+}
+
+/* Hover Effects */
+.tech-item:hover .tech-icon.react {
+  filter: drop-shadow(0 0 10px rgba(97, 218, 251, 0.5));
+}
+
+.tech-item:hover .tech-icon.node {
+  filter: drop-shadow(0 0 10px rgba(51, 153, 51, 0.5));
+}
+
+.tech-item:hover .tech-icon.webrtc {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.tech-item:hover .tech-icon.electron {
+  filter: drop-shadow(0 0 10px rgba(71, 132, 143, 0.5));
+}
+
+.tech-item:hover .tech-icon.socket {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.tech-item:hover .tech-icon.express {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.tech-item:hover .tech-icon.github {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.tech-item:hover .tech-icon.tailwind {
+  filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.5));
+}
+
+.tech-item:hover .tech-icon.azure {
+  filter: drop-shadow(0 0 10px rgba(0, 120, 212, 0.5));
+}
+
+.tech-item:hover .tech-icon.vercel {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.tech-item:hover .tech-icon.supabase {
+  filter: drop-shadow(0 0 10px rgba(62, 207, 142, 0.5));
+}
+
+.tech-item:hover .tech-icon.framer {
+  filter: drop-shadow(0 0 10px rgba(0, 85, 255, 0.5));
+}
+
+/* Custom Antigravity Icon */
+.tech-icon-wrapper {
+  width: 3.5rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  /* Increased opacity */
+  transition: all 0.3s ease;
+}
+
+.tech-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tech-item:hover .tech-icon-wrapper {
+  opacity: 1;
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
+}
+
+@media (max-width: 768px) {
+
+
+  .tech-icon-wrapper {
+    width: 2.5rem;
+    height: 2.5rem;
   }
 }

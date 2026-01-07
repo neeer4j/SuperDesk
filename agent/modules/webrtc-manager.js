@@ -64,7 +64,7 @@ class WebRTCManager {
     try {
       // Get available sources based on share type
       const sourceTypes = shareType === 'window' ? ['window'] : ['screen'];
-      
+
       const sources = await window.electron.desktopCapturer.getSources({
         types: sourceTypes,
         thumbnailSize: { width: 1920, height: 1080 }
@@ -77,7 +77,7 @@ class WebRTCManager {
       // For screen type, use primary screen (usually index 0)
       // For window type, let user select or use first window
       let selectedSource = sources[0];
-      
+
       // If multiple sources and window type, could show selection UI here
       // For now, using first available source
 
