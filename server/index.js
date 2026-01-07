@@ -183,11 +183,20 @@ const io = new Server(server, {
   rememberUpgrade: false
 });
 
-// Use Azure Web PubSub for Socket.IO
-useAzureSocketIO(io, {
-  hub: "superdesk_hub", // Hub name for organizing connections
-  connectionString: process.env.AZURE_WEBPUBSUB_CONNECTION_STRING
-});
+// Use Azure Web PubSub for Socket.IO (optional - works without it)
+if (process.env.AZURE_WEBPUBSUB_CONNECTION_STRING) {
+  try {
+    useAzureSocketIO(io, {
+      hub: "superdesk_hub",
+      connectionString: process.env.AZURE_WEBPUBSUB_CONNECTION_STRING
+    });
+    console.log('[Socket.IO] Azure Web PubSub integration enabled');
+  } catch (e) {
+    console.warn('[Socket.IO] Azure Web PubSub failed, using standard Socket.IO:', e.message);
+  }
+} else {
+  console.log('[Socket.IO] Running without Azure Web PubSub (standard mode)');
+}
 
 app.use(express.json());
 app.use(express.static('public'));
