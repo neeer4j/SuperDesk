@@ -1,4 +1,5 @@
 // SuperDesk Signaling Server - Deployed to Azure App Service
+// Trigger: SCM_DO_BUILD_DURING_DEPLOYMENT=true
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
