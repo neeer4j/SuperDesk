@@ -8,7 +8,19 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 // Shared constants
-const { FILE_TRANSFER, utils } = require('../shared');
+// Shared constants - handle both local and Azure paths
+let shared;
+try {
+  shared = require('../shared');
+} catch (e) {
+  try {
+    shared = require('./shared');
+  } catch (err) {
+    console.error('CRITICAL: Could not find shared constants folder');
+    shared = { FILE_TRANSFER: { MAX_SIZE: 20 * 1024 * 1024 * 1024 }, utils: { formatFileSize: (s) => s } };
+  }
+}
+const { FILE_TRANSFER, utils } = shared;
 
 // Load local .env in development if present (safe - won't crash if dotenv isn't installed)
 try {

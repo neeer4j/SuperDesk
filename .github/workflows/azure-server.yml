@@ -10,7 +10,7 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 env:
-  AZURE_WEBAPP_NAME: supderdesk-fgasbfdze6bwbbav
+  AZURE_WEBAPP_NAME: supderdesk
   NODE_VERSION: '20.x'
 
 jobs:
@@ -42,6 +42,7 @@ jobs:
         cp -r routes ../deploy-package/ 2>/dev/null || true
         cp -r middleware ../deploy-package/ 2>/dev/null || true
         cp -r utils ../deploy-package/ 2>/dev/null || true
+        cp -r ../shared ../deploy-package/shared 2>/dev/null || true
         # Create web.config for Azure IIS with WebSocket support
         cat > ../deploy-package/web.config << 'EOF'
         <?xml version="1.0" encoding="utf-8"?>
