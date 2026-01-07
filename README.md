@@ -1,10 +1,11 @@
 # SuperDesk
 
 <p align="center">
-  <img src="https://skillicons.dev/icons?i=react,nodejs,electron,js,html,css,express,windows,vercel,github,vscode" alt="Tech stack" />
+  <img src="https://skillicons.dev/icons?i=react,nodejs,electron,js,html,css,express,windows,azure,vercel,github,vscode" alt="Tech stack" />
 </p>
 
 A modern remote desktop access platform for Windows with real-time screen sharing, remote control, and peer-to-peer file transfer.
+
 
 ## ✨ Features
 
@@ -19,16 +20,16 @@ A modern remote desktop access platform for Windows with real-time screen sharin
 
 ## 🏗 Architecture
 
-```
-┌─────────────────┐    WebSocket     ┌─────────────────┐    WebRTC       ┌─────────────────┐
-│   Web Client    │◄────────────────►│  Node.js Server │◄───────────────►│ Desktop Agent   │
-│   (React)       │    Signaling     │  (Express+IO)   │   P2P Stream    │  (Electron)     │
-└─────────────────┘                  └─────────────────┘                 └─────────────────┘
-```
+┌──────────────────┐     WebSocket     ┌──────────────────┐     WebRTC      ┌──────────────────┐
+│   Web Client     │◄─────────────────►│ Signaling Server │◄─────────────►│  Desktop Agent   │
+│ (React - Vercel) │     Signaling     │ (Node.js - Azure)│   P2P Stream  │    (Electron)    │
+└──────────────────┘                   └──────────────────┘               └──────────────────┘
 
-- **Web Client**: React app for joining sessions from any browser
-- **Server**: Node.js signaling server (Express + Socket.io)
-- **Desktop Agent**: Electron app for Windows (host or guest)
+
+- **Web Client**: React app for joining sessions from any browser (Deployed to **Vercel**)
+- **Signaling Server**: Node.js backend using **Azure Web PubSub** for scalable WebSockets (Deployed to **Azure App Service**)
+- **Desktop Agent**: Electron app for Windows hosting or joining sessions
+
 
 ## 🚀 Quick Start
 
@@ -77,19 +78,32 @@ npm start
 3. Guest receives a file offer modal (Accept/Reject)
 4. Transfer happens directly P2P with progress indicators
 
-## ⚙️ Configuration
-
 ### Environment Variables
-Create a `.env` file in the server directory:
+Create a `.env` file in the `server` directory:
 
 ```env
-PORT=3001
-NODE_ENV=development
+PORT=8080
+NODE_ENV=production
+
+# Required for Azure Deployment
+AZURE_WEBPUBSUB_CONNECTION_STRING=your_connection_string
 
 # Optional: Cloudflare TURN for better NAT traversal
 CLOUDFLARE_TURN_KEY_ID=your_key_id
 CLOUDFLARE_TURN_KEY_API_TOKEN=your_api_token
 ```
+
+### 🚀 Deployment
+
+#### Signaling Server (Azure)
+Managed via GitHub Actions (`.github/workflows/azure-server.yml`).
+- **Trigger**: Pushes to `main` affecting `server/` or `shared/`.
+- **Note**: Ensure `SCM_DO_BUILD_DURING_DEPLOYMENT=true` is set in Azure App Service configuration.
+
+#### Web Client (Vercel)
+Automatically deployed by Vercel on every push to `main`.
+- **Base Directory**: `client/`
+
 
 ### File Transfer Settings
 Modify limits in `shared/index.js`:
