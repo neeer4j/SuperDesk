@@ -20,7 +20,7 @@ A modern remote desktop access platform for Windows with real-time screen sharin
 
 ## 🏗 Architecture
 
-┌──────────────────┐     WebSocket     ┌──────────────────┐     WebRTC      ┌──────────────────┐
+┌──────────────────┐     WebSocket     ┌──────────────────┐     WebRTC    ┌──────────────────┐
 │   Web Client     │◄─────────────────►│ Signaling Server │◄─────────────►│  Desktop Agent   │
 │ (React - Vercel) │     Signaling     │ (Node.js - Azure)│   P2P Stream  │    (Electron)    │
 └──────────────────┘                   └──────────────────┘               └──────────────────┘
