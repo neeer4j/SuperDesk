@@ -11,7 +11,7 @@ let pendingIceCandidates = []; // Buffer for early ICE candidates
 let remoteControlEnabled = false;
 
 // Server URL - use Render deployment
-const SERVER_URL = 'https://supderdesk.azurewebsites.net';
+const SERVER_URL = 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net';
 
 // ICE servers configuration (dynamic fetch from server)
 let iceServers = { iceServers: [] };

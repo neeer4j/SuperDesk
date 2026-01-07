@@ -10,7 +10,7 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 env:
-  AZURE_WEBAPP_NAME: supderdesk
+  AZURE_WEBAPP_NAME: supderdesk-fgasbfdze6bwbbav
   NODE_VERSION: '20.x'
 
 jobs:
