@@ -23,10 +23,13 @@ class SocketManager {
     return new Promise((resolve, reject) => {
       try {
         this.socket = io(this.serverUrl, {
-          transports: ['websocket', 'polling'],
+          transports: ['websocket'],
+          upgrade: false,
           reconnection: true,
           reconnectionAttempts: 5,
-          reconnectionDelay: 1000
+          reconnectionDelay: 1000,
+          timeout: 20000,
+          path: '/socket.io/'
         });
 
         this.socket.on('connect', () => {

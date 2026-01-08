@@ -67,7 +67,13 @@ async function capSenderToMbps(sender, mbps) {
 function connectToServer() {
   console.log('Connecting to server:', SERVER_URL);
   socket = io(SERVER_URL, {
-    transports: ['websocket', 'polling']
+    transports: ['websocket'],
+    upgrade: false,
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    timeout: 20000,
+    path: '/socket.io/'
   });
 
   socket.on('connect', async () => {

@@ -1,6 +1,6 @@
 // Dynamic ICE server retrieval for improved cross-network reliability
 export async function fetchIceServers() {
-  const base = process.env.REACT_APP_SERVER_URL || 'https://superdesk-socketio.webpubsub.azure.com';
+  const base = process.env.REACT_APP_SERVER_URL || 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net';
   try {
     const resp = await fetch(base + '/api/webrtc-config');
     if (!resp.ok) throw new Error('Non-OK response ' + resp.status);
@@ -24,11 +24,11 @@ export async function fetchIceServers() {
 // Environment configuration for different deployment scenarios
 const config = {
   development: {
-    server: process.env.REACT_APP_SERVER_URL || 'https://superdesk-socketio.webpubsub.azure.com',
+    server: process.env.REACT_APP_SERVER_URL || 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net',
     client: 'http://localhost:3000',
   },
   production: {
-    server: process.env.REACT_APP_SERVER_URL || 'https://superdesk-socketio.webpubsub.azure.com',
+    server: process.env.REACT_APP_SERVER_URL || 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net',
     client: process.env.REACT_APP_CLIENT_URL || window.location.origin,
   }
 };

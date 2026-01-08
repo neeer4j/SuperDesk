@@ -7000,18 +7000,32 @@
 
         // Join Session Implementation
         window.joinSession = async function (sessionId) {
+            // Normalize session ID to uppercase (server generates uppercase IDs)
+            const normalizedSessionId = sessionId ? sessionId.toString().toUpperCase().trim() : '';
             console.log('🎯 ========== JOINING SESSION AS GUEST ==========');
-            console.log('🎯 Session ID:', sessionId);
+            console.log('🎯 Session ID:', normalizedSessionId, '(original:', sessionId, ')');
 
             try {
-                // Initialize socket if not already connected
-                if (!window.socket || !window.socket.connected) {
+                // IMPORTANT: Reuse existing socket from superdeskState if available
+                // This ensures we use the same socket that was created on app load
+                if (window.superdeskState && window.superdeskState.socket && window.superdeskState.socket.connected) {
+                    console.log('🔌 Reusing existing socket from superdeskState');
+                    window.socket = window.superdeskState.socket;
+                } else if (!window.socket || !window.socket.connected) {
                     const serverUrl = window.location.hostname === 'localhost'
                         ? 'http://localhost:3001'
-                        : 'https://superdesk-7m7f.onrender.com';
+                        : 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net';
 
                     console.log('🔌 Connecting to server:', serverUrl);
-                    window.socket = io(serverUrl);
+                    window.socket = io(serverUrl, {
+                        transports: ['websocket'],
+                        upgrade: false,
+                        reconnection: true,
+                        reconnectionAttempts: 5,
+                        reconnectionDelay: 1000,
+                        timeout: 20000,
+                        path: '/socket.io/'
+                    });
 
                     window.socket.on('connect', () => {
                         console.log('✅ Connected to signaling server');
@@ -7021,6 +7035,11 @@
                         console.error('❌ Connection error:', error);
                         window.superdeskModal.error('Failed to connect to server. Please check your connection.', 'Connection Error');
                     });
+                    
+                    // Sync back to superdeskState
+                    if (window.superdeskState) {
+                        window.superdeskState.socket = window.socket;
+                    }
                 }
 
                 // Wait for socket connection
@@ -7051,7 +7070,7 @@
                     window.superdeskState = {};
                 }
                 window.superdeskState.socket = window.socket;
-                window.superdeskState.sessionId = sessionId;
+                window.superdeskState.sessionId = normalizedSessionId;
                 window.superdeskState.isHost = false;
                 console.log('✅ Socket and sessionId saved to superdeskState');
 
@@ -7063,11 +7082,11 @@
 
 
                 // Join the session
-                window.socket.emit('join-session', sessionId);
+                window.socket.emit('join-session', normalizedSessionId);
 
                 // Handle session joined confirmation
                 window.socket.once('session-joined', async () => {
-                    console.log('✅ Successfully joined session:', sessionId);
+                    console.log('✅ Successfully joined session:', normalizedSessionId);
 
                     // UPDATE JOIN BUTTON STATE TO CONNECTED
                     const joinBtn = document.getElementById('connect-session-btn');
@@ -7087,12 +7106,12 @@
                     if (hostView) hostView.style.display = 'none';
                     if (joinView) joinView.style.display = 'block';
 
-                    window.superdeskModal.success(`Connected to session ${sessionId}. Waiting for screen sharing to start...`, 'Session Joined');
+                    window.superdeskModal.success(`Connected to session ${normalizedSessionId}. Waiting for screen sharing to start...`, 'Session Joined');
 
                     // Set up WebRTC receiver using the proper function from superdesk-webrtc.js
                     console.log('🎥 Setting up WebRTC receiver...');
                     if (typeof window.superdeskWebRTC !== 'undefined' && window.superdeskWebRTC.setupWebRTCReceiver) {
-                        await window.superdeskWebRTC.setupWebRTCReceiver(window.socket, sessionId);
+                        await window.superdeskWebRTC.setupWebRTCReceiver(window.socket, normalizedSessionId);
                         console.log('✅ WebRTC receiver setup complete');
                         console.log('✅ Remote control ready - sessionId:', window.superdeskState.sessionId);
                         console.log('✅ Socket status:', window.superdeskState.socket?.connected ? 'connected' : 'disconnected');
@@ -7100,7 +7119,7 @@
                         // Setup file-only connection receiver (for file transfer without screen share)
                         if (window.superdeskWebRTC.setupFileOnlyReceiver) {
                             console.log('📁 Setting up file-only receiver for guest...');
-                            await window.superdeskWebRTC.setupFileOnlyReceiver(window.socket, sessionId);
+                            await window.superdeskWebRTC.setupFileOnlyReceiver(window.socket, normalizedSessionId);
                         }
 
                         // Show file transfer UI if file transfer module is loaded

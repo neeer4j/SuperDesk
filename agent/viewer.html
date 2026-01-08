@@ -490,19 +490,23 @@
         function initializeSocket(serverUrl) {
             console.log('🔌 Connecting to server:', serverUrl);
             socket = io(serverUrl, {
-                transports: ['websocket', 'polling'],
+                transports: ['websocket'],
+                upgrade: false,
                 reconnection: true,
                 reconnectionAttempts: 5,
-                reconnectionDelay: 1000
+                reconnectionDelay: 1000,
+                timeout: 20000,
+                path: '/socket.io/'
             });
 
             socket.on('connect', () => {
                 console.log('✅ Socket connected:', socket.id);
                 statusIndicator.classList.remove('disconnected');
 
-                // Join session as guest viewer
+                // Join session as guest viewer (normalize to uppercase)
                 if (sessionId) {
-                    socket.emit('join-session', { sessionId });
+                    const normalizedSessionId = sessionId.toString().toUpperCase().trim();
+                    socket.emit('join-session', { sessionId: normalizedSessionId });
                 }
             });
 

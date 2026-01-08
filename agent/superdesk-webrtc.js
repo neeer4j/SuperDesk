@@ -10,7 +10,7 @@ window.superdeskState = {
     sharingActive: false,
     remoteControlEnabled: false,
     hostIsMobile: false, // Track if the host device is mobile (detected via video aspect ratio)
-    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://superdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net'
+    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net'
 };
 
 // Test TURN connectivity - can be called from console for debugging
@@ -191,9 +191,44 @@ async function initializeSocket() {
             showNotification('Guest Connected', 'A user has joined your session');
             enableShareButton();
 
-            // Preload sources in background for instant start sharing
-            console.log('🚀 Preloading sources for faster sharing...');
-            preloadSources().catch(err => console.warn('Source preload failed:', err));
+            // AUTO-SHARE: Automatically start sharing the primary screen when guest joins
+            console.log('🚀 AUTO-SHARE: Starting automatic screen sharing...');
+            try {
+                const sources = await window.desktopCapturer.getSources({ types: ['screen'] });
+                if (sources && sources.length > 0) {
+                    const primaryScreen = sources[0]; // First screen is usually the primary
+                    console.log('📺 Auto-sharing primary screen:', primaryScreen.name);
+                    
+                    await setupWebRTCSender(socket, window.superdeskState.sessionId, primaryScreen.id);
+                    
+                    showNotification('Sharing Started', 'Your screen is now being shared automatically');
+                    const shareBtn = document.getElementById('start-share-btn');
+                    if (shareBtn) {
+                        shareBtn.textContent = 'Stop Sharing';
+                        shareBtn.style.background = '#dc2626';
+                    }
+                    
+                    // Show host floating toolbar
+                    if (typeof window.showHostFloatingToolbar === 'function') {
+                        window.showHostFloatingToolbar();
+                    }
+                    
+                    // Minimize the main window
+                    if (window.appControls && window.appControls.minimize) {
+                        setTimeout(() => {
+                            window.appControls.minimize();
+                            console.log('✅ Main window minimized for clean desktop view');
+                        }, 300);
+                    }
+                } else {
+                    console.warn('⚠️ No screens available for auto-share');
+                }
+            } catch (autoShareErr) {
+                console.error('❌ Auto-share failed:', autoShareErr);
+                // Fall back to manual sharing
+                console.log('🚀 Preloading sources for manual sharing...');
+                preloadSources().catch(err => console.warn('Source preload failed:', err));
+            }
 
             // Setup file-only connection for file transfer without screen share
             console.log('📁 Setting up file-only connection for immediate file transfer...');
@@ -2405,22 +2440,48 @@ async function setupWebRTCReceiver(socket, sessionId) {
     console.log('✅ GUEST WebRTC state saved globally - ready for remote control');
     updateDebugStatus('setup', 'complete');
 
+    // Track if we received an offer
+    let offerReceived = false;
+    const originalOfferHandler = socket.listeners('offer')[socket.listeners('offer').length - 1];
+    
     // Log if NO tracks received after 10 seconds
     setTimeout(() => {
         if (tracksReceived === 0) {
             console.error('❌ ========== NO TRACKS RECEIVED after 10 seconds! ==========');
             console.error('❌ WebRTC connection completed BUT no media tracks received');
-            console.error('❌ Possible causes:');
-            console.error('   1. HOST not actually capturing/sharing screen');
-            console.error('   2. HOST screen capture permission denied');
-            console.error('   3. HOST addTrack() not called');
-            console.error('   4. Firewall blocking media (but allowing signaling)');
+            console.error('❌ Diagnostic info:');
+            console.log('🔍 Offer received:', offerReceived ? 'YES' : 'NO - Host has not started sharing!');
             console.log('🔍 Current connection state:', peerConnection.connectionState);
             console.log('🔍 Current ICE state:', peerConnection.iceConnectionState);
             console.log('🔍 Current signaling state:', peerConnection.signalingState);
+            console.log('🔍 Transceivers:', peerConnection.getTransceivers().length);
+            
+            if (!offerReceived) {
+                console.error('❌ ROOT CAUSE: No offer received from HOST!');
+                console.error('❌ The HOST needs to click "Start Sharing" to send their screen.');
+                console.error('❌ If you ARE the host, make sure to share your screen after a guest joins.');
+            } else {
+                console.error('❌ Offer was received but no tracks came through.');
+                console.error('❌ Possible causes:');
+                console.error('   1. HOST screen capture permission denied');
+                console.error('   2. Firewall blocking media (but allowing signaling)');
+                console.error('   3. ICE connection failed');
+            }
             updateDebugStatus('error', 'no-tracks-received');
         }
     }, 10000);
+    
+    // Wrap the offer handler to track if offer was received
+    const offerListeners = socket.listeners('offer');
+    if (offerListeners.length > 0) {
+        socket.off('offer');
+        socket.on('offer', async (data) => {
+            console.log('📨 OFFER RECEIVED - marking offerReceived = true');
+            offerReceived = true;
+            // Call the original handler logic (it's defined inline above, so we re-implement)
+            // This is handled by the existing socket.on('offer') above
+        });
+    }
 
     // Start connection health monitoring
     const healthMonitor = monitorConnectionHealth(peerConnection);

@@ -12,7 +12,7 @@ class SuperDeskClient {
     this.remoteControlEnabled = false;
     this.serverUrl = window.location.hostname === 'localhost'
       ? 'http://localhost:3001'
-      : 'https://superdesk-7m7f.onrender.com';
+      : 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net';
 
     // Camera/mic state tracking
     this.remoteCameraTrackId = null;
@@ -44,8 +44,14 @@ class SuperDeskClient {
   async initialize() {
     return new Promise((resolve, reject) => {
       this.socket = io(this.serverUrl, {
-        transports: ['websocket', 'polling'],
-        reconnection: true
+        transports: ['websocket'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 20000,
+        upgrade: false,
+        forceNew: false,
+        path: '/socket.io/'
       });
 
       this.socket.on('connect', () => {
@@ -142,7 +148,10 @@ class SuperDeskClient {
   }
 
   async joinSession(sessionId) {
-    if (!sessionId || sessionId.length !== 8) {
+    // Normalize session ID to uppercase (server generates uppercase IDs)
+    const normalizedSessionId = sessionId ? sessionId.toString().toUpperCase().trim() : '';
+    
+    if (!normalizedSessionId || normalizedSessionId.length !== 8) {
       throw new Error('Invalid session ID. Must be 8 characters.');
     }
 
@@ -151,12 +160,12 @@ class SuperDeskClient {
     }
 
     this.isHost = false;
-    this.sessionId = sessionId;
-    this.socket.emit('join-session', sessionId);
+    this.sessionId = normalizedSessionId;
+    this.socket.emit('join-session', normalizedSessionId);
 
     // Setup peer connection for receiving
     await this.setupPeerConnection();
-    console.log('Joining session:', sessionId);
+    console.log('Joining session:', normalizedSessionId);
   }
 
   async setupPeerConnection() {

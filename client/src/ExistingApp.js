@@ -812,10 +812,10 @@ function App() {
       return;
     }
     
+    // Normalize session ID to uppercase (server generates uppercase IDs)
+    const sessionIdToJoin = id.trim().toUpperCase();
     console.log('=== JOINING SESSION ===');
-    console.log('Session ID:', id.trim());
-    
-    const sessionIdToJoin = id.trim();
+    console.log('Session ID:', sessionIdToJoin);
     setJoinSessionId(sessionIdToJoin);
     setSessionId(sessionIdToJoin);
     setIsHost(false);
