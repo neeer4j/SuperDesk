@@ -44,12 +44,12 @@ class SuperDeskClient {
   async initialize() {
     return new Promise((resolve, reject) => {
       this.socket = io(this.serverUrl, {
-        transports: ['websocket'],
+        transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         timeout: 20000,
-        upgrade: false,
+        upgrade: true, // Allow transport upgrades
         forceNew: false,
         path: '/socket.io/'
       });
@@ -150,7 +150,7 @@ class SuperDeskClient {
   async joinSession(sessionId) {
     // Normalize session ID to uppercase (server generates uppercase IDs)
     const normalizedSessionId = sessionId ? sessionId.toString().toUpperCase().trim() : '';
-    
+
     if (!normalizedSessionId || normalizedSessionId.length !== 8) {
       throw new Error('Invalid session ID. Must be 8 characters.');
     }

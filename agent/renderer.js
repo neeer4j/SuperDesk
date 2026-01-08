@@ -67,8 +67,8 @@ async function capSenderToMbps(sender, mbps) {
 function connectToServer() {
   console.log('Connecting to server:', SERVER_URL);
   socket = io(SERVER_URL, {
-    transports: ['websocket'],
-    upgrade: false,
+    transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
+    upgrade: true, // Allow transport upgrades
     reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,

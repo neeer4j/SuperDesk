@@ -30,6 +30,11 @@ jobs:
         cp server/package.json deploy-package/
         cp server/package-lock.json deploy-package/ 2>/dev/null || true
         cp server/index.js deploy-package/
+        # CRITICAL: Include web.config for IIS WebSocket support
+        cp server/web.config deploy-package/ 2>/dev/null || true
+        cp server/.deployment deploy-package/ 2>/dev/null || true
+        # Include TURN provider for Cloudflare TURN support
+        cp server/turn-provider.js deploy-package/ 2>/dev/null || true
         cp -r server/routes deploy-package/ 2>/dev/null || true
         cp -r server/middleware deploy-package/ 2>/dev/null || true
         cp -r server/utils deploy-package/ 2>/dev/null || true

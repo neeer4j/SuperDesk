@@ -201,7 +201,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  
+
   // Handle preflight immediately
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -220,11 +220,13 @@ const io = new Server(server, {
   allowEIO3: true,
   transports: ['websocket', 'polling'],
   upgrade: true,
-  rememberUpgrade: false,
-  // Additional Socket.IO settings for Azure compatibility
+  allowUpgrades: true,
+  // Azure-specific settings for improved compatibility
   pingTimeout: 60000,
   pingInterval: 25000,
-  cookie: false
+  cookie: false,
+  maxHttpBufferSize: 1e6, // 1MB for signaling messages
+  perMessageDeflate: false // Disable compression for Azure proxy compatibility
 });
 
 // Azure Web PubSub for Socket.IO - DISABLED
@@ -312,7 +314,7 @@ io.on('connection', (socket) => {
   socket.on('join-session', (payload) => {
     // Handle both string and object formats: 'ABC123' or { sessionId: 'ABC123' }
     const sessionId = typeof payload === 'string' ? payload : (payload?.sessionId || '');
-    
+
     // Normalize session ID to uppercase (session IDs are generated as uppercase)
     const normalizedSessionId = sessionId ? sessionId.toString().toUpperCase().trim() : '';
     console.log(`Attempting to join session: ${normalizedSessionId} (original: ${sessionId}) from socket: ${socket.id}`);

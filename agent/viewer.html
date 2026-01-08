@@ -365,7 +365,7 @@
                 `;
                 document.body.appendChild(container);
             }
-            
+
             const toast = document.createElement('div');
             const colors = {
                 success: { bg: '#10b981', icon: '✓' },
@@ -374,7 +374,7 @@
                 info: { bg: '#3b82f6', icon: 'ℹ' }
             };
             const c = colors[type] || colors.info;
-            
+
             toast.style.cssText = `
                 background: ${c.bg};
                 color: white;
@@ -391,7 +391,7 @@
             `;
             toast.innerHTML = `<span>${c.icon}</span><span>${message}</span>`;
             container.appendChild(toast);
-            
+
             // Add animation styles if not present
             if (!document.getElementById('toast-styles')) {
                 const style = document.createElement('style');
@@ -402,7 +402,7 @@
                 `;
                 document.head.appendChild(style);
             }
-            
+
             setTimeout(() => {
                 toast.style.animation = 'toastOut 0.3s ease';
                 setTimeout(() => toast.remove(), 300);
@@ -490,8 +490,8 @@
         function initializeSocket(serverUrl) {
             console.log('🔌 Connecting to server:', serverUrl);
             socket = io(serverUrl, {
-                transports: ['websocket'],
-                upgrade: false,
+                transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
+                upgrade: true, // Allow transport upgrades
                 reconnection: true,
                 reconnectionAttempts: 5,
                 reconnectionDelay: 1000,
@@ -581,20 +581,20 @@
 
                         if (isCameraTrack) {
                             console.log('📹 Camera track detected, preparing overlay');
-                            
+
                             // Set remoteCameraTrackId if not already set (race condition fix)
                             if (!remoteCameraTrackId) {
                                 remoteCameraTrackId = event.track.id;
                                 console.log('📹 Set remoteCameraTrackId from incoming track');
                             }
-                            
+
                             const cameraVideo = document.getElementById('remote-camera-video');
                             const overlay = document.getElementById('remote-camera-overlay');
                             if (cameraVideo && overlay) {
                                 cameraVideo.srcObject = event.streams[0] || new MediaStream([event.track]);
                                 // DON'T show overlay immediately - wait for actual video data
                                 overlay.style.display = 'none';
-                                
+
                                 // Show only when video has data
                                 cameraVideo.onloadeddata = () => {
                                     if (cameraVideo.videoWidth > 0 && cameraVideo.videoHeight > 0) {
@@ -602,11 +602,11 @@
                                         console.log('📹 Camera overlay visible (has data:', cameraVideo.videoWidth, 'x', cameraVideo.videoHeight, ')');
                                     }
                                 };
-                                
+
                                 cameraVideo.play().catch(e => console.error('Camera play error:', e));
                                 console.log('📹 Camera stream set, waiting for video data...');
                             }
-                            
+
                             // Handle track ended - hide overlay immediately
                             event.track.onended = () => {
                                 console.log('📹 Camera track ENDED - hiding overlay');
@@ -616,7 +616,7 @@
                                     cameraVideo.srcObject = null;
                                 }
                             };
-                            
+
                             return;
                         }
 

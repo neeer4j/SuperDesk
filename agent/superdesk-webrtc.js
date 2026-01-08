@@ -142,12 +142,12 @@ async function initializeSocket() {
 
     return new Promise((resolve, reject) => {
         const socket = io(window.superdeskState.serverUrl, {
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
             timeout: 20000,
-            upgrade: false,
+            upgrade: true, // Allow transport upgrades
             forceNew: false,
             path: '/socket.io/'
         });
@@ -198,21 +198,21 @@ async function initializeSocket() {
                 if (sources && sources.length > 0) {
                     const primaryScreen = sources[0]; // First screen is usually the primary
                     console.log('📺 Auto-sharing primary screen:', primaryScreen.name);
-                    
+
                     await setupWebRTCSender(socket, window.superdeskState.sessionId, primaryScreen.id);
-                    
+
                     showNotification('Sharing Started', 'Your screen is now being shared automatically');
                     const shareBtn = document.getElementById('start-share-btn');
                     if (shareBtn) {
                         shareBtn.textContent = 'Stop Sharing';
                         shareBtn.style.background = '#dc2626';
                     }
-                    
+
                     // Show host floating toolbar
                     if (typeof window.showHostFloatingToolbar === 'function') {
                         window.showHostFloatingToolbar();
                     }
-                    
+
                     // Minimize the main window
                     if (window.appControls && window.appControls.minimize) {
                         setTimeout(() => {
@@ -589,7 +589,7 @@ async function setupFileOnlyReceiver(socket, sessionId) {
 async function joinSession(sessionId) {
     // Normalize session ID to uppercase (server generates uppercase IDs)
     const normalizedSessionId = sessionId ? sessionId.toString().toUpperCase().trim() : '';
-    
+
     if (!normalizedSessionId || normalizedSessionId.length !== 8) {
         if (window.superdeskModal) {
             window.superdeskModal.warning('Please enter a valid 8-character session ID', 'Invalid Session ID');
@@ -2443,7 +2443,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
     // Track if we received an offer
     let offerReceived = false;
     const originalOfferHandler = socket.listeners('offer')[socket.listeners('offer').length - 1];
-    
+
     // Log if NO tracks received after 10 seconds
     setTimeout(() => {
         if (tracksReceived === 0) {
@@ -2455,7 +2455,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
             console.log('🔍 Current ICE state:', peerConnection.iceConnectionState);
             console.log('🔍 Current signaling state:', peerConnection.signalingState);
             console.log('🔍 Transceivers:', peerConnection.getTransceivers().length);
-            
+
             if (!offerReceived) {
                 console.error('❌ ROOT CAUSE: No offer received from HOST!');
                 console.error('❌ The HOST needs to click "Start Sharing" to send their screen.');
@@ -2470,7 +2470,7 @@ async function setupWebRTCReceiver(socket, sessionId) {
             updateDebugStatus('error', 'no-tracks-received');
         }
     }, 10000);
-    
+
     // Wrap the offer handler to track if offer was received
     const offerListeners = socket.listeners('offer');
     if (offerListeners.length > 0) {
