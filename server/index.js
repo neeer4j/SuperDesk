@@ -227,7 +227,11 @@ const io = new Server(server, {
   cookie: false
 });
 
-// Use Azure Web PubSub for Socket.IO (optional - works without it)
+// Azure Web PubSub for Socket.IO - DISABLED
+// The Web PubSub service causes 403 errors when not properly configured.
+// For single-instance Azure App Service, standard Socket.IO works fine.
+// To re-enable, uncomment below and ensure AZURE_WEBPUBSUB_CONNECTION_STRING is valid.
+/*
 if (process.env.AZURE_WEBPUBSUB_CONNECTION_STRING) {
   try {
     useAzureSocketIO(io, {
@@ -241,6 +245,8 @@ if (process.env.AZURE_WEBPUBSUB_CONNECTION_STRING) {
 } else {
   console.log('[Socket.IO] Running without Azure Web PubSub (standard mode)');
 }
+*/
+console.log('[Socket.IO] Running in standard mode (Azure Web PubSub disabled)');
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -303,7 +309,10 @@ io.on('connection', (socket) => {
     console.log(`Session created: ${sessionId} (Type: ${payload?.type || 'unknown'})`);
   });
 
-  socket.on('join-session', (sessionId) => {
+  socket.on('join-session', (payload) => {
+    // Handle both string and object formats: 'ABC123' or { sessionId: 'ABC123' }
+    const sessionId = typeof payload === 'string' ? payload : (payload?.sessionId || '');
+    
     // Normalize session ID to uppercase (session IDs are generated as uppercase)
     const normalizedSessionId = sessionId ? sessionId.toString().toUpperCase().trim() : '';
     console.log(`Attempting to join session: ${normalizedSessionId} (original: ${sessionId}) from socket: ${socket.id}`);
