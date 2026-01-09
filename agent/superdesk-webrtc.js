@@ -194,12 +194,22 @@ async function initializeSocket() {
             // AUTO-SHARE: Automatically start sharing the primary screen when guest joins
             console.log('🚀 AUTO-SHARE: Starting automatic screen sharing...');
             try {
-                const sources = await window.desktopCapturer.getSources({ types: ['screen'] });
+                // Check if appControls is available
+                if (!window.appControls || typeof window.appControls.getDesktopSources !== 'function') {
+                    throw new Error('window.appControls.getDesktopSources() not available - preload.js may have failed');
+                }
+
+                // Use appControls API from preload.js instead of direct desktopCapturer
+                console.log('🚀 Calling window.appControls.getDesktopSources()...');
+                const sources = await window.appControls.getDesktopSources({ types: ['screen'] });
+                console.log('🚀 Got sources:', sources ? sources.length : 0);
+                
                 if (sources && sources.length > 0) {
                     const primaryScreen = sources[0]; // First screen is usually the primary
                     console.log('📺 Auto-sharing primary screen:', primaryScreen.name);
 
                     await setupWebRTCSender(socket, window.superdeskState.sessionId, primaryScreen.id);
+                    console.log('✅ setupWebRTCSender completed successfully');
 
                     showNotification('Sharing Started', 'Your screen is now being shared automatically');
                     const shareBtn = document.getElementById('start-share-btn');
@@ -968,6 +978,20 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
         }
     });
 
+    // CRITICAL: Verify tracks were added before creating offer
+    const senders = peerConnection.getSenders();
+    console.log('🔍 HOST: Verifying tracks before creating offer...');
+    console.log('🔍 Total senders:', senders.length);
+    
+    const videoSenders = senders.filter(s => s.track && s.track.kind === 'video');
+    const audioSenders = senders.filter(s => s.track && s.track.kind === 'audio');
+    console.log('🔍 Video senders:', videoSenders.length);
+    console.log('🔍 Audio senders:', audioSenders.length);
+
+    if (videoSenders.length === 0) {
+        throw new Error('CRITICAL: No video tracks in peer connection! Cannot create offer without media.');
+    }
+
     // Create and send offer - include offerToReceiveVideo/Audio for bidirectional camera/mic
     console.log('📤 HOST Creating offer...');
     const offer = await peerConnection.createOffer({
@@ -976,6 +1000,15 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     });
     console.log('📤 Offer created (bidirectional), type:', offer.type);
     console.log('📤 Offer SDP length:', offer.sdp?.length || 0);
+
+    // Verify the SDP contains media
+    const videoLines = (offer.sdp.match(/m=video/g) || []).length;
+    const audioLines = (offer.sdp.match(/m=audio/g) || []).length;
+    console.log('📤 Offer contains:', videoLines, 'video lines,', audioLines, 'audio lines');
+    
+    if (videoLines === 0) {
+        throw new Error('CRITICAL: Offer SDP has no video! Screen capture may have failed.');
+    }
 
     await peerConnection.setLocalDescription(offer);
     console.log('✅ HOST Local description set');
@@ -2325,6 +2358,9 @@ async function setupWebRTCReceiver(socket, sessionId) {
         console.log('📨 Session ID:', data.sessionId);
         console.log('📨 Current signaling state:', peerConnection.signalingState);
 
+        // Mark offer as received for diagnostics
+        window.superdeskState.offerReceived = true;
+
         // Parse SDP to check for media tracks
         if (data.offer?.sdp) {
             const sdp = data.offer.sdp;
@@ -2367,6 +2403,23 @@ async function setupWebRTCReceiver(socket, sessionId) {
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                 console.log('✅ Remote description set successfully');
                 console.log('✅ New signaling state:', peerConnection.signalingState);
+
+                // Mark that remote description is set
+                remoteDescriptionSet = true;
+
+                // Process any queued ICE candidates
+                if (iceCandidateQueue.length > 0) {
+                    console.log('🧊 GUEST Processing', iceCandidateQueue.length, 'queued ICE candidates');
+                    for (const candidate of iceCandidateQueue) {
+                        try {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                            console.log('✅ GUEST Queued ICE candidate added');
+                        } catch (error) {
+                            console.error('❌ GUEST Error adding queued ICE candidate:', error);
+                        }
+                    }
+                    iceCandidateQueue.length = 0; // Clear the queue
+                }
 
                 console.log('📨 Creating answer...');
                 const answer = await peerConnection.createAnswer();
@@ -2413,6 +2466,10 @@ async function setupWebRTCReceiver(socket, sessionId) {
         }
     });
 
+    // Queue for ICE candidates that arrive before remote description is set
+    const iceCandidateQueue = [];
+    let remoteDescriptionSet = false;
+
     // Listen for ICE candidates from host
     socket.on('ice-candidate', async (data) => {
         if (data.candidate) {
@@ -2421,6 +2478,13 @@ async function setupWebRTCReceiver(socket, sessionId) {
             // Check if connection is still open
             if (peerConnection.signalingState === 'closed') {
                 console.warn('⚠️ GUEST Ignoring ICE candidate - connection already closed');
+                return;
+            }
+
+            // If remote description not set yet, queue the candidate
+            if (!remoteDescriptionSet || peerConnection.remoteDescription === null) {
+                console.log('🧊 GUEST Queuing ICE candidate (remote description not set yet)');
+                iceCandidateQueue.push(data.candidate);
                 return;
             }
 
@@ -2440,9 +2504,8 @@ async function setupWebRTCReceiver(socket, sessionId) {
     console.log('✅ GUEST WebRTC state saved globally - ready for remote control');
     updateDebugStatus('setup', 'complete');
 
-    // Track if we received an offer
-    let offerReceived = false;
-    const originalOfferHandler = socket.listeners('offer')[socket.listeners('offer').length - 1];
+    // Track if we received an offer (set by the offer handler above)
+    window.superdeskState.offerReceived = false;
 
     // Log if NO tracks received after 10 seconds
     setTimeout(() => {
@@ -2450,13 +2513,13 @@ async function setupWebRTCReceiver(socket, sessionId) {
             console.error('❌ ========== NO TRACKS RECEIVED after 10 seconds! ==========');
             console.error('❌ WebRTC connection completed BUT no media tracks received');
             console.error('❌ Diagnostic info:');
-            console.log('🔍 Offer received:', offerReceived ? 'YES' : 'NO - Host has not started sharing!');
+            console.log('🔍 Offer received:', window.superdeskState.offerReceived ? 'YES' : 'NO - Host has not started sharing!');
             console.log('🔍 Current connection state:', peerConnection.connectionState);
             console.log('🔍 Current ICE state:', peerConnection.iceConnectionState);
             console.log('🔍 Current signaling state:', peerConnection.signalingState);
             console.log('🔍 Transceivers:', peerConnection.getTransceivers().length);
 
-            if (!offerReceived) {
+            if (!window.superdeskState.offerReceived) {
                 console.error('❌ ROOT CAUSE: No offer received from HOST!');
                 console.error('❌ The HOST needs to click "Start Sharing" to send their screen.');
                 console.error('❌ If you ARE the host, make sure to share your screen after a guest joins.');
@@ -2470,18 +2533,6 @@ async function setupWebRTCReceiver(socket, sessionId) {
             updateDebugStatus('error', 'no-tracks-received');
         }
     }, 10000);
-
-    // Wrap the offer handler to track if offer was received
-    const offerListeners = socket.listeners('offer');
-    if (offerListeners.length > 0) {
-        socket.off('offer');
-        socket.on('offer', async (data) => {
-            console.log('📨 OFFER RECEIVED - marking offerReceived = true');
-            offerReceived = true;
-            // Call the original handler logic (it's defined inline above, so we re-implement)
-            // This is handled by the existing socket.on('offer') above
-        });
-    }
 
     // Start connection health monitoring
     const healthMonitor = monitorConnectionHealth(peerConnection);
