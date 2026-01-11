@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Persistence Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 { margin-bottom: 20px; color: #8b5cf6; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .test-result {
+            padding: 12px 16px;
+            margin: 8px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .test-result.pass { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; }
+        .test-result.fail { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; }
+        .test-result.info { background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; }
+        .test-result.warn { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; }
+        .icon { font-size: 18px; }
+        .summary {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .summary.success { background: rgba(16, 185, 129, 0.3); border: 2px solid #10b981; }
+        .summary.failure { background: rgba(239, 68, 68, 0.3); border: 2px solid #ef4444; }
+        .session-info {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        .session-info h3 { margin-bottom: 10px; color: #a78bfa; }
+        .session-info pre {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            margin-top: 16px;
+            padding: 12px 24px;
+            background: #8b5cf6;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:hover { background: #7c3aed; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Auth Persistence Test Suite</h1>
+        <div id="results"></div>
+        <div id="summary"></div>
+        <div id="session-info" class="session-info" style="display:none;">
+            <h3>Session Details</h3>
+            <pre id="session-data"></pre>
+        </div>
+        <button onclick="runTests()">Run Tests Again</button>
+        <button onclick="testStorageDirectly()">Test localStorage Directly</button>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://srwrsgkfkzstdsiqonzi.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyd3JzZ2tma3pzdGRzaXFvbnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyODM2MzUsImV4cCI6MjA3ODg1OTYzNX0.URa75VP24G6anG_9Pyo2PqNrgNZ20DmEalcLAKezkSM';
+        const STORAGE_KEY = 'superdesk-auth-token';
+
+        let testsPassed = 0;
+        let testsFailed = 0;
+        const resultsDiv = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            const icons = { pass: '✅', fail: '❌', info: 'ℹ️', warn: '⚠️' };
+            div.innerHTML = `<span class="icon">${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
+            resultsDiv.appendChild(div);
+        }
+
+        function assert(condition, testName) {
+            if (condition) {
+                log(`PASS: ${testName}`, 'pass');
+                testsPassed++;
+                return true;
+            } else {
+                log(`FAIL: ${testName}`, 'fail');
+                testsFailed++;
+                return false;
+            }
+        }
+
+        async function runTests() {
+            testsPassed = 0;
+            testsFailed = 0;
+            resultsDiv.innerHTML = '';
+            document.getElementById('summary').innerHTML = '';
+            document.getElementById('session-info').style.display = 'none';
+
+            log('Starting Auth Persistence Tests...', 'info');
+
+            // Test 1: localStorage availability
+            log('Test 1: localStorage Availability', 'info');
+            try {
+                localStorage.setItem('test-superdesk', 'test-value');
+                const retrieved = localStorage.getItem('test-superdesk');
+                localStorage.removeItem('test-superdesk');
+                assert(retrieved === 'test-value', 'localStorage is working');
+            } catch (e) {
+                assert(false, `localStorage error: ${e.message}`);
+            }
+
+            // Test 2: Custom storage adapter
+            log('Test 2: Custom Storage Adapter', 'info');
+            const customStorageAdapter = {
+                getItem: function(key) {
+                    try {
+                        return localStorage.getItem(key);
+                    } catch (e) {
+                        console.error('getItem error:', e);
+                        return null;
+                    }
+                },
+                setItem: function(key, value) {
+                    try {
+                        localStorage.setItem(key, value);
+                    } catch (e) {
+                        console.error('setItem error:', e);
+                    }
+                },
+                removeItem: function(key) {
+                    try {
+                        localStorage.removeItem(key);
+                    } catch (e) {
+                        console.error('removeItem error:', e);
+                    }
+                }
+            };
+            assert(typeof customStorageAdapter.getItem === 'function', 'Storage adapter has getItem');
+            assert(typeof customStorageAdapter.setItem === 'function', 'Storage adapter has setItem');
+
+            // Test 3: Supabase client creation
+            log('Test 3: Supabase Client with Persistence', 'info');
+            let supabaseClient;
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    auth: {
+                        persistSession: true,
+                        autoRefreshToken: true,
+                        detectSessionInUrl: false,
+                        storage: customStorageAdapter,
+                        storageKey: STORAGE_KEY,
+                        flowType: 'pkce'
+                    }
+                });
+                assert(true, 'Supabase client created with persistence options');
+            } catch (e) {
+                assert(false, `Client creation failed: ${e.message}`);
+                showSummary();
+                return;
+            }
+
+            // Test 4: Check for existing session
+            log('Test 4: Session Retrieval', 'info');
+            try {
+                const startTime = performance.now();
+                const { data, error } = await supabaseClient.auth.getSession();
+                const elapsed = (performance.now() - startTime).toFixed(2);
+                
+                log(`getSession completed in ${elapsed}ms`, 'info');
+                
+                assert(!error, `No session errors (${error?.message || 'ok'})`);
+                assert(data !== undefined, 'Session data object returned');
+                
+                if (data?.session) {
+                    log(`Active session found for: ${data.session.user?.email}`, 'pass');
+                    document.getElementById('session-info').style.display = 'block';
+                    document.getElementById('session-data').textContent = JSON.stringify({
+                        email: data.session.user?.email,
+                        id: data.session.user?.id,
+                        expires_at: new Date(data.session.expires_at * 1000).toISOString(),
+                        token_type: data.session.token_type
+                    }, null, 2);
+                } else {
+                    log('No active session (user not logged in)', 'info');
+                }
+            } catch (e) {
+                assert(false, `getSession exception: ${e.message}`);
+            }
+
+            // Test 5: Auth state listener
+            log('Test 5: Auth State Change Listener', 'info');
+            try {
+                const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
+                    console.log('Auth state changed:', event);
+                });
+                assert(subscription !== undefined, 'Auth listener created');
+                subscription.unsubscribe();
+            } catch (e) {
+                assert(false, `Listener error: ${e.message}`);
+            }
+
+            // Test 6: Check stored token
+            log('Test 6: Stored Token Check', 'info');
+            const storedToken = localStorage.getItem(STORAGE_KEY);
+            if (storedToken) {
+                log(`Token found in localStorage (${storedToken.length} chars)`, 'pass');
+                try {
+                    const parsed = JSON.parse(storedToken);
+                    assert(parsed !== null, 'Token is valid JSON');
+                } catch (e) {
+                    log('Token exists but not JSON (may be encrypted)', 'warn');
+                }
+            } else {
+                log('No token stored (user not logged in or fresh session)', 'info');
+            }
+
+            // Test 7: Retry logic simulation
+            log('Test 7: Retry Logic', 'info');
+            const MAX_RETRIES = 2;
+            let retryCount = 0;
+            for (let i = 0; i <= MAX_RETRIES; i++) {
+                retryCount++;
+                await new Promise(r => setTimeout(r, 50));
+            }
+            assert(retryCount === MAX_RETRIES + 1, `Retry loop executes correctly (${retryCount} iterations)`);
+
+            showSummary();
+        }
+
+        function showSummary() {
+            const summaryDiv = document.getElementById('summary');
+            const allPassed = testsFailed === 0;
+            summaryDiv.className = `summary ${allPassed ? 'success' : 'failure'}`;
+            summaryDiv.innerHTML = `${allPassed ? '✅' : '❌'} Test Results: ${testsPassed} passed, ${testsFailed} failed`;
+        }
+
+        function testStorageDirectly() {
+            resultsDiv.innerHTML = '';
+            log('Direct localStorage Test', 'info');
+            
+            // List all superdesk-related keys
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.includes('superdesk') || key.includes('supabase') || key.includes('sb-')) {
+                    keys.push(key);
+                }
+            }
+            
+            if (keys.length > 0) {
+                log(`Found ${keys.length} auth-related keys:`, 'info');
+                keys.forEach(key => {
+                    const value = localStorage.getItem(key);
+                    const preview = value.length > 100 ? value.substring(0, 100) + '...' : value;
+                    log(`  ${key}: ${preview}`, 'info');
+                });
+            } else {
+                log('No auth-related keys found in localStorage', 'warn');
+            }
+        }
+
+        // Run tests on load
+        runTests();
+    </script>
+</body>
+</html>

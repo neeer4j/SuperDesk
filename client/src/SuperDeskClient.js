@@ -324,26 +324,45 @@ class SuperDeskClient {
 
     // Handle data channel for receiving handshake and input
     this.peerConnection.ondatachannel = (event) => {
-      console.log('📱 Data channel received:', event.channel.label);
-      if (event.channel.label === 'input') {
-        this.dataChannel = event.channel;
-        this.dataChannel.onopen = () => {
-          console.log('📱 Data channel opened');
+      const channel = event.channel;
+      const label = channel.label;
+      console.log('📱 Data channel received:', label);
+      
+      // Handle input/control channels (for remote control)
+      if (label === 'input' || label === 'control') {
+        this.dataChannel = channel;
+        channel.onopen = () => {
+          console.log(`📱 ${label} channel opened`);
           this.callbacks.onDataChannelOpen?.();
         };
-        this.dataChannel.onmessage = (msgEvent) => {
+        channel.onmessage = (msgEvent) => {
           try {
             const msg = JSON.parse(msgEvent.data);
+            // Handle handshake messages
             if (msg.type === 'system' && msg.action === 'handshake') {
-              console.log('📱 Received host info:', msg.data);
+              console.log('📱 Received host handshake:', msg.channel, msg.data);
+              this.hostCapabilities = msg.data?.capabilities || [];
               this.callbacks.onHostInfo?.(msg.data);
             }
           } catch (e) {
-            console.warn('Failed to parse data channel message:', e);
+            // Not JSON - might be binary or other format
           }
         };
-        this.dataChannel.onclose = () => {
-          console.log('📱 Data channel closed');
+        channel.onclose = () => {
+          console.log(`📱 ${label} channel closed`);
+          this.dataChannel = null;
+        };
+      }
+      // Handle file transfer channels
+      else if (label === 'fileTransfer' || label === 'files' || label === 'file-transfer') {
+        channel.binaryType = 'arraybuffer';
+        this.fileChannel = channel;
+        channel.onopen = () => {
+          console.log('📁 File transfer channel opened');
+        };
+        channel.onclose = () => {
+          console.log('📁 File transfer channel closed');
+          this.fileChannel = null;
         };
       }
     };
@@ -405,21 +424,48 @@ class SuperDeskClient {
     this.socket.emit('disable-remote-control', { sessionId: this.sessionId });
   }
 
-  sendMouseEvent(type, x, y, button = 0) {
+  sendMouseEvent(type, x, y, button = 0, extra = {}) {
     if (!this.remoteControlEnabled) return;
 
+    const data = { action: type, x, y, button, ...extra };
+
+    // Prefer DataChannel for lowest latency (direct P2P)
+    if (this.dataChannel && this.dataChannel.readyState === 'open') {
+      try {
+        this.dataChannel.send(JSON.stringify(data));
+        return;
+      } catch (e) {
+        // Fall through to Socket.IO
+      }
+    }
+
+    // Fallback to Socket.IO
     this.socket.emit('mouse-event', {
       sessionId: this.sessionId,
       type,
       x,
       y,
-      button
+      button,
+      ...extra
     });
   }
 
   sendKeyboardEvent(type, key, code, modifiers = {}) {
     if (!this.remoteControlEnabled) return;
 
+    const data = { action: type, key, code, modifiers };
+
+    // Prefer DataChannel for lowest latency (direct P2P)
+    if (this.dataChannel && this.dataChannel.readyState === 'open') {
+      try {
+        this.dataChannel.send(JSON.stringify(data));
+        return;
+      } catch (e) {
+        // Fall through to Socket.IO
+      }
+    }
+
+    // Fallback to Socket.IO
     this.socket.emit('keyboard-event', {
       sessionId: this.sessionId,
       type,

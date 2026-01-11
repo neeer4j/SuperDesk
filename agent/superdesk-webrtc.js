@@ -1,5 +1,14 @@
 /* SuperDesk Remote Desktop - Complete WebRTC Implementation */
 
+// EARLY LOG - Should appear before ANYTHING else
+(function() { 
+    var msg = '🚀 SCRIPT START: superdesk-webrtc.js v20260109';
+    if (window.appControls && window.appControls.ipcSend) {
+        window.appControls.ipcSend('renderer-log', 'log', msg);
+    }
+    console.log(msg);
+})();
+
 // Global state
 window.superdeskState = {
     socket: null,
@@ -140,7 +149,17 @@ async function initializeSocket() {
         return window.superdeskState.socket;
     }
 
+    // Close any existing disconnected socket
+    if (window.superdeskState.socket) {
+        try {
+            window.superdeskState.socket.close();
+        } catch (e) {}
+        window.superdeskState.socket = null;
+    }
+
     return new Promise((resolve, reject) => {
+        console.log('🔌 Connecting to server:', window.superdeskState.serverUrl);
+        
         const socket = io(window.superdeskState.serverUrl, {
             transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
             reconnection: true,
@@ -148,20 +167,45 @@ async function initializeSocket() {
             reconnectionDelay: 1000,
             timeout: 20000,
             upgrade: true, // Allow transport upgrades
-            forceNew: false,
+            forceNew: true, // Force new connection to avoid stale state
             path: '/socket.io/'
         });
 
+        let hasResolved = false;
+        let connectionAttempts = 0;
+
         socket.on('connect', () => {
-            console.log('✅ Connected to server');
-            window.superdeskState.socket = socket;
-            resolve(socket);
+            if (!hasResolved) {
+                hasResolved = true;
+                console.log('✅ Connected to server');
+                window.superdeskState.socket = socket;
+                resolve(socket);
+            }
         });
 
         socket.on('connect_error', (error) => {
-            console.error('❌ Connection error:', error);
-            reject(error);
+            connectionAttempts++;
+            console.warn(`⚠️ Connection attempt ${connectionAttempts} failed:`, error.message || error);
+            // Don't reject yet - let Socket.IO try reconnection
         });
+
+        socket.on('reconnect_failed', () => {
+            if (!hasResolved) {
+                hasResolved = true;
+                console.error('❌ All reconnection attempts failed');
+                reject(new Error('Failed to connect to server after multiple attempts'));
+            }
+        });
+
+        // Timeout fallback - if no connect after 30 seconds, reject
+        setTimeout(() => {
+            if (!hasResolved) {
+                hasResolved = true;
+                console.error('❌ Connection timeout after 30 seconds');
+                socket.close();
+                reject(new Error('Connection timeout'));
+            }
+        }, 30000);
 
         // Session events
         socket.on('session-created', (data) => {
@@ -417,18 +461,29 @@ function showSharingEndedOverlay() {
 
 // Create session (Host)
 async function createSession() {
+    console.log('🔌 createSession() called');
+    
+    // Check if socket.io is loaded
+    if (typeof io === 'undefined') {
+        console.error('❌ Socket.IO not loaded! Check if CDN is accessible.');
+        throw new Error('Socket.IO library not loaded');
+    }
+    
     try {
+        console.log('🔌 Calling initializeSocket()...');
         const socket = await initializeSocket();
+        console.log('✅ Socket initialized, emitting create-session');
         window.superdeskState.isHost = true;
 
         socket.emit('create-session', { type: 'agent' });
 
         console.log('Creating session...');
     } catch (error) {
-        console.error('Failed to create session:', error);
+        console.error('Failed to create session:', error.message || error);
         if (window.superdeskModal) {
             window.superdeskModal.error('Failed to create session. Check your internet connection.', 'Connection Error');
         }
+        throw error; // Re-throw so retry logic can catch it
     }
 }
 
@@ -687,11 +742,46 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     }
 
     // Create input DataChannel for receiving remote control from mobile viewers
-    console.log('🎮 HOST: Creating input DataChannel for mobile viewer control...');
-    const inputDataChannel = peerConnection.createDataChannel('input', { ordered: true });
+    // LOW LATENCY CONFIG: unordered + maxRetransmits=0 for fastest delivery
+    console.log('🎮 HOST: Creating input DataChannel for low-latency remote control...');
+    const inputDataChannel = peerConnection.createDataChannel('input', {
+        ordered: false,           // Unordered = lower latency (no head-of-line blocking)
+        maxRetransmits: 0,        // Fire-and-forget for mouse moves (UDP-like)
+        protocol: 'superdesk-input'
+    });
 
     inputDataChannel.onopen = () => {
         console.log('🎮 HOST: Input data channel OPEN - ready to receive mobile input');
+
+        // Send handshake to identify this channel to the guest
+        try {
+            // Detect platform safely (works in both Node and browser contexts)
+            let platform = 'windows';
+            if (typeof process !== 'undefined' && process.platform) {
+                platform = process.platform;
+            } else if (typeof navigator !== 'undefined') {
+                const ua = navigator.userAgent.toLowerCase();
+                if (ua.includes('android')) platform = 'android';
+                else if (ua.includes('iphone') || ua.includes('ipad')) platform = 'ios';
+                else if (ua.includes('mac')) platform = 'darwin';
+                else if (ua.includes('linux')) platform = 'linux';
+            }
+            
+            const handshake = JSON.stringify({
+                type: 'system',
+                action: 'handshake',
+                channel: 'input',
+                data: {
+                    platform: platform,
+                    version: '1.0',
+                    capabilities: ['mouse', 'keyboard', 'touch', 'scroll']
+                }
+            });
+            inputDataChannel.send(handshake);
+            console.log('🎮 HOST: Sent input channel handshake');
+        } catch (e) {
+            console.warn('🎮 HOST: Failed to send handshake:', e.message);
+        }
 
         // AUTO-ENABLE remote control when data channel opens
         // This fixes the race condition where mobile sends input before Socket.IO enable-remote-control completes
@@ -722,16 +812,22 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     inputDataChannel.onmessage = (event) => {
         try {
             const inputEvent = JSON.parse(event.data);
-            console.log('🎮 HOST: Received input from mobile viewer:', inputEvent.type, inputEvent.action);
+            // LOW LATENCY: Skip logging for move events (too frequent)
+            if (inputEvent.action !== 'move') {
+                console.log('🎮 HOST: DataChannel input:', inputEvent.type, inputEvent.action);
+            }
 
-            // Process input event similar to socket events
+            // Process input event - handle both mouse/touch and direct action format
             if (inputEvent.type === 'mouse' || inputEvent.type === 'touch') {
                 handleMobileInputEvent(inputEvent);
             } else if (inputEvent.type === 'keyboard') {
                 handleMobileKeyboardEvent(inputEvent);
+            } else if (inputEvent.action) {
+                // Direct format from desktop guest: { action, x, y, button, ... }
+                handleDirectInputEvent(inputEvent);
             }
         } catch (e) {
-            console.warn('🎮 HOST: Failed to parse input event:', e);
+            // Silently ignore parse errors for performance
         }
     };
 
@@ -837,24 +933,43 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     const tracks = stream.getTracks();
     console.log('🎥 Total tracks to add:', tracks.length);
 
+    // Collect senders for low-latency configuration
+    const senders = [];
     tracks.forEach((track, index) => {
-        console.log(`🎥 Track #${index + 1}:`, {
-            kind: track.kind,
-            label: track.label,
-            id: track.id,
-            enabled: track.enabled,
-            muted: track.muted,
-            readyState: track.readyState
-        });
-
+        console.log(`🎥 Track #${index + 1}: ${track.kind} - ${track.label}`);
         const sender = peerConnection.addTrack(track, stream);
-        console.log('✅ Track added successfully, Sender:', {
-            track: sender.track ? 'SET' : 'NOT SET',
-            transport: sender.transport ? 'SET' : 'NOT SET'
-        });
+        senders.push({ sender, track });
     });
 
     console.log('🎥 All tracks added. Total senders:', peerConnection.getSenders().length);
+
+    // === LOW LATENCY OPTIMIZATION: Configure screen sharing for minimal delay ===
+    // Must be done after addTrack but before createOffer
+    for (const { sender, track } of senders) {
+        if (track.kind === 'video') {
+            try {
+                const params = sender.getParameters();
+                if (!params.encodings) params.encodings = [{}];
+
+                params.encodings.forEach(encoding => {
+                    // Optimize for screen sharing (text clarity + low latency)
+                    encoding.maxBitrate = 4000000;      // 4 Mbps - good for 1080p screen
+                    encoding.maxFramerate = 30;          // Cap at 30fps for stability
+                    encoding.priority = 'high';          // Prioritize this stream
+                    encoding.networkPriority = 'high';   // Network priority
+                    encoding.scaleResolutionDownBy = 1.0; // Full resolution
+                });
+
+                // Prioritize framerate over resolution for responsive feel
+                params.degradationPreference = 'maintain-framerate';
+
+                await sender.setParameters(params);
+                console.log('🚀 Low-latency video encoding configured for screen share');
+            } catch (e) {
+                console.warn('Could not apply low-latency encoding:', e.message);
+            }
+        }
+    }
 
     // Add transceivers for receiving GUEST camera/mic (bidirectional communication)
     // This ensures HOST can receive tracks from GUEST when they enable camera/mic
@@ -979,12 +1094,12 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     });
 
     // CRITICAL: Verify tracks were added before creating offer
-    const senders = peerConnection.getSenders();
+    const allSenders = peerConnection.getSenders();
     console.log('🔍 HOST: Verifying tracks before creating offer...');
-    console.log('🔍 Total senders:', senders.length);
+    console.log('🔍 Total senders:', allSenders.length);
     
-    const videoSenders = senders.filter(s => s.track && s.track.kind === 'video');
-    const audioSenders = senders.filter(s => s.track && s.track.kind === 'audio');
+    const videoSenders = allSenders.filter(s => s.track && s.track.kind === 'video');
+    const audioSenders = allSenders.filter(s => s.track && s.track.kind === 'audio');
     console.log('🔍 Video senders:', videoSenders.length);
     console.log('🔍 Audio senders:', audioSenders.length);
 
@@ -3047,7 +3162,44 @@ function getNormalizedCoordinates(e, videoElement) {
     };
 }
 
+// ==================== LOW LATENCY INPUT SENDING ====================
+// Prefer WebRTC DataChannel (direct P2P, ~50-100ms faster) over Socket.IO
+
+/**
+ * Send input event with lowest possible latency
+ * Priority: DataChannel (P2P) > Socket.IO (via server)
+ * @param {string} eventType - 'mouse' or 'keyboard'
+ * @param {object} data - Event data { action, x, y, button, deltaX, deltaY, key, code }
+ */
+function sendLowLatencyInput(eventType, data) {
+    const channel = window.superdeskState.inputDataChannel;
+    
+    // Prefer DataChannel for direct P2P (lowest latency)
+    if (channel && channel.readyState === 'open') {
+        try {
+            channel.send(JSON.stringify(data));
+            return true; // Sent via DataChannel
+        } catch (e) {
+            // DataChannel failed, fall through to Socket.IO
+        }
+    }
+    
+    // Fallback to Socket.IO
+    if (window.superdeskState.socket && window.superdeskState.socket.connected) {
+        const socketEvent = eventType === 'keyboard' ? 'keyboard-event' : 'mouse-event';
+        window.superdeskState.socket.emit(socketEvent, {
+            sessionId: window.superdeskState.sessionId,
+            type: data.action,
+            ...data
+        });
+        return true;
+    }
+    
+    return false; // Failed to send
+}
+
 let rafScheduled = false;
+let pendingMoveData = null; // Store pending move for RAF batching
 
 function handleMouseMove(e) {
     if (!window.superdeskState.remoteControlEnabled) {
@@ -3067,27 +3219,17 @@ function handleMouseMove(e) {
 
     const { x, y } = coords;
 
-    if (!window.superdeskState.socket || !window.superdeskState.socket.connected) {
-        return;
-    }
-
-    // Always store the latest position
-    pendingMouseMove = { x, y };
+    // Store latest position for RAF batching
+    pendingMoveData = { action: 'move', x, y };
 
     // Use requestAnimationFrame for optimal timing - syncs with display refresh
     if (!rafScheduled) {
         rafScheduled = true;
         requestAnimationFrame(() => {
             rafScheduled = false;
-            if (pendingMouseMove && window.superdeskState.socket) {
-                const { x, y } = pendingMouseMove;
-                pendingMouseMove = null;
-                window.superdeskState.socket.emit('mouse-event', {
-                    sessionId: window.superdeskState.sessionId,
-                    type: 'move',
-                    x,
-                    y
-                });
+            if (pendingMoveData) {
+                sendLowLatencyInput('mouse', pendingMoveData);
+                pendingMoveData = null;
             }
         });
     }
@@ -3102,13 +3244,8 @@ function handleMouseClick(e) {
 
     const { x, y } = coords;
 
-    window.superdeskState.socket.emit('mouse-event', {
-        sessionId: window.superdeskState.sessionId,
-        type: 'click',
-        button: e.button,
-        x,
-        y
-    });
+    // Use low-latency DataChannel when available
+    sendLowLatencyInput('mouse', { action: 'click', button: e.button, x, y });
 }
 
 function handleMouseDown(e) {
@@ -3120,13 +3257,7 @@ function handleMouseDown(e) {
 
     const { x, y } = coords;
 
-    window.superdeskState.socket.emit('mouse-event', {
-        sessionId: window.superdeskState.sessionId,
-        type: 'down',
-        button: e.button,
-        x,
-        y
-    });
+    sendLowLatencyInput('mouse', { action: 'down', button: e.button, x, y });
 }
 
 function handleMouseUp(e) {
@@ -3144,17 +3275,13 @@ function handleMouseUp(e) {
 
     const { x, y } = coords;
 
-    window.superdeskState.socket.emit('mouse-event', {
-        sessionId: window.superdeskState.sessionId,
-        type: 'up',
-        button: e.button,
-        x,
-        y
-    });
+    sendLowLatencyInput('mouse', { action: 'up', button: e.button, x, y });
 }
 
-// Mouse wheel/scroll handler
+// Mouse wheel/scroll handler - optimized for low latency
 let wheelEventCount = 0;
+let lastWheelTime = 0;
+
 function handleMouseWheel(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
 
@@ -3162,10 +3289,10 @@ function handleMouseWheel(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    wheelEventCount++;
-    if (wheelEventCount === 1 || wheelEventCount % 5 === 0) {
-        console.log(`🖱️ Wheel event #${wheelEventCount}:`, { deltaX: e.deltaX, deltaY: e.deltaY });
-    }
+    // Throttle wheel events to max 60fps (16ms)
+    const now = performance.now();
+    if (now - lastWheelTime < 16) return;
+    lastWheelTime = now;
 
     const video = e.target;
     const coords = getNormalizedCoordinates(e, video);
@@ -3179,32 +3306,18 @@ function handleMouseWheel(e) {
     const deltaX = Math.sign(e.deltaX) * Math.min(Math.abs(e.deltaX), 120);
     const deltaY = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120);
 
-    window.superdeskState.socket.emit('mouse-event', {
-        sessionId: window.superdeskState.sessionId,
-        type: 'scroll',
-        deltaX: deltaX,
-        deltaY: deltaY,
-        x,
-        y
-    });
+    sendLowLatencyInput('mouse', { action: 'scroll', deltaX, deltaY, x, y });
 }
 
-// Keyboard event handlers
-let keyEventCount = 0;
+// Keyboard event handlers - optimized for low latency
 function handleKeyDown(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    keyEventCount++;
-    if (keyEventCount === 1 || keyEventCount % 10 === 0) {
-        console.log(`⌨️ Key down event #${keyEventCount}:`, e.key, e.code);
-    }
-
-    window.superdeskState.socket.emit('keyboard-event', {
-        sessionId: window.superdeskState.sessionId,
-        type: 'down',
+    sendLowLatencyInput('keyboard', {
+        action: 'keydown',
         key: e.key,
         code: e.code,
         modifiers: {
@@ -3222,9 +3335,8 @@ function handleKeyUp(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    window.superdeskState.socket.emit('keyboard-event', {
-        sessionId: window.superdeskState.sessionId,
-        type: 'up',
+    sendLowLatencyInput('keyboard', {
+        action: 'keyup',
         key: e.key,
         code: e.code
     });
@@ -3237,11 +3349,13 @@ function handleMobileInputEvent(inputEvent) {
     const x = data.x;
     const y = data.y;
 
-    console.log('🎮 Processing mobile input:', action, 'at', x?.toFixed(3), y?.toFixed(3));
+    // LOW LATENCY: Skip logging for move events
+    if (action !== 'move') {
+        console.log('🎮 Processing mobile input:', action, 'at', x?.toFixed(3), y?.toFixed(3));
+    }
 
     // Require remote control to be enabled (host must have enabled it)
     if (!window.superdeskState.remoteControlEnabled) {
-        console.log('🎮 Remote control not enabled, ignoring mobile input');
         return;
     }
 
@@ -3260,9 +3374,45 @@ function handleMobileInputEvent(inputEvent) {
             deltaX: data.deltaX || 0,
             deltaY: data.deltaY || 0
         });
-        console.log('🎮 ✅ Sent IPC robot-mouse-event:', eventType, 'at', x?.toFixed(3), y?.toFixed(3));
+    }
+}
+
+// Handle direct input format from desktop guests via DataChannel
+// Format: { action: 'move'/'click'/'down'/'up'/'scroll'/'keydown'/'keyup', x, y, button, deltaX, deltaY, key, code }
+function handleDirectInputEvent(inputEvent) {
+    const { action, x, y, button, deltaX, deltaY, key, code } = inputEvent;
+
+    // Require remote control to be enabled
+    if (!window.superdeskState.remoteControlEnabled) {
+        return;
+    }
+
+    // Handle keyboard events - check for keyboard action names or presence of key/code fields
+    const isKeyboardAction = action === 'keydown' || action === 'keyup' || 
+                             ((action === 'down' || action === 'up') && (key || code));
+    
+    if (isKeyboardAction) {
+        // Keyboard event - normalize action to keydown/keyup
+        const keyAction = (action === 'down' || action === 'keydown') ? 'keydown' : 'keyup';
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('robot-keyboard-event', {
+                type: keyAction,
+                key: key || '',
+                code: code || ''
+            });
+        }
     } else {
-        console.error('🎮 ❌ No appControls.ipcSend available!');
+        // Mouse event
+        if (window.appControls && window.appControls.ipcSend) {
+            window.appControls.ipcSend('robot-mouse-event', {
+                type: action,
+                x: x,
+                y: y,
+                button: button || 0,
+                deltaX: deltaX || 0,
+                deltaY: deltaY || 0
+            });
+        }
     }
 }
 
@@ -3272,7 +3422,6 @@ function handleMobileKeyboardEvent(inputEvent) {
     console.log('🎮 Processing mobile keyboard:', action, data?.key);
 
     if (!window.superdeskState.remoteControlEnabled) {
-        console.log('🎮 Remote control not enabled, ignoring mobile keyboard');
         return;
     }
 
@@ -3286,9 +3435,6 @@ function handleMobileKeyboardEvent(inputEvent) {
             key: data?.key || '',
             code: data?.code || ''
         });
-        console.log('🎮 ✅ Sent IPC robot-keyboard-event:', eventType, data?.key);
-    } else {
-        console.error('🎮 ❌ No appControls.ipcSend available!');
     }
 }
 
@@ -3403,15 +3549,8 @@ function handleTouchStart(e) {
         touchState.tapTimeout = null;
     }
 
-    // Send mouse move to starting position immediately
-    if (window.superdeskState.socket && window.superdeskState.socket.connected) {
-        window.superdeskState.socket.emit('mouse-event', {
-            sessionId: window.superdeskState.sessionId,
-            type: 'move',
-            x: coords.x,
-            y: coords.y
-        });
-    }
+    // Send mouse move to starting position immediately via low-latency channel
+    sendLowLatencyInput('mouse', { action: 'move', x: coords.x, y: coords.y });
 }
 
 function handleTouchMove(e) {
@@ -3464,45 +3603,30 @@ function handleTouchMove(e) {
             const scrollThreshold = 8;
             if (Math.abs(touchState.scrollAccumulator.y) > scrollThreshold) {
                 const scrollDelta = touchState.scrollAccumulator.y * TOUCH_CONFIG.SCROLL_SENSITIVITY;
-
-                if (window.superdeskState.socket && window.superdeskState.socket.connected) {
-                    window.superdeskState.socket.emit('mouse-event', {
-                        sessionId: window.superdeskState.sessionId,
-                        type: 'scroll',
-                        deltaX: 0,
-                        deltaY: -scrollDelta,
-                        x: coords.x,
-                        y: coords.y
-                    });
-                }
+                sendLowLatencyInput('mouse', {
+                    action: 'scroll',
+                    deltaX: 0,
+                    deltaY: -scrollDelta,
+                    x: coords.x,
+                    y: coords.y
+                });
                 touchState.scrollAccumulator.y = 0;
             }
 
             if (Math.abs(touchState.scrollAccumulator.x) > scrollThreshold) {
                 const scrollDelta = touchState.scrollAccumulator.x * TOUCH_CONFIG.SCROLL_SENSITIVITY;
-
-                if (window.superdeskState.socket && window.superdeskState.socket.connected) {
-                    window.superdeskState.socket.emit('mouse-event', {
-                        sessionId: window.superdeskState.sessionId,
-                        type: 'scroll',
-                        deltaX: -scrollDelta,
-                        deltaY: 0,
-                        x: coords.x,
-                        y: coords.y
-                    });
-                }
+                sendLowLatencyInput('mouse', {
+                    action: 'scroll',
+                    deltaX: -scrollDelta,
+                    deltaY: 0,
+                    x: coords.x,
+                    y: coords.y
+                });
                 touchState.scrollAccumulator.x = 0;
             }
         } else {
             // Single finger drag - move mouse pointer
-            if (window.superdeskState.socket && window.superdeskState.socket.connected) {
-                window.superdeskState.socket.emit('mouse-event', {
-                    sessionId: window.superdeskState.sessionId,
-                    type: 'move',
-                    x: coords.x,
-                    y: coords.y
-                });
-            }
+            sendLowLatencyInput('mouse', { action: 'move', x: coords.x, y: coords.y });
         }
 
         touchState.lastX = touch.clientX;
@@ -3541,56 +3665,22 @@ function handleTouchEnd(e) {
         const timeSinceLastTap = now - touchState.lastTapTime;
 
         if (timeSinceLastTap < TOUCH_CONFIG.DOUBLE_TAP_DELAY) {
-            // Double tap - double click
-            console.log('👆👆 Double tap detected - sending double click');
-            if (window.superdeskState.socket && window.superdeskState.socket.connected) {
-                // Send two clicks rapidly
-                window.superdeskState.socket.emit('mouse-event', {
-                    sessionId: window.superdeskState.sessionId,
-                    type: 'click',
-                    button: 0,
-                    x: coords.x,
-                    y: coords.y
-                });
-                setTimeout(() => {
-                    window.superdeskState.socket.emit('mouse-event', {
-                        sessionId: window.superdeskState.sessionId,
-                        type: 'click',
-                        button: 0,
-                        x: coords.x,
-                        y: coords.y
-                    });
-                }, 50);
-            }
+            // Double tap - double click - send two clicks rapidly via low-latency channel
+            sendLowLatencyInput('mouse', { action: 'click', button: 0, x: coords.x, y: coords.y });
+            setTimeout(() => {
+                sendLowLatencyInput('mouse', { action: 'click', button: 0, x: coords.x, y: coords.y });
+            }, 50);
             touchState.lastTapTime = 0;
         } else {
             // Single tap - send click after a short delay to check for double tap
             touchState.lastTapTime = now;
             touchState.tapTimeout = setTimeout(() => {
-                console.log('👆 Single tap detected - sending click');
-                if (window.superdeskState.socket && window.superdeskState.socket.connected) {
-                    window.superdeskState.socket.emit('mouse-event', {
-                        sessionId: window.superdeskState.sessionId,
-                        type: 'click',
-                        button: 0,
-                        x: coords.x,
-                        y: coords.y
-                    });
-                }
+                sendLowLatencyInput('mouse', { action: 'click', button: 0, x: coords.x, y: coords.y });
             }, TOUCH_CONFIG.DOUBLE_TAP_DELAY);
         }
     } else if (duration > TOUCH_CONFIG.LONG_PRESS_DURATION && distance < TOUCH_CONFIG.TAP_THRESHOLD && !touchState.isScrolling && !touchState.hasMoved) {
         // Long press - right click (only if no movement)
-        console.log('👆⏱️ Long press detected - sending right click');
-        if (window.superdeskState.socket && window.superdeskState.socket.connected) {
-            window.superdeskState.socket.emit('mouse-event', {
-                sessionId: window.superdeskState.sessionId,
-                type: 'click',
-                button: 2, // Right click
-                x: coords.x,
-                y: coords.y
-            });
-        }
+        sendLowLatencyInput('mouse', { action: 'click', button: 2, x: coords.x, y: coords.y });
     }
 
     // Cancel any pending move frame
@@ -3604,8 +3694,6 @@ function handleTouchEnd(e) {
     touchState.isSwiping = false;
     touchState.isScrolling = false;
     touchState.hasMoved = false;
-
-    console.log('👆 Touch end - duration:', duration, 'distance:', distance.toFixed(1));
 }
 
 function handleTouchCancel(e) {

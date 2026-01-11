@@ -37,9 +37,10 @@ app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 
-// Configure nut-js for instant mouse movement (no animation)
+// Configure nut-js for instant mouse/keyboard (no animation delays)
 mouse.config.autoDelayMs = 0;
 mouse.config.mouseSpeed = 10000; // Very fast movement
+keyboard.config.autoDelayMs = 0; // No delay between key presses
 
 console.log('✅ nut-js modules loaded successfully');
 console.log('   - mouse:', typeof mouse);
@@ -300,34 +301,18 @@ ipcMain.on('renderer-log', (_event, level, message) => {
   }
 });
 
-ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
-  if (!remoteControlEnabled) {
-    console.log('[robot] mouse event ignored - remote control not enabled');
-    return;
-  }
+ipcMain.on('robot-mouse-event', (_event, data = {}) => {
+  if (!remoteControlEnabled) return;
+  
   const { type, x, y, button } = data;
   const coords = translateCoordinates(x, y);
 
   try {
-    // Log every 50th event to avoid spam but still see what's happening
-    if (Math.random() < 0.02 || x > 0.9 || y > 0.9) {
-      console.log('[robot] mouse', {
-        type,
-        inputX: x,
-        inputY: y,
-        outputX: coords.x,
-        outputY: coords.y,
-        screenW: screenSize.width,
-        screenH: screenSize.height,
-        pctX: ((coords.x / screenSize.width) * 100).toFixed(1) + '%',
-        pctY: ((coords.y / screenSize.height) * 100).toFixed(1) + '%'
-      });
-    }
     switch (type) {
       case 'move':
       case 'mousemove':
         // Fire-and-forget for instant movement (no await = no latency)
-        mouse.setPosition({ x: coords.x, y: coords.y }).catch(err => console.error('[robot] move error:', err));
+        mouse.setPosition({ x: coords.x, y: coords.y }).catch(() => {});
         break;
       case 'down':
       case 'mousedown':
@@ -350,34 +335,22 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
       case 'wheel':
         // Handle scroll/wheel events
         const { deltaX, deltaY } = data;
-        console.log('[robot] 🖱️ Scroll event received:', { deltaX, deltaY, x: coords.x, y: coords.y });
-
-        // Move mouse to position first, then scroll
-        // Browser wheel deltaY: positive = scroll down, negative = scroll up
-        // nut-js: scrollDown(positive) scrolls DOWN, scrollUp(positive) scrolls UP
-        // Lower divisor = more sensitive scrolling (was 40, then 15, now 5 for much better responsiveness)
+        // Lower divisor = more sensitive scrolling
         const scrollAmount = Math.max(1, Math.abs(Math.round(deltaY / 5)));
 
         if (scrollAmount > 0) {
           mouse.setPosition({ x: coords.x, y: coords.y }).then(async () => {
             try {
               if (deltaY > 0) {
-                // Scroll down
-                console.log('[robot] Scrolling DOWN by:', scrollAmount);
                 await mouse.scrollDown(scrollAmount);
               } else {
-                // Scroll up
-                console.log('[robot] Scrolling UP by:', scrollAmount);
                 await mouse.scrollUp(scrollAmount);
               }
             } catch (scrollErr) {
-              console.error('[robot] scroll action error:', scrollErr);
+              console.error('[robot] scroll error:', scrollErr);
             }
-          }).catch(err => console.error('[robot] scroll position error:', err));
+          }).catch(() => {});
         }
-        break;
-      default:
-        console.log('[robot] Unknown mouse event type:', type);
         break;
     }
   } catch (error) {
@@ -385,30 +358,26 @@ ipcMain.on('robot-mouse-event', async (_event, data = {}) => {
   }
 });
 
-ipcMain.on('robot-keyboard-event', async (_event, data = {}) => {
+ipcMain.on('robot-keyboard-event', (_event, data = {}) => {
   if (!remoteControlEnabled) {
-    console.log('[robot] keyboard event ignored - remote control not enabled');
-    return;
+    return; // Silently ignore when disabled
   }
   const { type, key, code } = data;
   const nutKey = toNutKey(code, key);
 
   if (!nutKey) {
-    console.log('[robot] ❌ Unmapped keyboard event:', data);
+    console.log('[robot] ❌ Unmapped key:', code, key);
     return;
   }
 
   try {
-    // Log more keyboard events to verify they're working
-    if (Math.random() < 0.1) {
-      console.log('[robot] ⌨️ key', { type, key, code, nutKey, activeKeysCount: activeKeys.size });
-    }
     if (type === 'keydown') {
       if (activeKeys.has(nutKey)) return;
-      await keyboard.pressKey(nutKey);
+      // Fire-and-forget for lowest latency
+      keyboard.pressKey(nutKey).catch(err => console.error('[robot] keydown error:', err));
       activeKeys.add(nutKey);
     } else if (type === 'keyup') {
-      await keyboard.releaseKey(nutKey);
+      keyboard.releaseKey(nutKey).catch(err => console.error('[robot] keyup error:', err));
       activeKeys.delete(nutKey);
     }
   } catch (error) {
@@ -719,6 +688,12 @@ function createWindow() {
 
   // Open DevTools only in development mode (optional)
   // mainWindow.webContents.openDevTools();
+
+  // Log all renderer console messages to main process (for debugging)
+  // mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+  //   const levels = ['verbose', 'info', 'warning', 'error'];
+  //   console.log(`[RENDERER ${levels[level] || level}] ${message}`);
+  // });
 
   mainWindow.on('closed', () => {
     mainWindow = null;

@@ -680,25 +680,45 @@ function App() {
 
     pc.ondatachannel = (event) => {
       console.log('Data channel received:', event.channel.label);
-      const dataChannel = event.channel;
+      const channel = event.channel;
+      const label = channel.label;
       
-      dataChannel.onopen = () => {
-        console.log('Data channel opened (guest side)');
-        setDataChannel(dataChannel);
-        notify.success('Connected! File transfer and remote control available.');
-      };
-      
-      dataChannel.onclose = () => {
-        console.log('Data channel closed (guest side)');
-        setDataChannel(null);
-      };
-      
-      dataChannel.onerror = (error) => {
-        console.error('Data channel error (guest side):', error);
-        notify.error('Data channel error: ' + error.message);
-      };
-      
-      dataChannel.onmessage = handleDataChannelMessage;
+      // Handle different channel types by label
+      if (label === 'control' || label === 'input') {
+        // Control/Input channel for remote control and general messages
+        channel.onopen = () => {
+          console.log(`${label} channel opened (guest side)`);
+          setDataChannel(channel);
+          notify.success('Connected! File transfer and remote control available.');
+        };
+        
+        channel.onclose = () => {
+          console.log(`${label} channel closed (guest side)`);
+          setDataChannel(null);
+        };
+        
+        channel.onerror = (error) => {
+          console.error(`${label} channel error (guest side):`, error);
+          notify.error('Data channel error: ' + error.message);
+        };
+        
+        channel.onmessage = handleDataChannelMessage;
+      } else if (label === 'fileTransfer' || label === 'files' || label === 'file-transfer') {
+        // File transfer channel - binary data
+        channel.binaryType = 'arraybuffer';
+        
+        channel.onopen = () => {
+          console.log('File transfer channel opened (guest side)');
+        };
+        
+        channel.onclose = () => {
+          console.log('File transfer channel closed (guest side)');
+        };
+        
+        channel.onmessage = handleDataChannelMessage;
+      } else {
+        console.log('Unknown data channel received:', label);
+      }
     };
 
     // Set up optimized encoding parameters for screen sharing

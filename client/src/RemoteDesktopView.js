@@ -207,6 +207,11 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
     }
   };
 
+  // Throttle mouse move for performance (16ms = ~60fps max)
+  const lastMoveRef = useRef(0);
+  const pendingMoveRef = useRef(null);
+  const scheduledRef = useRef(false);
+
   const handleMouseMove = (e) => {
     if (!remoteControlEnabled || !videoRef.current) return;
 
@@ -214,7 +219,26 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
-    client.sendMouseEvent('move', x, y);
+    // Store latest position
+    pendingMoveRef.current = { x, y };
+
+    // Throttle: only send every 16ms
+    const now = Date.now();
+    if (now - lastMoveRef.current >= 16) {
+      lastMoveRef.current = now;
+      client.sendMouseEvent('move', x, y);
+      pendingMoveRef.current = null;
+    } else if (!scheduledRef.current) {
+      // Schedule sending the final position
+      scheduledRef.current = true;
+      setTimeout(() => {
+        scheduledRef.current = false;
+        if (pendingMoveRef.current) {
+          client.sendMouseEvent('move', pendingMoveRef.current.x, pendingMoveRef.current.y);
+          pendingMoveRef.current = null;
+        }
+      }, 16);
+    }
   };
 
   const handleMouseDown = (e) => {

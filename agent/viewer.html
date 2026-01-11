@@ -696,7 +696,16 @@
             inputDataChannel.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    if (msg.type === 'handshake' && msg.platform === 'android') {
+                    // Handle new handshake format: { type: 'system', action: 'handshake', channel: 'input', data: {...} }
+                    if (msg.type === 'system' && msg.action === 'handshake') {
+                        console.log('📡 Received host handshake:', msg.channel, msg.data);
+                        if (msg.data && msg.data.platform === 'android') {
+                            hostIsMobile = true;
+                            updateCursorVisibility();
+                        }
+                    }
+                    // Also handle legacy format: { type: 'handshake', platform: 'android' }
+                    else if (msg.type === 'handshake' && msg.platform === 'android') {
                         hostIsMobile = true;
                         updateCursorVisibility();
                     }

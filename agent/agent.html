@@ -17,8 +17,49 @@
         var SUPABASE_URL = 'https://srwrsgkfkzstdsiqonzi.supabase.co';
         var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyd3JzZ2tma3pzdGRzaXFvbnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyODM2MzUsImV4cCI6MjA3ODg1OTYzNX0.URa75VP24G6anG_9Pyo2PqNrgNZ20DmEalcLAKezkSM';
 
-        // Create client instance and store globally
-        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Custom storage adapter for Electron that ensures proper session persistence
+        // This wraps localStorage with error handling and fallback mechanisms
+        var customStorageAdapter = {
+            getItem: function(key) {
+                try {
+                    var value = localStorage.getItem(key);
+                    console.log('[Supabase Storage] getItem:', key, value ? 'found' : 'not found');
+                    return value;
+                } catch (e) {
+                    console.error('[Supabase Storage] getItem error:', e);
+                    return null;
+                }
+            },
+            setItem: function(key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                    console.log('[Supabase Storage] setItem:', key, 'saved');
+                } catch (e) {
+                    console.error('[Supabase Storage] setItem error:', e);
+                }
+            },
+            removeItem: function(key) {
+                try {
+                    localStorage.removeItem(key);
+                    console.log('[Supabase Storage] removeItem:', key);
+                } catch (e) {
+                    console.error('[Supabase Storage] removeItem error:', e);
+                }
+            }
+        };
+
+        // Create client instance with explicit persistence configuration
+        // This fixes issues with session not being retained in Electron apps
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: false, // Not needed for Electron
+                storage: customStorageAdapter,
+                storageKey: 'superdesk-auth-token', // Explicit key to avoid conflicts
+                flowType: 'pkce'
+            }
+        });
 
         // Create a script-level alias 'supabase' that refers to the client (not the CDN library)
         // This allows code using 'supabase.channel()' etc to work
@@ -26,12 +67,26 @@
         var supabaseClient = window.supabaseClient;
         var supabase = window.supabaseClient;
 
-        console.log('✅ Supabase client initialized (window.supabaseClient)');
+        console.log('✅ Supabase client initialized with explicit persistence (window.supabaseClient)');
+        
+        // Early error capture before other scripts load
+        window.onerror = function(msg, url, line, col, error) {
+            console.error('SCRIPT ERROR:', msg, 'at', url, 'line', line);
+            return false;
+        };
     </script>
     <!-- Socket.io Client CDN -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <!-- WebRTC Implementation -->
-    <script src="superdesk-webrtc.js"></script>
+    <!-- WebRTC Implementation - cache bust -->
+    <script src="superdesk-webrtc.js?v=20260109"></script>
+    <script>
+        // Verify WebRTC module loaded
+        if (typeof window.createSession === 'function') {
+            console.log('✅ superdesk-webrtc.js loaded, createSession available');
+        } else {
+            console.error('❌ superdesk-webrtc.js FAILED to load or createSession not defined');
+        }
+    </script>
     <!-- File Transfer Module -->
     <script src="modules/file-transfer.js"></script>
     <script>
@@ -6128,19 +6183,53 @@
                 // Track if this is a fresh login (not app startup)
                 let isFreshLogin = false;
 
-                // Check for existing session WITH TIMEOUT to prevent hanging
+                // Check for existing session WITH TIMEOUT and RETRY to prevent hanging
+                // Extended timeout and retry for Electron apps where storage may initialize slowly
                 let session = null;
-                try {
-                    const sessionPromise = window.supabaseClient.auth.getSession();
-                    const timeoutPromise = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Auth timeout')), 3000)
-                    );
-                    const result = await Promise.race([sessionPromise, timeoutPromise]);
-                    session = result?.data?.session;
-                    console.log('✅ Auth session check completed');
-                } catch (e) {
-                    console.warn('⚠️ Auth session check timed out or failed:', e.message);
-                    // Proceed without session
+                const MAX_RETRIES = 2;
+                const TIMEOUT_MS = 5000; // Increased timeout for slow networks/storage
+                
+                for (let attempt = 0; attempt <= MAX_RETRIES && !session; attempt++) {
+                    try {
+                        if (attempt > 0) {
+                            console.log(`🔄 Auth session check retry ${attempt}/${MAX_RETRIES}...`);
+                            await new Promise(r => setTimeout(r, 500)); // Small delay before retry
+                        }
+                        
+                        const sessionPromise = window.supabaseClient.auth.getSession();
+                        const timeoutPromise = new Promise((_, reject) =>
+                            setTimeout(() => reject(new Error('Auth timeout')), TIMEOUT_MS)
+                        );
+                        const result = await Promise.race([sessionPromise, timeoutPromise]);
+                        session = result?.data?.session;
+                        
+                        if (session) {
+                            console.log('✅ Auth session found for user:', session.user?.email);
+                        } else {
+                            console.log('ℹ️ No active session found (attempt ' + (attempt + 1) + ')');
+                        }
+                    } catch (e) {
+                        console.warn(`⚠️ Auth session check attempt ${attempt + 1} failed:`, e.message);
+                        // On last retry, try one more approach - check localStorage directly
+                        if (attempt === MAX_RETRIES) {
+                            console.log('🔧 Attempting to recover session from storage...');
+                            try {
+                                // Try to manually trigger session refresh from storage
+                                const storedToken = localStorage.getItem('superdesk-auth-token');
+                                if (storedToken) {
+                                    console.log('📦 Found stored token, attempting to refresh...');
+                                    // Try refreshing the session
+                                    const refreshResult = await window.supabaseClient.auth.refreshSession();
+                                    if (refreshResult?.data?.session) {
+                                        session = refreshResult.data.session;
+                                        console.log('✅ Session recovered via refresh!');
+                                    }
+                                }
+                            } catch (refreshError) {
+                                console.warn('⚠️ Session recovery failed:', refreshError.message);
+                            }
+                        }
+                    }
                 }
 
                 if (session) {
@@ -6997,25 +7086,28 @@
             // Show connecting state
             const sessionIdEl = document.getElementById('session-id');
             sessionIdEl.textContent = 'CONNECTING...';
+            sessionIdEl.style.color = ''; // Reset color
 
             // Wait a bit for socket module to be ready, then create session
-            const maxRetries = 3;
+            const maxRetries = 5;
             let attempt = 0;
 
             const tryCreateSession = async () => {
                 attempt++;
-                console.log(`🔄 Attempting to create session (attempt ${attempt}/${maxRetries})...`);
+                const hasCreateSession = typeof window.createSession === 'function';
+                console.log(`🔄 Attempting to create session (attempt ${attempt}/${maxRetries}), createSession available: ${hasCreateSession}`);
 
-                if (typeof window.createSession === 'function') {
+                if (hasCreateSession) {
                     try {
                         await window.createSession();
                         console.log('✅ Session creation initiated');
 
-                        // Give server 5 seconds to respond with session ID
+                        // Give server 8 seconds to respond with session ID (increased from 5)
                         setTimeout(() => {
                             if (sessionIdEl.textContent === 'CONNECTING...') {
-                                console.warn('⚠️ Session ID not received after 5s');
+                                console.warn('⚠️ Session ID not received after 8s');
                                 sessionIdEl.textContent = 'RETRY';
+                                sessionIdEl.style.color = '#f59e0b'; // Orange for retry
                                 sessionIdEl.style.cursor = 'pointer';
                                 sessionIdEl.title = 'Click to retry connection';
                                 sessionIdEl.onclick = () => {
@@ -7025,19 +7117,20 @@
                                     generateSessionId();
                                 };
                             }
-                        }, 5000);
+                        }, 8000);
                         return true;
                     } catch (err) {
-                        console.error('❌ Session creation failed:', err);
+                        console.error('❌ Session creation failed:', err.message || err);
                         if (attempt < maxRetries) {
-                            await new Promise(r => setTimeout(r, 1000));
+                            console.log(`⏳ Retrying in 2 seconds...`);
+                            await new Promise(r => setTimeout(r, 2000));
                             return tryCreateSession();
                         }
                     }
                 } else {
                     console.warn('⚠️ createSession not ready, waiting...');
                     if (attempt < maxRetries) {
-                        await new Promise(r => setTimeout(r, 500));
+                        await new Promise(r => setTimeout(r, 1000));
                         return tryCreateSession();
                     }
                 }
