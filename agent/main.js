@@ -333,23 +333,19 @@ ipcMain.on('robot-mouse-event', (_event, data = {}) => {
         break;
       case 'scroll':
       case 'wheel':
-        // Handle scroll/wheel events
+        // ULTRA-LOW LATENCY: Fire-and-forget scroll with 3x sensitivity
         const { deltaX, deltaY } = data;
-        // Lower divisor = more sensitive scrolling
-        const scrollAmount = Math.max(1, Math.abs(Math.round(deltaY / 5)));
+        // Increased sensitivity: divisor 2 instead of 5 = 2.5x more responsive
+        // Minimum 1 line even for tiny movements
+        const scrollAmount = Math.max(1, Math.abs(Math.round(deltaY / 2)));
 
         if (scrollAmount > 0) {
-          mouse.setPosition({ x: coords.x, y: coords.y }).then(async () => {
-            try {
-              if (deltaY > 0) {
-                await mouse.scrollDown(scrollAmount);
-              } else {
-                await mouse.scrollUp(scrollAmount);
-              }
-            } catch (scrollErr) {
-              console.error('[robot] scroll error:', scrollErr);
-            }
-          }).catch(() => {});
+          // Fire-and-forget - no await, no mouse positioning (scroll at current pos)
+          if (deltaY > 0) {
+            mouse.scrollDown(scrollAmount).catch(() => {});
+          } else {
+            mouse.scrollUp(scrollAmount).catch(() => {});
+          }
         }
         break;
     }

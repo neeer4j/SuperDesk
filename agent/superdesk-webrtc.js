@@ -235,53 +235,19 @@ async function initializeSocket() {
             showNotification('Guest Connected', 'A user has joined your session');
             enableShareButton();
 
-            // AUTO-SHARE: Automatically start sharing the primary screen when guest joins
-            console.log('🚀 AUTO-SHARE: Starting automatic screen sharing...');
+            // MANUAL SHARE: Preload sources for fast screen selection dialog
+            // User MUST choose which screen/window to share (no auto-share)
+            console.log('📺 Preloading sources for screen selection...');
             try {
-                // Check if appControls is available
-                if (!window.appControls || typeof window.appControls.getDesktopSources !== 'function') {
-                    throw new Error('window.appControls.getDesktopSources() not available - preload.js may have failed');
-                }
-
-                // Use appControls API from preload.js instead of direct desktopCapturer
-                console.log('🚀 Calling window.appControls.getDesktopSources()...');
-                const sources = await window.appControls.getDesktopSources({ types: ['screen'] });
-                console.log('🚀 Got sources:', sources ? sources.length : 0);
+                // Preload sources so dialog shows instantly when user clicks "Start Sharing"
+                await preloadSources();
+                console.log('✅ Sources preloaded and ready for user selection');
                 
-                if (sources && sources.length > 0) {
-                    const primaryScreen = sources[0]; // First screen is usually the primary
-                    console.log('📺 Auto-sharing primary screen:', primaryScreen.name);
-
-                    await setupWebRTCSender(socket, window.superdeskState.sessionId, primaryScreen.id);
-                    console.log('✅ setupWebRTCSender completed successfully');
-
-                    showNotification('Sharing Started', 'Your screen is now being shared automatically');
-                    const shareBtn = document.getElementById('start-share-btn');
-                    if (shareBtn) {
-                        shareBtn.textContent = 'Stop Sharing';
-                        shareBtn.style.background = '#dc2626';
-                    }
-
-                    // Show host floating toolbar
-                    if (typeof window.showHostFloatingToolbar === 'function') {
-                        window.showHostFloatingToolbar();
-                    }
-
-                    // Minimize the main window
-                    if (window.appControls && window.appControls.minimize) {
-                        setTimeout(() => {
-                            window.appControls.minimize();
-                            console.log('✅ Main window minimized for clean desktop view');
-                        }, 300);
-                    }
-                } else {
-                    console.warn('⚠️ No screens available for auto-share');
-                }
-            } catch (autoShareErr) {
-                console.error('❌ Auto-share failed:', autoShareErr);
-                // Fall back to manual sharing
-                console.log('🚀 Preloading sources for manual sharing...');
-                preloadSources().catch(err => console.warn('Source preload failed:', err));
+                // Show prompt to user
+                showNotification('Ready to Share', 'Click "Start Screen Share" to choose what to share');
+            } catch (preloadErr) {
+                console.error('❌ Failed to preload sources:', preloadErr);
+                // User can still click button to load sources manually
             }
 
             // Setup file-only connection for file transfer without screen share
@@ -783,15 +749,14 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
             console.warn('🎮 HOST: Failed to send handshake:', e.message);
         }
 
-        // AUTO-ENABLE remote control when data channel opens
-        // This fixes the race condition where mobile sends input before Socket.IO enable-remote-control completes
-        // The Socket.IO flow still works for manual enable/disable control
-        console.log('🎮 HOST: Auto-enabling remote control for data channel input');
-        window.superdeskState.remoteControlEnabled = true;
-        if (window.appControls && window.appControls.ipcSend) {
-            window.appControls.ipcSend('robot-refresh-screen-size');
-            window.appControls.ipcSend('robot-set-enabled', true);
-        }
+        // MANUAL CONTROL: Guest must explicitly enable remote control
+        // Data channel is open and ready, but control is disabled by default for security
+        // Guest clicks "Enable Remote Control" button to activate
+        console.log('🎮 HOST: Input data channel ready - awaiting guest to enable remote control');
+        console.log('🔒 Remote control DISABLED by default (guest must enable via UI)');
+        
+        // Keep remote control disabled until guest explicitly enables it
+        window.superdeskState.remoteControlEnabled = false;
     };
 
     inputDataChannel.onclose = () => {
@@ -812,11 +777,8 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     inputDataChannel.onmessage = (event) => {
         try {
             const inputEvent = JSON.parse(event.data);
-            // LOW LATENCY: Skip logging for move events (too frequent)
-            if (inputEvent.action !== 'move') {
-                console.log('🎮 HOST: DataChannel input:', inputEvent.type, inputEvent.action);
-            }
-
+            // PERFORMANCE: No logging for move events (too frequent, causes lag)
+            
             // Process input event - handle both mouse/touch and direct action format
             if (inputEvent.type === 'mouse' || inputEvent.type === 'touch') {
                 handleMobileInputEvent(inputEvent);
@@ -893,8 +855,8 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                     maxWidth: 1920,
                     minHeight: 480,
                     maxHeight: 1080,
-                    minFrameRate: 5,
-                    maxFrameRate: 30
+                    minFrameRate: 15,
+                    maxFrameRate: 60  // 60fps for ultra-smooth mouse tracking
                 }
             }
         });
@@ -915,8 +877,8 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                         maxWidth: 1920,
                         minHeight: 480,
                         maxHeight: 1080,
-                        minFrameRate: 5,
-                        maxFrameRate: 30
+                        minFrameRate: 15,
+                        maxFrameRate: 60  // 60fps for ultra-smooth mouse tracking
                     }
                 }
             });
@@ -952,9 +914,9 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 if (!params.encodings) params.encodings = [{}];
 
                 params.encodings.forEach(encoding => {
-                    // Optimize for screen sharing (text clarity + low latency)
-                    encoding.maxBitrate = 4000000;      // 4 Mbps - good for 1080p screen
-                    encoding.maxFramerate = 30;          // Cap at 30fps for stability
+                    // ULTRA-LOW LATENCY: 60fps + high bitrate for instant cursor tracking
+                    encoding.maxBitrate = 6000000;      // 6 Mbps - crisp 1080p60
+                    encoding.maxFramerate = 60;          // 60fps for instant visual response
                     encoding.priority = 'high';          // Prioritize this stream
                     encoding.networkPriority = 'high';   // Network priority
                     encoding.scaleResolutionDownBy = 1.0; // Full resolution
@@ -3198,8 +3160,10 @@ function sendLowLatencyInput(eventType, data) {
     return false; // Failed to send
 }
 
-let rafScheduled = false;
-let pendingMoveData = null; // Store pending move for RAF batching
+// ULTRA-LOW LATENCY: No throttling, send every move for instant response
+// DataChannel is fast enough to handle 100+ updates/sec without congestion
+let lastMouseSendTime = 0;
+const MOUSE_SEND_INTERVAL = 0; // 0ms = send every event for maximum responsiveness
 
 function handleMouseMove(e) {
     if (!window.superdeskState.remoteControlEnabled) {
@@ -3219,20 +3183,8 @@ function handleMouseMove(e) {
 
     const { x, y } = coords;
 
-    // Store latest position for RAF batching
-    pendingMoveData = { action: 'move', x, y };
-
-    // Use requestAnimationFrame for optimal timing - syncs with display refresh
-    if (!rafScheduled) {
-        rafScheduled = true;
-        requestAnimationFrame(() => {
-            rafScheduled = false;
-            if (pendingMoveData) {
-                sendLowLatencyInput('mouse', pendingMoveData);
-                pendingMoveData = null;
-            }
-        });
-    }
+    // Send immediately - no throttling for instant cursor tracking
+    sendLowLatencyInput('mouse', { action: 'move', x, y });
 }
 
 function handleMouseClick(e) {
@@ -3278,9 +3230,8 @@ function handleMouseUp(e) {
     sendLowLatencyInput('mouse', { action: 'up', button: e.button, x, y });
 }
 
-// Mouse wheel/scroll handler - optimized for low latency
+// Mouse wheel/scroll handler - ULTRA LOW LATENCY
 let wheelEventCount = 0;
-let lastWheelTime = 0;
 
 function handleMouseWheel(e) {
     if (!window.superdeskState.remoteControlEnabled) return;
@@ -3289,11 +3240,7 @@ function handleMouseWheel(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    // Throttle wheel events to max 60fps (16ms)
-    const now = performance.now();
-    if (now - lastWheelTime < 16) return;
-    lastWheelTime = now;
-
+    // NO THROTTLING - send every scroll event instantly for responsive feel
     const video = e.target;
     const coords = getNormalizedCoordinates(e, video);
 
@@ -3301,10 +3248,10 @@ function handleMouseWheel(e) {
 
     const { x, y } = coords;
 
-    // Normalize delta values - different browsers report different scales
-    // Most browsers use 100 for one "click" of the scroll wheel
-    const deltaX = Math.sign(e.deltaX) * Math.min(Math.abs(e.deltaX), 120);
-    const deltaY = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120);
+    // Pass raw delta values for maximum sensitivity and control
+    // Host will handle the scaling
+    const deltaX = e.deltaX;
+    const deltaY = e.deltaY;
 
     sendLowLatencyInput('mouse', { action: 'scroll', deltaX, deltaY, x, y });
 }
