@@ -608,26 +608,19 @@ export default function Home() {
 
                         <div className="developers-note-content">
                             <p>
-                                SuperDesk started with a simple thought. Remote access should not feel complicated, heavy, or intrusive.
+                                SuperDesk basically started because we just wanted a simple way to connect to our stuff. We're just independent devs building this out of pure curiosity and because we really love coding.
                             </p>
                             <p>
-                                We are a small independent team, and SuperDesk was built out of curiosity, frustration with existing tools, and a genuine love for building good software.
-                            </p>
-                            <p>
-                                This is not a product created by a large company or backed by investors. It was built under real limitations, with a lot of trial and error, late nights, and constant learning. Every feature exists because it solves a real problem we personally cared about.
+                                We're not some big company with investors. This was built with a lot of trial and error, late nights, and plenty of coffee. We built features that we needed and hoped you'd like them too.
                             </p>
                             <p className="highlight-paragraph">
-                                Privacy sits at the heart of SuperDesk. Connections are peer to peer using WebRTC, so your data does not pass through our servers. We believe remote access should be fast, secure, and respectful of the user.
+                                We care a lot about privacy, which is why we use direct peer-to-peer connections. Your data stays yours, which is how it should be.
                             </p>
                             <p>
-                                SuperDesk is not perfect, and it never will be. Software is always evolving. What we can promise is that we will give our full effort every single day to make it better, more reliable, and more useful with each update.
+                                To be real with you, SuperDesk isn't perfect. Software never really is, right? But we're trying our best every day to squash bugs and make it smoother. We're learning as we go.
                             </p>
                             <p>
-                                The aim of SuperDesk is simple. To make remote access easy and reliable. To put privacy and control back in the hands of users. To build software that feels lightweight, honest, and human.
-                            </p>
-                            <p>
-
-                                SuperDesk is still evolving, and so are we as developers. If you are using it or supporting it in any way, you are already part of this journey. Thank you for being here.
+                                Our goal is just to make something simple and useful that feels human. If you're using it, you're already part of our journey. Thanks for hanging out with us!
                             </p>
 
 

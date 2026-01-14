@@ -403,19 +403,19 @@ html {
   }
 
   .portfolio-hero-content {
-    gap: 40px;
+    gap: 24px;
   }
 
-  /* Stack mockup images vertically on mobile */
+  /* Single image on mobile */
   .portfolio-hero-content>div:last-child {
     max-width: 100% !important;
-    min-height: 700px !important;
+    min-height: auto !important;
   }
 
   .portfolio-hero-content>div:last-child>div {
     position: relative !important;
     width: 100% !important;
-    max-width: 380px !important;
+    max-width: 90% !important;
     margin: 0 auto !important;
     transform: none !important;
     top: auto !important;
@@ -424,8 +424,9 @@ html {
     bottom: auto !important;
   }
 
-  .portfolio-hero-content>div:last-child>div:first-child {
-    margin-bottom: 20px !important;
+  /* Hide the second image on mobile */
+  .portfolio-hero-content>div:last-child>div:last-child {
+    display: none !important;
   }
 }
 
