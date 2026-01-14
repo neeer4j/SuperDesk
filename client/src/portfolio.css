@@ -164,6 +164,11 @@ html {
     padding: 4px 5px !important;
   }
 
+  /* Hide Web App button on mobile */
+  .portfolio-nav-buttons a:first-child {
+    display: none !important;
+  }
+
   .portfolio-nav-buttons svg {
     width: 8px !important;
     height: 8px !important;
@@ -372,6 +377,24 @@ html {
     gap: 50px;
     text-align: center;
   }
+
+  /* Adjust mockup images for tablet */
+  .portfolio-hero-content>div:last-child {
+    max-width: 100% !important;
+    min-height: 450px !important;
+  }
+
+  .portfolio-hero-content>div:last-child>div:first-child {
+    width: 55% !important;
+    top: 0 !important;
+    left: 5% !important;
+  }
+
+  .portfolio-hero-content>div:last-child>div:last-child {
+    width: 60% !important;
+    bottom: 0 !important;
+    right: 5% !important;
+  }
 }
 
 @media (max-width: 640px) {
@@ -382,12 +405,34 @@ html {
   .portfolio-hero-content {
     gap: 40px;
   }
+
+  /* Stack mockup images vertically on mobile */
+  .portfolio-hero-content>div:last-child {
+    max-width: 100% !important;
+    min-height: 700px !important;
+  }
+
+  .portfolio-hero-content>div:last-child>div {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 380px !important;
+    margin: 0 auto !important;
+    transform: none !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+  }
+
+  .portfolio-hero-content>div:last-child>div:first-child {
+    margin-bottom: 20px !important;
+  }
 }
 
 /* Features Section */
 .portfolio-features {
   padding: 100px 48px;
-  background-color: #0a0a10;
+  background-color: #0d0d14;
 }
 
 .portfolio-features-grid {
@@ -520,7 +565,7 @@ html {
 /* Developers Note Section */
 .portfolio-developers-note {
   padding: 100px 48px;
-  background: linear-gradient(180deg, #0a0a10 0%, #0d0d14 50%, #0f0f18 100%);
+  background-color: #0d0d14;
   position: relative;
 }
 
@@ -532,7 +577,7 @@ html {
   transform: translateX(-50%);
   width: 200px;
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.3) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.15) 50%, transparent 100%);
 }
 
 .portfolio-developers-note-container {
@@ -636,7 +681,6 @@ html {
 /* Footer */
 .portfolio-footer {
   padding: 48px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
   text-align: center;
 }
 
@@ -649,9 +693,8 @@ html {
 /* Tech Stack Section */
 .tech-stack-section {
   padding: 6rem 2rem;
-  background: rgba(13, 13, 20, 0.4);
+  background-color: #0d0d14;
   position: relative;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .section-title-container {
@@ -671,12 +714,12 @@ html {
 }
 
 .tech-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 3rem;
-  max-width: 1000px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2.5rem;
+  max-width: 900px;
   margin: 0 auto;
+  justify-items: center;
 }
 
 .tech-item {

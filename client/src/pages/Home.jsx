@@ -7,6 +7,8 @@ import superdeskLogoText from '../assets/superdeskmm.png';
 import superdeskLogoWhite from '../assets/superdeskw.png';
 import superdeskShowcase from '../assets/suppm.png';
 import superdeskHeroMockup from '../assets/supipad.png';
+import superdeskScreenshot from '../assets/sup.png';
+import supimage from '../assets/supimage.png';
 import {
     SiReact, SiNodedotjs, SiElectron,
     SiSocketdotio, SiWebrtc, SiTailwindcss, SiGithub,
@@ -270,8 +272,10 @@ export default function Home() {
 
                 {/* Right side */}
                 <div className="portfolio-nav-buttons">
-                    {/* Web App Button */}
-                    <a href="/app" onClick={handleAppNavigation}>
+                    {/* Web App Button - Hidden on Mobile */}
+                    <a href="/app" onClick={handleAppNavigation} style={{
+                        display: window.innerWidth <= 768 ? 'none' : 'flex'
+                    }}>
                         <span>Web App</span>
                     </a>
 
@@ -341,22 +345,133 @@ export default function Home() {
                         </p>
                     </motion.div>
 
-                    {/* Right - App Mockup Image */}
+                    {/* Right - App Mockup Images with Mac Frames (Stacked) */}
                     <motion.div
                         initial={{ opacity: 0, x: 30 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6, delay: 0.2 }}
-                        style={{ flex: 1, maxWidth: '550px' }}
+                        style={{ flex: 1, maxWidth: '900px', position: 'relative', minHeight: '550px' }}
                     >
-                        <img
-                            src={superdeskHeroMockup}
-                            alt="SuperDesk App"
-                            style={{
-                                width: '100%',
-                                height: 'auto',
-                                filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5))',
-                            }}
-                        />
+                        {/* First Mac Window Frame (Top Left - Agent Screenshot) */}
+                        <div style={{
+                            background: '#1a1a1a',
+                            borderRadius: '12px',
+                            padding: '0',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+                            transform: 'perspective(1200px) rotateZ(-2deg) rotateY(-2deg) rotateX(1deg)',
+                            transformStyle: 'preserve-3d',
+                            position: 'absolute',
+                            top: '0',
+                            left: '-40px',
+                            width: '420px',
+                            zIndex: 2,
+                            overflow: 'hidden',
+                        }}>
+                            {/* Mac Title Bar - Slim */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '8px 12px',
+                                background: 'rgba(30, 30, 30, 0.95)',
+                            }}>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <div style={{
+                                        width: '10px',
+                                        height: '10px',
+                                        borderRadius: '50%',
+                                        background: '#ff5f57',
+                                    }} />
+                                    <div style={{
+                                        width: '10px',
+                                        height: '10px',
+                                        borderRadius: '50%',
+                                        background: '#ffbd2e',
+                                    }} />
+                                    <div style={{
+                                        width: '10px',
+                                        height: '10px',
+                                        borderRadius: '50%',
+                                        background: '#28c840',
+                                    }} />
+                                </div>
+                            </div>
+                            <div style={{
+                                background: '#000',
+                                overflow: 'hidden',
+                            }}>
+                                <img
+                                    src={supimage}
+                                    alt="SuperDesk App"
+                                    style={{
+                                        width: '100%',
+                                        height: 'auto',
+                                        display: 'block',
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Second Mac Window Frame (Bottom Right - Supimage) */}
+                        <div style={{
+                            background: '#1a1a1a',
+                            borderRadius: '12px',
+                            padding: '0',
+                            boxShadow: '0 35px 70px -15px rgba(0, 0, 0, 0.8)',
+                            transform: 'perspective(1200px) rotateZ(2deg) rotateY(2deg) rotateX(1deg)',
+                            transformStyle: 'preserve-3d',
+                            position: 'absolute',
+                            top: '120px',
+                            right: '-60px',
+                            width: '480px',
+                            zIndex: 1,
+                            overflow: 'hidden',
+                        }}>
+                            {/* Mac Title Bar - Slim */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '8px 12px',
+                                background: 'rgba(30, 30, 30, 0.95)',
+                            }}>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <div style={{
+                                        width: '10px',
+                                        height: '10px',
+                                        borderRadius: '50%',
+                                        background: '#ff5f57',
+                                    }} />
+                                    <div style={{
+                                        width: '10px',
+                                        height: '10px',
+                                        borderRadius: '50%',
+                                        background: '#ffbd2e',
+                                    }} />
+                                    <div style={{
+                                        width: '10px',
+                                        height: '10px',
+                                        borderRadius: '50%',
+                                        background: '#28c840',
+                                    }} />
+                                </div>
+                            </div>
+                            <div style={{
+                                background: '#000',
+                                overflow: 'hidden',
+                                aspectRatio: '16 / 10',
+                            }}>
+                                <img
+                                    src={superdeskScreenshot}
+                                    alt="SuperDesk Agent"
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        objectPosition: 'center',
+                                        display: 'block',
+                                    }}
+                                />
+                            </div>
+                        </div>
                     </motion.div>
                 </div>
             </section>
