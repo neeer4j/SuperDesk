@@ -10,7 +10,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
 
 <p>
-  <img src="https://skillicons.dev/icons?i=react,nodejs,electron,typescript,azure,vercel,supabase,tailwind" alt="Tech stack" />
+  <img src="https://skillicons.dev/icons?i=react,nodejs,electron,js,azure,vercel,supabase,tailwind" alt="Tech stack" />
 </p>
 
 **Real-time screen sharing • Remote control • P2P file transfer • Cross-platform**
@@ -29,7 +29,7 @@
 
 ### 🖥️ Remote Desktop
 - **Real-time Screen Sharing** with WebRTC
-- **Full Remote Control** – Mouse & keyboard
+- **Full Remote Control** via WebRTC DataChannels – Mouse & keyboard
 - **Multi-monitor Support** – Choose which screen to share
 - **Adaptive Quality** – Auto-adjusts based on network
 
@@ -72,22 +72,22 @@
 
 ```mermaid
 flowchart TB
-    subgraph Cloud["☁️ Cloud Services"]
+    subgraph Cloud["Cloud Services"]
         direction LR
-        Client["🌐 Web Client\n(React)"]
-        Server["⚡ Signaling Server\n(Node.js + Socket.IO)"]
-        PubSub["📡 Azure Web PubSub"]
+        Client["Web Client<br/>(React + Vercel)"]
+        Server["Signaling Server<br/>(Node.js + Azure)"]
+        Auth["Auth<br/>(Supabase)"]
     end
     
-    subgraph Local["💻 Local Devices"]
+    subgraph Local["Local Devices"]
         direction LR
-        Agent1["🖥️ Desktop Agent\n(Electron - Host)"]
-        Agent2["🖥️ Desktop Agent\n(Electron - Guest)"]
-        Mobile["📱 Mobile App\n(React Native)"]
+        Agent1["Desktop Agent<br/>(Electron - Host)"]
+        Agent2["Desktop Agent<br/>(Electron - Guest)"]
+        Mobile["Mobile App<br/>(React Native)"]
     end
 
     Client <-->|WebSocket| Server
-    Server <--> PubSub
+    Client <-->|Auth| Auth
     Agent1 <-->|WebSocket| Server
     Agent2 <-->|WebSocket| Server
     Mobile <-->|WebSocket| Server
@@ -98,7 +98,7 @@ flowchart TB
 
     style Client fill:#000,stroke:#3291FF,color:#fff,stroke-width:2px
     style Server fill:#0078D4,stroke:#fff,color:#fff,stroke-width:2px
-    style PubSub fill:#50E6FF,stroke:#fff,color:#000,stroke-width:2px
+    style Auth fill:#3ECF8E,stroke:#fff,color:#fff,stroke-width:2px
     style Agent1 fill:#6B5B95,stroke:#fff,color:#fff,stroke-width:2px
     style Agent2 fill:#6B5B95,stroke:#fff,color:#fff,stroke-width:2px
     style Mobile fill:#88B04B,stroke:#fff,color:#fff,stroke-width:2px
@@ -108,7 +108,7 @@ flowchart TB
 |:----------|:------------|:---------:|
 | **Web Client** | React app for browser-based session joining | ![Vercel](https://img.shields.io/badge/-Vercel-000?logo=vercel&logoColor=white) |
 | **Signaling Server** | Node.js backend for WebRTC signaling & sessions | ![Azure](https://img.shields.io/badge/-Azure-0078D4?logo=microsoftazure&logoColor=white) |
-| **Azure Web PubSub** | Managed WebSocket service for real-time connections | ![Azure](https://img.shields.io/badge/-Azure-0078D4?logo=microsoftazure&logoColor=white) |
+| **Auth (Supabase)** | Email OTP authentication and user management | ![Supabase](https://img.shields.io/badge/-Supabase-3ECF8E?logo=supabase&logoColor=white) |
 | **Desktop Agent** | Electron app for Windows (host or join) | 💻 Local |
 | **Mobile App** | React Native app for Android/iOS | 📱 Local |
 
@@ -192,12 +192,14 @@ Create a `.env` file in the `server/` directory:
 PORT=8080
 NODE_ENV=production
 
-# Required for Azure Deployment
-AZURE_WEBPUBSUB_CONNECTION_STRING=your_connection_string
-
-# Optional: Cloudflare TURN for better NAT traversal
+# Cloudflare TURN for NAT traversal (recommended for production)
 CLOUDFLARE_TURN_KEY_ID=your_key_id
 CLOUDFLARE_TURN_KEY_API_TOKEN=your_api_token
+
+# Alternative: Static TURN configuration
+# TURN_URLS=turn:your-turn-server.com:3478
+# TURN_USERNAME=your_username
+# TURN_CREDENTIAL=your_password
 ```
 
 ### File Transfer Limits
@@ -285,6 +287,6 @@ See the [LICENSE](LICENSE) file for details. If you redistribute or modify this 
 
 **⚡ SuperDesk** – Modern remote desktop access built with web technologies.
 
-Made with ❤️ by [neeer4j](https://github.com/neeer4j)
+Made with ❤️ by [neeer4j](https://github.com/neeer4j) & [Joniyal](https://github.com/Joniyal)
 
 </div>
