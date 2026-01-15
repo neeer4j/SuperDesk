@@ -1300,6 +1300,7 @@ function LandingPage() {
   const [savingAccount, setSavingAccount] = useState(false);
   const [hostPlatform, setHostPlatform] = useState(null); // 'android', 'electron', or null
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [showWelcomeScreen, setShowWelcomeScreen] = useState(false);
   const clientRef = useRef(null);
   const usernameTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -1666,6 +1667,9 @@ function LandingPage() {
             right: '20px',
             width: '36px',
             height: '36px',
+            minWidth: '36px',
+            minHeight: '36px',
+            aspectRatio: '1',
             borderRadius: '50%',
             background: 'rgba(255, 255, 255, 0.15)',
             border: '2px solid rgba(255, 255, 255, 0.3)',
@@ -1677,7 +1681,10 @@ function LandingPage() {
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 0.2s ease',
-            zIndex: 10
+            zIndex: 10,
+            boxSizing: 'border-box',
+            padding: 0,
+            lineHeight: 1
           }}
           onMouseEnter={(e) => {
             e.target.style.background = 'rgba(255, 255, 255, 0.25)';
@@ -1909,6 +1916,108 @@ function LandingPage() {
 
   const headerInfo = getHeaderInfo();
 
+  // Welcome Back Screen - shows when user clicks exit button
+  if (showWelcomeScreen) {
+    return (
+      <div style={{
+        ...styles.authContainer,
+        background: darkTheme.primaryBg
+      }} className="auth-container-animated">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          gap: '24px',
+          padding: '32px'
+        }}>
+          {/* User Avatar */}
+          <div style={{
+            width: '100px',
+            height: '100px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '40px',
+            fontWeight: 700,
+            color: 'white',
+            boxShadow: '0 8px 32px rgba(139, 92, 246, 0.3)'
+          }}>
+            {userInfo.initial}
+          </div>
+
+          {/* Welcome Text */}
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{
+              fontSize: '28px',
+              fontWeight: 700,
+              color: darkTheme.textPrimary,
+              marginBottom: '8px'
+            }}>
+              Welcome back, {userInfo.name}
+            </h2>
+            <p style={{
+              fontSize: '14px',
+              color: darkTheme.textMuted
+            }}>
+              {userInfo.email}
+            </p>
+          </div>
+
+          {/* Continue Button */}
+          <button
+            onClick={() => setShowWelcomeScreen(false)}
+            style={{
+              padding: '16px 48px',
+              fontSize: '16px',
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+              border: 'none',
+              borderRadius: '12px',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 16px rgba(139, 92, 246, 0.3)',
+              marginTop: '16px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 8px 24px rgba(139, 92, 246, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.3)';
+            }}
+          >
+            Continue to Dashboard
+          </button>
+
+          {/* Sign Out Link */}
+          <button
+            onClick={handleSignOut}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: darkTheme.textMuted,
+              fontSize: '13px',
+              cursor: 'pointer',
+              marginTop: '8px',
+              padding: '8px 16px',
+              transition: 'color 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.target.style.color = '#ef4444'}
+            onMouseLeave={(e) => e.target.style.color = darkTheme.textMuted}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Dashboard Screen - Share Screen is HIDDEN
   return (
     <div style={styles.dashboardContainer}>
@@ -1972,13 +2081,13 @@ function LandingPage() {
         </button>
 
         <button
-          onClick={handleSignOut}
+          onClick={() => setShowWelcomeScreen(true)}
           style={{
             ...styles.navItem(false),
             marginTop: '8px'
           }}
-          title="Sign Out"
-          onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+          title="Exit to Home"
+          onMouseEnter={(e) => e.currentTarget.style.color = '#a78bfa'}
           onMouseLeave={(e) => e.currentTarget.style.color = darkTheme.sidebarText}
         >
           {Icons.logout}
