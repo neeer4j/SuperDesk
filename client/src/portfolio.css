@@ -902,3 +902,261 @@ html {
     height: 2.5rem;
   }
 }
+
+/* ========================================
+   LOGIN SCREEN ENTRANCE ANIMATIONS
+   ======================================== */
+
+/* Keyframe definitions */
+@keyframes authSlideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes authSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes authFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes authScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes subtleFloat {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.4);
+  }
+}
+
+/* Auth container - base animation */
+.auth-container-animated {
+  animation: authScaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Auth Left Panel - slides in from left */
+.auth-left-animated {
+  animation: authSlideInLeft 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.1s;
+  opacity: 0;
+}
+
+/* Auth Right Panel - slides in from right */
+.auth-right-animated {
+  animation: authSlideInRight 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+/* Logo with subtle float */
+.auth-logo-animated {
+  animation: authFadeUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+    subtleFloat 4s ease-in-out infinite;
+  animation-delay: 0.3s, 1s;
+  opacity: 0;
+}
+
+/* Brand text fade in */
+.auth-brand-text-animated {
+  animation: authFadeUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.4s;
+  opacity: 0;
+}
+
+/* Auth form container */
+.auth-form-animated {
+  animation: authFadeUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+
+/* Auth header */
+.auth-header-animated {
+  animation: authFadeUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.4s;
+  opacity: 0;
+}
+
+/* Input fields with staggered animation */
+.auth-input-animated {
+  animation: authFadeUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.5s;
+  opacity: 0;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease !important;
+}
+
+.auth-input-animated:nth-child(2) {
+  animation-delay: 0.55s;
+}
+
+.auth-input-animated:focus {
+  border-color: rgba(139, 92, 246, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-2px);
+}
+
+/* Primary button animation */
+.auth-btn-primary-animated {
+  animation: authFadeUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.6s;
+  opacity: 0;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.auth-btn-primary-animated:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+}
+
+.auth-btn-primary-animated:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Secondary button animation */
+.auth-btn-secondary-animated {
+  animation: authFadeUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.65s;
+  opacity: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
+}
+
+.auth-btn-secondary-animated:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+/* Back button animation */
+.auth-back-btn-animated {
+  animation: authFadeUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.15s;
+  opacity: 0;
+  transition: background-color 0.2s ease, transform 0.2s ease !important;
+}
+
+.auth-back-btn-animated:hover {
+  transform: translateX(-3px);
+}
+
+/* Help button animation */
+.auth-help-btn-animated {
+  animation: authScaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+/* Decorative background element for auth left */
+.auth-left-bg-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .auth-left-animated {
+    animation-delay: 0s;
+  }
+
+  .auth-right-animated {
+    animation-delay: 0.1s;
+  }
+
+  .auth-logo-animated {
+    animation-delay: 0.15s, 0.8s;
+  }
+
+  .auth-brand-text-animated {
+    animation-delay: 0.2s;
+  }
+
+  .auth-form-animated {
+    animation-delay: 0.15s;
+  }
+
+  .auth-header-animated {
+    animation-delay: 0.2s;
+  }
+
+  .auth-input-animated {
+    animation-delay: 0.25s;
+  }
+
+  .auth-btn-primary-animated {
+    animation-delay: 0.3s;
+  }
+
+  .auth-btn-secondary-animated {
+    animation-delay: 0.35s;
+  }
+}

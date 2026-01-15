@@ -16,12 +16,17 @@ import {
 } from 'react-icons/si';
 import { VscAzure } from 'react-icons/vsc';
 
-// Loading Overlay Component
+// Loading Overlay Component with smooth page transition
 const LoadingOverlay = React.memo(() => (
     <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={{ opacity: 0, scale: 1.02 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{
+            opacity: 0,
+            scale: 0.98,
+            transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
+        }}
+        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         style={{
             position: 'fixed',
             top: 0,
@@ -34,38 +39,111 @@ const LoadingOverlay = React.memo(() => (
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
         }}
     >
+        {/* Animated background gradient */}
         <motion.div
             animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.5, 1, 0.5],
+                background: [
+                    'radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%)',
+                    'radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.25) 0%, transparent 60%)',
+                    'radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%)',
+                ]
             }}
             transition={{
-                duration: 1.5,
+                duration: 2,
                 repeat: Infinity,
                 ease: "easeInOut"
             }}
-        >
-            <img src={superdeskLogoText} alt="Loading..." style={{ height: '48px', width: 'auto' }} />
-        </motion.div>
-        <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: 200 }}
-            transition={{ duration: 1.2, ease: "easeInOut" }}
             style={{
-                height: '2px',
-                backgroundColor: '#8b5cf6',
-                marginTop: '24px',
-                borderRadius: '2px',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                pointerEvents: 'none',
             }}
         />
-        <p style={{
-            marginTop: '16px',
-            color: 'rgba(255,255,255,0.5)',
-            fontSize: '14px',
-            fontFamily: 'monospace',
-        }}>Initializing Environment...</p>
+
+        {/* Logo with smooth pulse */}
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{
+                opacity: 1,
+                y: 0,
+            }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
+        >
+            <motion.img
+                src={superdeskLogoText}
+                alt="Loading..."
+                animate={{
+                    filter: [
+                        'drop-shadow(0 0 0px rgba(139, 92, 246, 0))',
+                        'drop-shadow(0 0 20px rgba(139, 92, 246, 0.5))',
+                        'drop-shadow(0 0 0px rgba(139, 92, 246, 0))',
+                    ]
+                }}
+                transition={{
+                    duration: 1.8,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+                style={{ height: '48px', width: 'auto' }}
+            />
+        </motion.div>
+
+        {/* Progress bar with glow effect */}
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            style={{
+                position: 'relative',
+                marginTop: '32px',
+                width: '200px',
+                height: '3px',
+                backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                borderRadius: '3px',
+                overflow: 'hidden',
+            }}
+        >
+            <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: '100%' }}
+                transition={{
+                    duration: 1,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '50%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, #8b5cf6, transparent)',
+                    borderRadius: '3px',
+                }}
+            />
+        </motion.div>
+
+        {/* Status text with fade */}
+        <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            transition={{ delay: 0.4 }}
+            style={{
+                marginTop: '20px',
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: '13px',
+                fontFamily: "'SF Mono', 'Consolas', monospace",
+                letterSpacing: '0.5px',
+            }}
+        >
+            Launching SuperDesk...
+        </motion.p>
     </motion.div>
 ));
 

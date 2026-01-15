@@ -6,6 +6,7 @@ import superdeskLogoLarge from './assets/superdeskL.png';
 import superdeskLogoWhiteLarge from './assets/superdeskwL.png';
 import SuperDeskClient from './SuperDeskClient';
 import RemoteDesktopView from './RemoteDesktopView';
+import './portfolio.css';
 
 // SVG Icons matching agent app
 const Icons = {
@@ -1625,11 +1626,12 @@ function LandingPage() {
   // Authentication Screen
   if (!user) {
     return (
-      <div style={styles.authContainer}>
+      <div style={styles.authContainer} className="auth-container-animated">
         {/* Back to Portfolio Button */}
         <a
           href="/"
           title="Back to Portfolio"
+          className="auth-back-btn-animated"
           style={{
             position: 'absolute',
             top: '20px',
@@ -1657,6 +1659,7 @@ function LandingPage() {
         <button
           onClick={() => setHelpModalOpen(true)}
           title="How to use SuperDesk"
+          className="auth-help-btn-animated"
           style={{
             position: 'absolute',
             top: '20px',
@@ -1774,21 +1777,24 @@ function LandingPage() {
           </div>
         )}
 
-        <div style={styles.authLeft}>
+        <div style={styles.authLeft} className="auth-left-animated">
+          {/* Background glow effect */}
+          <div className="auth-left-bg-glow"></div>
           <img
             src={darkMode ? superdeskLogoWhiteLarge : superdeskLogoLarge}
             alt="SuperDesk"
+            className="auth-logo-animated"
             style={styles.logoLarge}
             onError={(e) => { e.target.src = darkMode ? superdeskLogoWhite : superdeskLogo; }}
           />
-          <div style={styles.brandText}>
+          <div style={styles.brandText} className="auth-brand-text-animated">
             Secure remote desktop sharing<br />for modern teams
           </div>
         </div>
 
-        <div style={styles.authRight}>
-          <div style={styles.authForm}>
-            <div style={styles.authHeader}>
+        <div style={styles.authRight} className="auth-right-animated">
+          <div style={styles.authForm} className="auth-form-animated">
+            <div style={styles.authHeader} className="auth-header-animated">
               <h1 style={styles.authTitle}>
                 {otpSent ? 'Verify OTP' : 'Welcome Back!'}
               </h1>
@@ -1809,12 +1815,14 @@ function LandingPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendOTP()}
                   disabled={loading}
+                  className="auth-input-animated"
                   style={styles.inputField}
                 />
 
                 <button
                   onClick={handleSendOTP}
                   disabled={loading}
+                  className="auth-btn-primary-animated"
                   style={{
                     ...styles.btnPrimary,
                     opacity: loading ? 0.7 : 1,
@@ -1836,12 +1844,14 @@ function LandingPage() {
                   onKeyPress={(e) => e.key === 'Enter' && handleVerifyOTP()}
                   disabled={loading}
                   maxLength={6}
+                  className="auth-input-animated"
                   style={styles.inputField}
                 />
 
                 <button
                   onClick={handleVerifyOTP}
                   disabled={loading}
+                  className="auth-btn-primary-animated"
                   style={{
                     ...styles.btnPrimary,
                     opacity: loading ? 0.7 : 1,
@@ -1853,6 +1863,7 @@ function LandingPage() {
 
                 <button
                   onClick={() => { setOtpSent(false); setOtp(''); }}
+                  className="auth-btn-secondary-animated"
                   style={styles.btnSecondary}
                 >
                   Back to Email
