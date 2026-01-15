@@ -2,6 +2,8 @@
   "name": "superdesk-client",
   "version": "1.0.0",
   "private": true,
+  "author": "Neeraj Venu & Joniyal",
+  "license": "Apache-2.0",
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",

@@ -27,8 +27,8 @@
     "screen-sharing",
     "windows"
   ],
-  "author": "Your Name",
-  "license": "MIT",
+  "author": "Neeraj Venu & Joniyal",
+  "license": "Apache-2.0",
   "workspaces": [
     "client",
     "server",

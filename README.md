@@ -6,7 +6,7 @@
 
 [![Azure](https://img.shields.io/badge/Server-Azure%20App%20Service-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com)
 [![Vercel](https://img.shields.io/badge/Client-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
-[![License](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
 
 <p>
@@ -277,9 +277,9 @@ SuperDesk/
 
 ## 📄 License
 
-This project is licensed under the **GNU General Public License v3.0**.
+This project is licensed under the **Apache License 2.0**.
 
-See the [LICENSE](LICENSE) file for details. If you redistribute or modify this project, you must keep it under GPL-3.0.
+See the [LICENSE](LICENSE) file for details.
 
 ---
 
