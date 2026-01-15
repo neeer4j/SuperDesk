@@ -1778,8 +1778,6 @@ function LandingPage() {
         )}
 
         <div style={styles.authLeft} className="auth-left-animated">
-          {/* Background glow effect */}
-          <div className="auth-left-bg-glow"></div>
           <img
             src={darkMode ? superdeskLogoWhiteLarge : superdeskLogoLarge}
             alt="SuperDesk"

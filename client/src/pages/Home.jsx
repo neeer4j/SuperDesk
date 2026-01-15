@@ -16,17 +16,13 @@ import {
 } from 'react-icons/si';
 import { VscAzure } from 'react-icons/vsc';
 
-// Loading Overlay Component with smooth page transition
+// Loading Overlay Component - Simple and clean
 const LoadingOverlay = React.memo(() => (
     <motion.div
-        initial={{ opacity: 0, scale: 1.02 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{
-            opacity: 0,
-            scale: 0.98,
-            transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
-        }}
-        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
         style={{
             position: 'fixed',
             top: 0,
@@ -39,111 +35,27 @@ const LoadingOverlay = React.memo(() => (
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            overflow: 'hidden',
+            gap: '24px',
         }}
     >
-        {/* Animated background gradient */}
-        <motion.div
-            animate={{
-                background: [
-                    'radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%)',
-                    'radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.25) 0%, transparent 60%)',
-                    'radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%)',
-                ]
-            }}
-            transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-            }}
-            style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                pointerEvents: 'none',
-            }}
+        <img
+            src={superdeskLogoText}
+            alt="SuperDesk"
+            style={{ height: '40px', width: 'auto' }}
         />
-
-        {/* Logo with smooth pulse */}
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{
-                opacity: 1,
-                y: 0,
-            }}
-            transition={{ duration: 0.5, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
-        >
-            <motion.img
-                src={superdeskLogoText}
-                alt="Loading..."
-                animate={{
-                    filter: [
-                        'drop-shadow(0 0 0px rgba(139, 92, 246, 0))',
-                        'drop-shadow(0 0 20px rgba(139, 92, 246, 0.5))',
-                        'drop-shadow(0 0 0px rgba(139, 92, 246, 0))',
-                    ]
-                }}
-                transition={{
-                    duration: 1.8,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-                style={{ height: '48px', width: 'auto' }}
-            />
-        </motion.div>
-
-        {/* Progress bar with glow effect */}
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            style={{
-                position: 'relative',
-                marginTop: '32px',
-                width: '200px',
-                height: '3px',
-                backgroundColor: 'rgba(139, 92, 246, 0.2)',
-                borderRadius: '3px',
-                overflow: 'hidden',
-            }}
-        >
-            <motion.div
-                initial={{ x: '-100%' }}
-                animate={{ x: '100%' }}
-                transition={{
-                    duration: 1,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '50%',
-                    height: '100%',
-                    background: 'linear-gradient(90deg, transparent, #8b5cf6, transparent)',
-                    borderRadius: '3px',
-                }}
-            />
-        </motion.div>
-
-        {/* Status text with fade */}
-        <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            transition={{ delay: 0.4 }}
-            style={{
-                marginTop: '20px',
-                color: 'rgba(255,255,255,0.5)',
-                fontSize: '13px',
-                fontFamily: "'SF Mono', 'Consolas', monospace",
-                letterSpacing: '0.5px',
-            }}
-        >
-            Launching SuperDesk...
-        </motion.p>
+        <div style={{
+            width: '24px',
+            height: '24px',
+            border: '2px solid rgba(139, 92, 246, 0.2)',
+            borderTopColor: '#8b5cf6',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+        }} />
+        <style>{`
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+        `}</style>
     </motion.div>
 ));
 
