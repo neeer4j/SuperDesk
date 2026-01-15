@@ -1919,100 +1919,147 @@ function LandingPage() {
   // Welcome Back Screen - shows when user clicks exit button
   if (showWelcomeScreen) {
     return (
-      <div style={{
-        ...styles.authContainer,
-        background: darkTheme.primaryBg
-      }} className="auth-container-animated">
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          gap: '24px',
-          padding: '32px'
-        }}>
-          {/* User Avatar */}
-          <div style={{
-            width: '100px',
-            height: '100px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+      <div style={styles.authContainer} className="auth-container-animated">
+        {/* Back to Portfolio Button */}
+        <a
+          href="/"
+          title="Back to Portfolio"
+          className="auth-back-btn-animated"
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: 'rgba(255, 255, 255, 0.9)',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '40px',
-            fontWeight: 700,
-            color: 'white',
-            boxShadow: '0 8px 32px rgba(139, 92, 246, 0.3)'
-          }}>
-            {userInfo.initial}
-          </div>
+            gap: '6px',
+            textDecoration: 'none',
+            transition: 'all 0.2s ease',
+            zIndex: 10
+          }}
+        >
+          ← Back
+        </a>
 
-          {/* Welcome Text */}
-          <div style={{ textAlign: 'center' }}>
-            <h2 style={{
+        {/* Left Panel - Logo & Branding */}
+        <div style={styles.authLeft} className="auth-left-animated">
+          <img
+            src={darkMode ? superdeskLogoWhiteLarge : superdeskLogoLarge}
+            alt="SuperDesk"
+            className="auth-logo-animated"
+            style={styles.logoLarge}
+            onError={(e) => { e.target.src = darkMode ? superdeskLogoWhite : superdeskLogo; }}
+          />
+          <div style={styles.brandText} className="auth-brand-text-animated">
+            Secure remote desktop sharing<br />for modern teams
+          </div>
+        </div>
+
+        {/* Right Panel - Welcome Card */}
+        <div style={styles.authRight} className="auth-right-animated">
+          <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+            {/* Header */}
+            <h1 style={{
               fontSize: '28px',
               fontWeight: 700,
-              color: darkTheme.textPrimary,
+              color: '#ffffff',
               marginBottom: '8px'
             }}>
-              Welcome back, {userInfo.name}
-            </h2>
+              Welcome Back!
+            </h1>
             <p style={{
               fontSize: '14px',
-              color: darkTheme.textMuted
+              color: 'rgba(255, 255, 255, 0.6)',
+              marginBottom: '32px'
             }}>
-              {userInfo.email}
+              You're currently signed in as
             </p>
+
+            {/* Profile Card */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '24px',
+              marginBottom: '24px'
+            }}>
+              {/* Avatar */}
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                fontWeight: 700,
+                color: 'white',
+                margin: '0 auto 16px'
+              }}>
+                {userInfo.initial}
+              </div>
+              {/* Email */}
+              <p style={{
+                fontSize: '15px',
+                color: '#ffffff',
+                fontWeight: 500
+              }}>
+                {userInfo.email}
+              </p>
+            </div>
+
+            {/* Continue Button */}
+            <button
+              onClick={() => setShowWelcomeScreen(false)}
+              style={{
+                width: '100%',
+                padding: '14px 24px',
+                fontSize: '15px',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                border: 'none',
+                borderRadius: '10px',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                marginBottom: '16px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.opacity = '1';
+              }}
+            >
+              Continue to Dashboard
+            </button>
+
+            {/* Sign in with different account */}
+            <button
+              onClick={handleSignOut}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'rgba(255, 255, 255, 0.5)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                padding: '8px 16px',
+                transition: 'color 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.8)'}
+              onMouseLeave={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.5)'}
+            >
+              Sign in with different account
+            </button>
           </div>
-
-          {/* Continue Button */}
-          <button
-            onClick={() => setShowWelcomeScreen(false)}
-            style={{
-              padding: '16px 48px',
-              fontSize: '16px',
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-              border: 'none',
-              borderRadius: '12px',
-              color: 'white',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 4px 16px rgba(139, 92, 246, 0.3)',
-              marginTop: '16px'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 8px 24px rgba(139, 92, 246, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.3)';
-            }}
-          >
-            Continue to Dashboard
-          </button>
-
-          {/* Sign Out Link */}
-          <button
-            onClick={handleSignOut}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: darkTheme.textMuted,
-              fontSize: '13px',
-              cursor: 'pointer',
-              marginTop: '8px',
-              padding: '8px 16px',
-              transition: 'color 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.color = '#ef4444'}
-            onMouseLeave={(e) => e.target.style.color = darkTheme.textMuted}
-          >
-            Sign out
-          </button>
         </div>
       </div>
     );
