@@ -70,6 +70,10 @@ let remoteControlEnabled = false;
 let screenSize = { width: 1920, height: 1080 };
 const activeKeys = new Set();
 
+// Mutex for mouse click operations to prevent race conditions
+let mouseOperationInProgress = false;
+const mouseOperationQueue = [];
+
 
 async function refreshScreenSize() {
   try {
@@ -301,50 +305,78 @@ ipcMain.on('renderer-log', (_event, level, message) => {
   }
 });
 
+// Process mouse operations from queue (for click operations)
+async function processMouseQueue() {
+  if (mouseOperationInProgress || mouseOperationQueue.length === 0) return;
+
+  mouseOperationInProgress = true;
+
+  while (mouseOperationQueue.length > 0) {
+    const op = mouseOperationQueue.shift();
+    try {
+      await op();
+    } catch (err) {
+      console.error('[robot] Mouse operation error:', err);
+    }
+  }
+
+  mouseOperationInProgress = false;
+}
+
+// Queue a click operation to ensure sequential execution
+function queueClickOperation(operation) {
+  mouseOperationQueue.push(operation);
+  processMouseQueue();
+}
+
 ipcMain.on('robot-mouse-event', (_event, data = {}) => {
   if (!remoteControlEnabled) return;
-  
+
   const { type, x, y, button } = data;
   const coords = translateCoordinates(x, y);
+  const nutButton = mapNutButton(button);
 
   try {
     switch (type) {
       case 'move':
       case 'mousemove':
         // Fire-and-forget for instant movement (no await = no latency)
-        mouse.setPosition({ x: coords.x, y: coords.y }).catch(() => {});
+        mouse.setPosition({ x: coords.x, y: coords.y }).catch(() => { });
         break;
       case 'down':
       case 'mousedown':
-        mouse.setPosition({ x: coords.x, y: coords.y }).then(() =>
-          mouse.pressButton(mapNutButton(button))
-        ).catch(err => console.error('[robot] down error:', err));
+        // Queue mousedown to ensure proper sequencing
+        queueClickOperation(async () => {
+          await mouse.setPosition({ x: coords.x, y: coords.y });
+          await mouse.pressButton(nutButton);
+        });
         break;
       case 'up':
       case 'mouseup':
-        mouse.setPosition({ x: coords.x, y: coords.y }).then(() =>
-          mouse.releaseButton(mapNutButton(button))
-        ).catch(err => console.error('[robot] up error:', err));
+        // Queue mouseup to ensure proper sequencing after mousedown
+        queueClickOperation(async () => {
+          await mouse.setPosition({ x: coords.x, y: coords.y });
+          await mouse.releaseButton(nutButton);
+        });
         break;
       case 'click':
-        mouse.setPosition({ x: coords.x, y: coords.y }).then(() =>
-          mouse.click(mapNutButton(button))
-        ).catch(err => console.error('[robot] click error:', err));
+        // Queue full click sequence
+        queueClickOperation(async () => {
+          await mouse.setPosition({ x: coords.x, y: coords.y });
+          await mouse.click(nutButton);
+        });
         break;
       case 'scroll':
       case 'wheel':
         // ULTRA-LOW LATENCY: Fire-and-forget scroll with 3x sensitivity
         const { deltaX, deltaY } = data;
-        // Increased sensitivity: divisor 2 instead of 5 = 2.5x more responsive
-        // Minimum 1 line even for tiny movements
         const scrollAmount = Math.max(1, Math.abs(Math.round(deltaY / 2)));
 
         if (scrollAmount > 0) {
-          // Fire-and-forget - no await, no mouse positioning (scroll at current pos)
           if (deltaY > 0) {
-            mouse.scrollDown(scrollAmount).catch(() => {});
+            mouse.scrollDown(scrollAmount).catch(() => { });
           } else {
-            mouse.scrollUp(scrollAmount).catch(() => {});
+            mouse.scrollUp(scrollAmount).catch(() => { });
           }
         }
         break;
@@ -503,23 +535,23 @@ function repositionToolbar(collapsed = false, edge = 'right', expanded = false) 
 
     const animate = () => {
       if (toolbarWindow.isDestroyed()) return;
-      
+
       currentStep++;
       const progress = easeOutCubic(currentStep / steps);
-      
+
       const newBounds = {
         x: Math.round(startBounds.x + (targetBounds.x - startBounds.x) * progress),
         y: Math.round(startBounds.y + (targetBounds.y - startBounds.y) * progress),
         width: Math.round(startBounds.width + (targetBounds.width - startBounds.width) * progress),
         height: targetBounds.height
       };
-      
+
       try {
         toolbarWindow.setBounds(newBounds);
       } catch (err) {
         console.warn('[Toolbar] Animation setBounds failed:', err);
       }
-      
+
       if (currentStep < steps) {
         setTimeout(animate, stepTime);
       }
@@ -718,7 +750,7 @@ function createWindow() {
     console.log('📺 [Popup Created] URL:', details.url);
     childWindow.setMenu(null);
     childWindow.setMenuBarVisibility(false);
-    
+
     // CRITICAL: Apply content protection to guest camera popup
     // This prevents the guest from seeing their own camera in the host's screen share
     if (details.url && details.url.includes('guest-camera-popup')) {
@@ -1046,7 +1078,7 @@ app.whenReady().then(() => {
   // The toolbar handles file offers inline, so we just show a notification for user awareness
   ipcMain.on('show-file-offer-notification', (event, { title, body, fileName, fileSize, fileSizeFormatted }) => {
     console.log('📁 [Main] File offer notification received:', fileName);
-    
+
     if (Notification.isSupported()) {
       const notification = new Notification({
         title: title || '📁 Incoming File',
@@ -1066,7 +1098,7 @@ app.whenReady().then(() => {
 
       notification.show();
     }
-    
+
     // Flash taskbar to get user attention without opening the app
     if (mainWindow) {
       mainWindow.flashFrame(true);
@@ -1197,13 +1229,13 @@ function showLocalCameraOverlay() {
   // Maximum always-on-top priority - visible even over fullscreen apps
   localCameraOverlay.setAlwaysOnTop(true, 'screen-saver');
   localCameraOverlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  
+
   // CRITICAL: Exclude camera overlay from screen capture so it doesn't appear in shared screen
   localCameraOverlay.setContentProtection(true);
-  
+
   // Prevent the window from being hidden when main app is minimized
   localCameraOverlay.setSkipTaskbar(true);
-  
+
   localCameraOverlay.loadFile(path.join(__dirname, 'camera-overlay.html'));
 
   localCameraOverlay.webContents.on('did-finish-load', () => {
@@ -1231,7 +1263,7 @@ function hideLocalCameraOverlay() {
           video.srcObject.getTracks().forEach(t => t.stop());
           video.srcObject = null;
         }
-      `).catch(() => {});
+      `).catch(() => { });
       localCameraOverlay.close();
     } catch (e) {
       console.warn('📹 Error closing local camera overlay:', e.message);
@@ -1276,12 +1308,12 @@ function showRemoteCameraOverlay() {
   // Maximum always-on-top priority - visible even over fullscreen apps and when minimized
   remoteCameraOverlay.setAlwaysOnTop(true, 'screen-saver');
   remoteCameraOverlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  
+
   // CRITICAL: Exclude from screen capture so guest doesn't see their own camera
   remoteCameraOverlay.setContentProtection(true);
-  
+
   remoteCameraOverlay.setSkipTaskbar(true);
-  
+
   remoteCameraOverlay.loadFile(path.join(__dirname, 'guest-camera-popup.html'));
 
   remoteCameraOverlay.on('closed', () => {
