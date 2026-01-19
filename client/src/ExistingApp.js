@@ -7,8 +7,8 @@ import FeaturesPage from './FeaturesPage';
 import notify from './utils/notifications';
 
 // Material UI imports
-import { 
-  ThemeProvider, 
+import {
+  ThemeProvider,
   createTheme,
   AppBar,
   Toolbar,
@@ -75,8 +75,8 @@ const createAppTheme = (mode) => createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: mode === 'light' 
-            ? '0 2px 8px rgba(0,0,0,0.1)' 
+          boxShadow: mode === 'light'
+            ? '0 2px 8px rgba(0,0,0,0.1)'
             : '0 2px 8px rgba(0,0,0,0.3)',
           transition: 'box-shadow 0.3s ease-in-out',
           '&:hover': {
@@ -114,8 +114,8 @@ function App() {
   const [remoteControlEnabled, setRemoteControlEnabled] = useState(false);
   const [screenShareRequested, setScreenShareRequested] = useState(false);
   const [remoteDesktopWindow, setRemoteDesktopWindowState] = useState(null);
-  const [darkMode, setDarkMode] = useState(false);
-  
+  const darkMode = false;
+
   // Create theme based on current mode
   const theme = createAppTheme(darkMode ? 'dark' : 'light');
 
@@ -132,9 +132,9 @@ function App() {
   const setRemoteSocketId = (value) => {
     remoteSocketIdRef.current = value;
   };
-  
 
-  
+
+
   const videoRef = useRef(null);
   const remoteDesktopWindowRef = useRef(null);
   const isHostRef = useRef(false);
@@ -174,7 +174,7 @@ function App() {
     } catch (e) {
       console.log(`[diagnostics][local-track] ${label}: settings unavailable`, e);
     }
-    }, []);
+  }, []);
 
   const startOutboundStatsLogger = (pc) => {
     if (!pc) return;
@@ -274,7 +274,7 @@ function App() {
     // Initialize socket connection with fallback options to bypass ad blockers
     console.log('Connecting to server:', config.server);
     setLoading(true);
-    
+
     const newSocket = io(config.server, {
       transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
       timeout: 20000,
@@ -287,134 +287,134 @@ function App() {
       upgrade: true,
       rememberUpgrade: false
     });
-      // Screen sharing event handlers
-      newSocket.on('screen-share-requested', (data) => {
-        const { requesterId } = data;
-        notify.info(`Screen share requested by ${requesterId}`);
-      });
+    // Screen sharing event handlers
+    newSocket.on('screen-share-requested', (data) => {
+      const { requesterId } = data;
+      notify.info(`Screen share requested by ${requesterId}`);
+    });
 
-      // Guest joined - host needs to send offer
-      newSocket.on('guest-joined', async (data) => {
-        const { guestId, sessionId: joinedSessionId } = data;
-        console.log('=== GUEST JOINED SESSION ===');
-        console.log('Guest ID:', guestId);
-        console.log('Session ID:', joinedSessionId);
-        console.log('peerConnectionRef.current:', peerConnectionRef.current);
-        console.log('localStreamRef.current:', localStreamRef.current);
-        
-        setRemoteSocketId(guestId);
-        
-        const pc = peerConnectionRef.current;
-        const stream = localStreamRef.current;
-        
-        if (pc && stream) {
-          console.log('✅ Sending offer to new guest');
-          
-          // Create and send offer
-          try {
-            const offer = await pc.createOffer();
-            console.log('Created offer for guest:', offer);
-            await pc.setLocalDescription(offer);
-            
-            newSocket.emit('offer', {
-              sessionId: sessionIdRef.current,
-              targetId: guestId,
-              offer
-            });
-            console.log('✅ Sent offer to guest:', guestId);
-          } catch (error) {
-            console.error('❌ Error creating offer for guest:', error);
-          }
-        } else {
-          console.error('❌ Cannot send offer - missing:', {
-            hasPeerConnection: !!pc,
-            hasLocalStream: !!stream
+    // Guest joined - host needs to send offer
+    newSocket.on('guest-joined', async (data) => {
+      const { guestId, sessionId: joinedSessionId } = data;
+      console.log('=== GUEST JOINED SESSION ===');
+      console.log('Guest ID:', guestId);
+      console.log('Session ID:', joinedSessionId);
+      console.log('peerConnectionRef.current:', peerConnectionRef.current);
+      console.log('localStreamRef.current:', localStreamRef.current);
+
+      setRemoteSocketId(guestId);
+
+      const pc = peerConnectionRef.current;
+      const stream = localStreamRef.current;
+
+      if (pc && stream) {
+        console.log('✅ Sending offer to new guest');
+
+        // Create and send offer
+        try {
+          const offer = await pc.createOffer();
+          console.log('Created offer for guest:', offer);
+          await pc.setLocalDescription(offer);
+
+          newSocket.emit('offer', {
+            sessionId: sessionIdRef.current,
+            targetId: guestId,
+            offer
           });
+          console.log('✅ Sent offer to guest:', guestId);
+        } catch (error) {
+          console.error('❌ Error creating offer for guest:', error);
         }
-      });
+      } else {
+        console.error('❌ Cannot send offer - missing:', {
+          hasPeerConnection: !!pc,
+          hasLocalStream: !!stream
+        });
+      }
+    });
 
-      newSocket.on('screen-share-approved', () => {
-        notify.success('Screen share request approved! Host can start sharing.');
-      });
+    newSocket.on('screen-share-approved', () => {
+      notify.success('Screen share request approved! Host can start sharing.');
+    });
 
-      newSocket.on('screen-share-denied', () => {
-        notify.warning('Screen share request was denied.');
-        setScreenShareRequested(false);
-      });
+    newSocket.on('screen-share-denied', () => {
+      notify.warning('Screen share request was denied.');
+      setScreenShareRequested(false);
+    });
 
-      newSocket.on('screen-share-started', () => {
-        notify.success('Host started screen sharing!');
-      });
+    newSocket.on('screen-share-started', () => {
+      notify.success('Host started screen sharing!');
+    });
 
-      newSocket.on('screen-share-stopped', () => {
-        notify.info('Host stopped screen sharing.');
-      });
+    newSocket.on('screen-share-stopped', () => {
+      notify.info('Host stopped screen sharing.');
+    });
 
-  socketRef.current = newSocket;
+    socketRef.current = newSocket;
 
-      newSocket.on('connect', () => {
+    newSocket.on('connect', () => {
       setConnected(true);
       setConnectionError(null);
       setLoading(false);
       console.log('Connected to signaling server via', newSocket.io.engine.transport.name);
     });
 
-      newSocket.on('disconnect', () => {
+    newSocket.on('disconnect', () => {
       setConnected(false);
       console.log('Disconnected from signaling server');
     });
 
-      newSocket.on('connect_error', (error) => {
+    newSocket.on('connect_error', (error) => {
       console.error('Connection error:', error);
       setConnected(false);
       setLoading(false);
       setConnectionError(`Failed to connect to server: ${config.server}. ${error.message || 'Unknown error'}`);
     });
 
-      newSocket.on('reconnect', (attemptNumber) => {
+    newSocket.on('reconnect', (attemptNumber) => {
       console.log('Reconnected after', attemptNumber, 'attempts');
       setConnected(true);
       setConnectionError(null);
     });
 
-      newSocket.on('reconnect_error', (error) => {
+    newSocket.on('reconnect_error', (error) => {
       console.error('Reconnection error:', error);
       setConnectionError(`Reconnection failed: ${error.message || 'Unknown error'}`);
     });
 
-      newSocket.io.on('error', (error) => {
+    newSocket.io.on('error', (error) => {
       console.error('Socket.io error:', error);
       setConnectionError(`Socket error: ${error.message || 'Unknown error'}`);
     });
 
-      newSocket.on('session-created', (data) => {
+    newSocket.on('session-created', (data) => {
       const id = typeof data === 'string' ? data : data.sessionId;
       setSessionId(id);
       setIsHost(true);
       console.log('✅ Session created:', id);
     });
 
-      newSocket.on('session-joined', (id) => {
+    newSocket.on('session-joined', (id) => {
       console.log('✅ Successfully joined session:', id);
       notify.success(`Successfully joined session: ${id}`);
     });
 
-      newSocket.on('session-error', (error) => {
+    newSocket.on('session-error', (error) => {
       console.error('❌ Session error:', error);
       notify.error(`Session error: ${error}`);
     });
 
-      newSocket.on('user-joined', (userId) => {
+    newSocket.on('user-joined', (userId) => {
       console.log('👤 User joined session:', userId);
       notify.info('Another user joined the session!');
     });
 
-      newSocket.on('user-left', (userId) => {
+    newSocket.on('user-left', (userId) => {
       console.log('👤 User left session:', userId);
       notify.info('User left the session');
     });
 
-      newSocket.on('session-ended', () => {
+    newSocket.on('session-ended', () => {
       notify.warning('Session has been ended by the host');
       // Clean up
       setSessionId('');
@@ -434,7 +434,7 @@ function App() {
       localStreamRef.current = null;
     });
 
-      newSocket.on('remote-control-enabled', () => {
+    newSocket.on('remote-control-enabled', () => {
       setRemoteControlEnabled(true);
       if (isHostRef.current) {
         notify.success('Guest remote control enabled. You can disable it any time from the dashboard.');
@@ -443,7 +443,7 @@ function App() {
       }
     });
 
-      newSocket.on('remote-control-disabled', () => {
+    newSocket.on('remote-control-disabled', () => {
       setRemoteControlEnabled(false);
       if (isHostRef.current) {
         notify.info('Guest remote control disabled.');
@@ -452,19 +452,19 @@ function App() {
       }
     });
 
-      newSocket.on('offer', async (data) => {
+    newSocket.on('offer', async (data) => {
       console.log('📨 RECEIVED OFFER from server');
       console.log('Offer data:', data);
       await handleOffer(data);
     });
 
-      newSocket.on('answer', async (data) => {
+    newSocket.on('answer', async (data) => {
       console.log('📨 RECEIVED ANSWER from server');
       console.log('Answer data:', data);
       await handleAnswer(data);
     });
 
-      newSocket.on('ice-candidate', (data) => {
+    newSocket.on('ice-candidate', (data) => {
       console.log('📨 RECEIVED ICE CANDIDATE from server');
       console.log('Candidate:', data.candidate);
       handleIceCandidate(data);
@@ -474,7 +474,7 @@ function App() {
       socketRef.current = null;
       newSocket.close();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update popup window when remoteStream changes (ONLY for cases where stream arrives AFTER popup opens)
@@ -482,21 +482,21 @@ function App() {
     console.log('🔄 useEffect triggered - remoteStream changed');
     console.log('remoteDesktopWindow exists:', !!remoteDesktopWindow);
     console.log('remoteStream exists:', !!remoteStream);
-    
+
     if (remoteDesktopWindow && !remoteDesktopWindow.closed && remoteStream) {
       const popupVideo = remoteDesktopWindow.document.getElementById('remoteVideo');
-      
+
       console.log('popupVideo exists:', !!popupVideo);
       console.log('popupVideo.srcObject:', popupVideo?.srcObject);
       console.log('remoteStream:', remoteStream);
       console.log('Are they equal?', popupVideo?.srcObject === remoteStream);
-      
+
       if (popupVideo && popupVideo.srcObject !== remoteStream) {
         console.log('⚠️ useEffect setting stream - stream arrived after popup opened');
-        
+
         // Just set the stream - the onplaying handler from openRemoteDesktop will handle the rest
         popupVideo.srcObject = remoteStream;
-        
+
         // Autoplay should handle it, but add fallback
         setTimeout(() => {
           if (popupVideo.paused) {
@@ -511,27 +511,27 @@ function App() {
   }, [remoteStream, remoteDesktopWindow]); // Include both dependencies
 
   const initializePeerConnection = () => {
-  const baseConfig = { iceServers, iceCandidatePoolSize: 10 };
-  const configPc = forceRelay ? { ...baseConfig, iceTransportPolicy: 'relay' } : baseConfig;
-  console.log('Creating RTCPeerConnection with config:', configPc);
-  const pc = new RTCPeerConnection(configPc);
+    const baseConfig = { iceServers, iceCandidatePoolSize: 10 };
+    const configPc = forceRelay ? { ...baseConfig, iceTransportPolicy: 'relay' } : baseConfig;
+    console.log('Creating RTCPeerConnection with config:', configPc);
+    const pc = new RTCPeerConnection(configPc);
 
-  // ICE diagnostics (guest)
-  const candidateStats = { host: 0, srflx: 0, relay: 0, prflx: 0, tcp: 0, udp: 0 };
-  const parseCandidate = (candObj) => {
-    try {
-      const cand = candObj?.candidate || '';
-      if (!cand.startsWith('candidate:')) return;
-      const parts = cand.split(' ');
-      const proto = (parts[2] || '').toLowerCase();
-      const typIndex = parts.indexOf('typ');
-      const typ = typIndex > -1 ? (parts[typIndex + 1] || '').toLowerCase() : '';
-      if (typ && candidateStats[typ] !== undefined) candidateStats[typ]++;
-      if (proto === 'tcp') candidateStats.tcp++;
-      if (proto === 'udp') candidateStats.udp++;
-    } catch (_) {}
-  };
-  // Optimize for desktop streaming
+    // ICE diagnostics (guest)
+    const candidateStats = { host: 0, srflx: 0, relay: 0, prflx: 0, tcp: 0, udp: 0 };
+    const parseCandidate = (candObj) => {
+      try {
+        const cand = candObj?.candidate || '';
+        if (!cand.startsWith('candidate:')) return;
+        const parts = cand.split(' ');
+        const proto = (parts[2] || '').toLowerCase();
+        const typIndex = parts.indexOf('typ');
+        const typ = typIndex > -1 ? (parts[typIndex + 1] || '').toLowerCase() : '';
+        if (typ && candidateStats[typ] !== undefined) candidateStats[typ]++;
+        if (proto === 'tcp') candidateStats.tcp++;
+        if (proto === 'udp') candidateStats.udp++;
+      } catch (_) { }
+    };
+    // Optimize for desktop streaming
 
     // If we're the guest (no local stream), proactively indicate we want to receive
     try {
@@ -542,7 +542,7 @@ function App() {
     } catch (e) {
       console.log('Optional transceiver setup failed (safe to ignore):', e);
     }
-    
+
     pc.onicecandidate = (event) => {
       const activeSocket = socketRef.current;
       if (event.candidate && activeSocket) {
@@ -576,9 +576,9 @@ function App() {
       console.log('Current isHost value:', isHost);
       console.log('Current sessionId value:', sessionId);
       console.log('Remote socket ID:', remoteSocketIdRef.current);
-      
+
       const receivedStream = event.streams[0];
-      
+
       // Explicitly enable all tracks
       receivedStream.getTracks().forEach(track => {
         console.log(`Enabling track: ${track.kind}, current enabled: ${track.enabled}, muted: ${track.muted}`);
@@ -592,13 +592,13 @@ function App() {
           console.log(`[remote track unmuted] kind=${track.kind}`);
         };
       });
-      
+
       setRemoteStream(receivedStream);
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = receivedStream;
       }
-      
+
       // Update popup if it's already open
       if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
         console.log('Popup already open, updating with new stream');
@@ -635,16 +635,16 @@ function App() {
       const state = pc.iceConnectionState;
       console.log('[pc.iceConnectionState]', state);
       console.log('ICE gathering state:', pc.iceGatheringState);
-      
+
       // Log local and remote descriptions
       console.log('Local description:', pc.localDescription ? 'Set' : 'Not set');
       console.log('Remote description:', pc.remoteDescription ? 'Set' : 'Not set');
-      
+
       if (remoteDesktopWindow && !remoteDesktopWindow.closed) {
         const overlay = remoteDesktopWindow.document.getElementById('statusOverlay');
         if (overlay) overlay.textContent = `ICE: ${state}`;
       }
-      
+
       // If ICE connection fails, log more details
       if (state === 'failed' || state === 'disconnected') {
         console.error('❌ ICE connection issue detected');
@@ -657,7 +657,7 @@ function App() {
           });
           try {
             console.log('🔎 ICE diagnostics summary (guest):', candidateStats);
-          } catch (_) {}
+          } catch (_) { }
         });
 
         // Auto relay fallback: only attempt once, only if not already forcing relay, and not yet connected
@@ -672,7 +672,7 @@ function App() {
             try {
               const overlay = remoteDesktopWindow.document.getElementById('statusOverlay');
               if (overlay) overlay.textContent = 'Retrying with TURN relay...';
-            } catch(_) {}
+            } catch (_) { }
           }
         }
       }
@@ -682,7 +682,7 @@ function App() {
       console.log('Data channel received:', event.channel.label);
       const channel = event.channel;
       const label = channel.label;
-      
+
       // Handle different channel types by label
       if (label === 'control' || label === 'input') {
         // Control/Input channel for remote control and general messages
@@ -691,30 +691,30 @@ function App() {
           setDataChannel(channel);
           notify.success('Connected! File transfer and remote control available.');
         };
-        
+
         channel.onclose = () => {
           console.log(`${label} channel closed (guest side)`);
           setDataChannel(null);
         };
-        
+
         channel.onerror = (error) => {
           console.error(`${label} channel error (guest side):`, error);
           notify.error('Data channel error: ' + error.message);
         };
-        
+
         channel.onmessage = handleDataChannelMessage;
       } else if (label === 'fileTransfer' || label === 'files' || label === 'file-transfer') {
         // File transfer channel - binary data
         channel.binaryType = 'arraybuffer';
-        
+
         channel.onopen = () => {
           console.log('File transfer channel opened (guest side)');
         };
-        
+
         channel.onclose = () => {
           console.log('File transfer channel closed (guest side)');
         };
-        
+
         channel.onmessage = handleDataChannelMessage;
       } else {
         console.log('Unknown data channel received:', label);
@@ -744,7 +744,7 @@ function App() {
   const startSession = async () => {
     try {
       // Get screen capture with system audio for true remote desktop experience
-      const stream = await navigator.mediaDevices.getDisplayMedia({ 
+      const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           cursor: 'always',
           displaySurface: 'monitor',
@@ -762,12 +762,12 @@ function App() {
       setLocalStream(stream);
       localStreamRef.current = stream; // Store in ref for event handlers
       logLocalVideoDiagnostics('after getDisplayMedia');
-  setIsHost(true); // Mark as host
+      setIsHost(true); // Mark as host
 
       const pc = initializePeerConnection();
       setPeerConnection(pc); // CRITICAL: Store peer connection in state
       peerConnectionRef.current = pc; // Store in ref for event handlers
-      
+
       // Add local stream to peer connection and cap video sender
       let videoSender = null;
       stream.getTracks().forEach(track => {
@@ -831,7 +831,7 @@ function App() {
       alert('Please enter a valid Session ID');
       return;
     }
-    
+
     // Normalize session ID to uppercase (server generates uppercase IDs)
     const sessionIdToJoin = id.trim().toUpperCase();
     console.log('=== JOINING SESSION ===');
@@ -839,13 +839,13 @@ function App() {
     setJoinSessionId(sessionIdToJoin);
     setSessionId(sessionIdToJoin);
     setIsHost(false);
-    
+
     try {
       let stream = null;
-      
+
       try {
         // Try to get microphone audio for guests (optional)
-        stream = await navigator.mediaDevices.getUserMedia({ 
+        stream = await navigator.mediaDevices.getUserMedia({
           video: false,
           audio: {
             echoCancellation: true,
@@ -858,7 +858,7 @@ function App() {
         console.log('Audio not available, continuing without microphone:', audioError.message);
         stream = new MediaStream();
       }
-      
+
       setLocalStream(stream);
       localStreamRef.current = stream; // Store in ref
 
@@ -868,7 +868,7 @@ function App() {
       setPeerConnection(pc);
       peerConnectionRef.current = pc; // Store in ref
       console.log('Guest peer connection created');
-      
+
       // Add tracks if we have them
       if (stream && stream.getTracks().length > 0) {
         stream.getTracks().forEach(track => {
@@ -1098,9 +1098,9 @@ function App() {
   const requestScreenShare = () => {
     const activeSocket = socketRef.current;
     if (activeSocket && sessionId) {
-      activeSocket.emit('request-screen-share', { 
-        sessionId, 
-        requesterId: activeSocket.id 
+      activeSocket.emit('request-screen-share', {
+        sessionId,
+        requesterId: activeSocket.id
       });
       setScreenShareRequested(true);
       alert('Screen share request sent to host!');
@@ -1119,10 +1119,10 @@ function App() {
     console.log('Peer Connection:', peerConnection);
     console.log('Peer Connection state:', peerConnection?.connectionState);
     console.log('Is Host:', isHost);
-    
+
     // Use ref instead of state to avoid stale closure
     const currentSessionId = sessionIdRef.current;
-    
+
     if (!currentSessionId) {
       console.error('No session ID - cannot open desktop');
       alert('No active session. Please join a session first.');
@@ -1145,8 +1145,8 @@ function App() {
 
     // Create popup window
     const popup = window.open(
-      '', 
-      'RemoteDesktop', 
+      '',
+      'RemoteDesktop',
       'width=1200,height=800,resizable=yes,scrollbars=no,menubar=no,toolbar=no,location=no,status=no'
     );
 
@@ -1163,9 +1163,9 @@ function App() {
     }
     // Don't set state yet - wait until we're done setting up
 
-  // Create the popup content
-  popup.document.open();
-  popup.document.write(`
+    // Create the popup content
+    popup.document.open();
+    popup.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -1494,14 +1494,14 @@ function App() {
       </html>
     `);
 
-  popup.document.close();
+    popup.document.close();
 
     // Set up the video stream in the popup
     const popupVideo = popup.document.getElementById('remoteVideo');
-    
+
     // Set the popup window reference FIRST, before setting the stream
     setRemoteDesktopWindow(popup);
-    
+
     // Now set the stream directly if it exists
     if (popupVideo && remoteStream) {
       console.log('📺 openRemoteDesktop: Setting initial remote stream to popup video');
@@ -1509,30 +1509,30 @@ function App() {
       console.log('Stream tracks:', remoteStream.getTracks());
       console.log('Stream active:', remoteStream.active);
       console.log('Video tracks:', remoteStream.getVideoTracks());
-      
+
       // Set muted first (required for autoplay)
       popupVideo.muted = true;
-      
+
       // Set up a playing event to hide the loading overlay
       popupVideo.onplaying = () => {
         console.log('✅ Video is now playing!');
-        
+
         // Clear the progress animation interval
         if (popup.progressInterval) {
           clearInterval(popup.progressInterval);
           popup.progressInterval = null;
         }
-        
+
         // Update progress to 100% and show success
         const progressBar = popup.document.getElementById('progressBar');
         const progressText = popup.document.getElementById('progressText');
         const statusText = popup.document.getElementById('statusText');
         const loadingOverlay = popup.document.getElementById('loadingOverlay');
-        
+
         if (progressBar) progressBar.style.width = '100%';
         if (progressText) progressText.textContent = '100%';
         if (statusText) statusText.textContent = '✅ Connected! Stream ready!';
-        
+
         // Hide overlay after a brief moment
         setTimeout(() => {
           if (loadingOverlay) {
@@ -1540,28 +1540,28 @@ function App() {
           }
         }, 500);
       };
-      
+
       // Add error handlers
       popupVideo.onerror = (e) => {
         console.error('❌ Video error:', e);
         console.error('Video error details:', popupVideo.error);
       };
-      
+
       popupVideo.onloadedmetadata = () => {
         console.log('✅ Video metadata loaded');
         console.log('Video dimensions:', popupVideo.videoWidth, 'x', popupVideo.videoHeight);
       };
-      
+
       popupVideo.onloadeddata = () => {
         console.log('✅ Video data loaded - ready to play');
       };
-      
-  // Set the srcObject - autoplay attribute will handle playing
-  popupVideo.srcObject = remoteStream;
-  // Expose controls temporarily to help user trigger playback if needed
-  try { popupVideo.controls = true; } catch(_) {}
-  console.log('Stream set, autoplay will handle playback');
-      
+
+      // Set the srcObject - autoplay attribute will handle playing
+      popupVideo.srcObject = remoteStream;
+      // Expose controls temporarily to help user trigger playback if needed
+      try { popupVideo.controls = true; } catch (_) { }
+      console.log('Stream set, autoplay will handle playback');
+
       // Fallback: If autoplay doesn't work within 2 seconds, manually play
       setTimeout(() => {
         if (popupVideo.paused) {
@@ -1599,7 +1599,7 @@ function App() {
             clearInterval(watchdog);
             return;
           }
-          popupVideo.play().catch(() => {});
+          popupVideo.play().catch(() => { });
           if (attempts >= maxAttempts) {
             clearInterval(watchdog);
             const statusText = popup.document.getElementById('statusText');
@@ -1612,11 +1612,11 @@ function App() {
                 const activeSocket = socketRef.current;
                 activeSocket?.emit('renegotiate', { sessionId: sessionIdRef.current, targetId: remoteSocketIdRef.current });
               }
-            } catch(_) {}
+            } catch (_) { }
           }
         }, 2000);
-      } catch(e) { /* noop */ }
-      
+      } catch (e) { /* noop */ }
+
       // Store watchdog for cleanup
       if (popup && watchdog) {
         popup.watchdogInterval = watchdog;
@@ -1626,7 +1626,7 @@ function App() {
     // Handle popup messages
     const handlePopupMessage = (event) => {
       if (event.source !== popup) return;
-      
+
       switch (event.data.type) {
         case 'enableRemoteControl':
           enableRemoteControl();
@@ -1676,7 +1676,7 @@ function App() {
     };
 
     window.addEventListener('message', handlePopupMessage);
-    
+
     // Cleanup on unmount or when dependencies change
     return () => {
       window.removeEventListener('message', handlePopupMessage);
@@ -1743,7 +1743,7 @@ function App() {
     console.log('Current peerConnectionRef:', peerConnectionRef.current);
     console.log('Peer connection state:', peerConnection?.connectionState);
     console.log('Peer connection signaling state:', peerConnection?.signalingState);
-    
+
     // Use existing peer connection or create new one
     let pc = peerConnectionRef.current || peerConnection;
     if (!pc) {
@@ -1754,12 +1754,12 @@ function App() {
     } else {
       console.log('✅ Using existing peer connection');
     }
-    
+
     try {
       console.log('Setting remote description...');
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       console.log('Remote description set successfully');
-      
+
       // Process any buffered ICE candidates now that remote description is set
       if (pendingIceCandidatesRef.current.length > 0) {
         console.log(`📦 Processing ${pendingIceCandidatesRef.current.length} buffered ICE candidates`);
@@ -1773,13 +1773,13 @@ function App() {
         }
         pendingIceCandidatesRef.current = []; // Clear the buffer
       }
-      
+
       console.log('Creating answer...');
       const answer = await pc.createAnswer();
       console.log('Answer created:', answer);
       console.log('Setting local description...');
       await pc.setLocalDescription(answer);
-      
+
       const activeSocket = socketRef.current;
       if (activeSocket) {
         console.log('Sending answer back to host');
@@ -1819,16 +1819,16 @@ function App() {
     }
 
     const pc = peerConnectionRef.current || peerConnection;
-    
+
     if (!pc) {
       console.error('No peer connection available to handle answer');
       return;
     }
-    
+
     try {
       await pc.setRemoteDescription(answer);
       console.log('Successfully set remote description from answer');
-      
+
       // Process any buffered ICE candidates now that remote description is set (HOST SIDE)
       if (pendingIceCandidatesRef.current.length > 0) {
         console.log(`📦 Processing ${pendingIceCandidatesRef.current.length} buffered ICE candidates (host)`);
@@ -1866,7 +1866,7 @@ function App() {
     }
 
     const pc = peerConnectionRef.current || peerConnection;
-    
+
     if (!pc) {
       console.warn('⏸️ Peer connection not ready yet, buffering ICE candidate');
       pendingIceCandidatesRef.current.push(candidate);
@@ -1895,7 +1895,7 @@ function App() {
 
   const handleDataChannelMessage = (event) => {
     const data = JSON.parse(event.data);
-    
+
     switch (data.type) {
       case 'file-chunk':
         // Handle file transfer chunk
@@ -1922,7 +1922,7 @@ function App() {
 
     const MAX_FILE_SIZE = 20 * 1024 * 1024 * 1024; // 20GB default; adjust or make config-driven if needed
     if (file.size > MAX_FILE_SIZE) { // 20GB default
-      alert(`File size must be less than ${Math.round(MAX_FILE_SIZE / (1024*1024*1024))}GB`);
+      alert(`File size must be less than ${Math.round(MAX_FILE_SIZE / (1024 * 1024 * 1024))}GB`);
       return;
     }
 
@@ -1932,7 +1932,7 @@ function App() {
     }
 
     setFileTransfer({ progress: 0, active: true });
-    
+
     // Send file via data channel in chunks
     const chunkSize = 16384; // 16KB chunks
     const reader = new FileReader();
@@ -1984,8 +1984,8 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       {currentPage === 'landing' ? (
-        <LandingPage 
-          onGetStarted={() => setCurrentPage('session')} 
+        <LandingPage
+          onGetStarted={() => setCurrentPage('session')}
           onViewFeatures={() => setCurrentPage('features')}
           darkMode={darkMode}
         />
@@ -1996,444 +1996,336 @@ function App() {
           darkMode={darkMode}
         />
       ) : (
-      <Box sx={{ 
-        flexGrow: 1, 
-        minHeight: '100vh', 
-        background: '#613da9'
-      }}>
-        <AppBar 
-          position="static" 
-          elevation={0}
-          sx={{
-            background: 'rgba(97, 61, 169, 0.9)',
-            backdropFilter: 'blur(10px)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
-          }}
-        >
-          <Toolbar>
-            <DesktopWindows sx={{ mr: 2, color: '#8b5cf6' }} />
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="h6" component="div" sx={{ color: '#fff' }}>
-                SuperDesk Remote Desktop
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                Secure • Fast • Reliable
-              </Typography>
-            </Box>
-            <Box display="flex" alignItems="center" gap={1}>
-              <Button
-                color="inherit"
-                onClick={() => setCurrentPage('landing')}
-                sx={{ 
-                  textTransform: 'none', 
-                  color: 'white',
-                  borderColor: 'rgba(139, 92, 246, 0.3)',
-                  '&:hover': {
-                    background: 'rgba(139, 92, 246, 0.1)'
-                  }
-                }}
-              >
-                ← Home
-              </Button>
-              <Chip 
-                icon={connected ? <CheckCircle /> : <Cancel />}
-                label={connected ? 'Connected' : 'Disconnected'}
-                sx={{ 
-                  background: connected ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                  color: connected ? '#22c55e' : '#ef4444',
-                  border: `1px solid ${connected ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
-                }}
-              />
-            </Box>
-          </Toolbar>
-        </AppBar>
-
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-          {/* Hero Section */}
-          <Paper sx={{ 
-            p: 4, 
-            mb: 4, 
-            background: 'rgba(255, 255, 255, 0.1)', 
-            color: 'white', 
-            textAlign: 'center',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-              Next-Generation Remote Desktop
-            </Typography>
-            <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
-              Experience ultra-responsive remote control with enterprise-grade security
-            </Typography>
-            <Box display="flex" justifyContent="center" gap={4} flexWrap="wrap">
-              <Box display="flex" alignItems="center">
-                <DesktopWindows sx={{ mr: 1 }} />
-                <Typography variant="body2">Real-time Screen Sharing</Typography>
+        <Box sx={{
+          flexGrow: 1,
+          minHeight: '100vh',
+          background: '#613da9'
+        }}>
+          <AppBar
+            position="static"
+            elevation={0}
+            sx={{
+              background: 'rgba(97, 61, 169, 0.9)',
+              backdropFilter: 'blur(10px)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            <Toolbar>
+              <DesktopWindows sx={{ mr: 2, color: '#8b5cf6' }} />
+              <Box sx={{ flexGrow: 1 }}>
+                <Typography variant="h6" component="div" sx={{ color: '#fff' }}>
+                  SuperDesk Remote Desktop
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                  Secure • Fast • Reliable
+                </Typography>
               </Box>
-              <Box display="flex" alignItems="center">
-                <TouchApp sx={{ mr: 1 }} />
-                <Typography variant="body2">Instant Remote Control</Typography>
-              </Box>
-              <Box display="flex" alignItems="center">
-                <CloudUpload sx={{ mr: 1 }} />
-                <Typography variant="body2">Secure File Transfer</Typography>
-              </Box>
-            </Box>
-          </Paper>
-
-          {/* Popup Permission Warning Banner */}
-          {!isHost && sessionId && (
-              <Alert 
-              severity="info" 
-              sx={{ 
-                mb: 3,
-                background: 'rgba(97, 61, 169, 0.08)',
-                border: '1px solid rgba(97, 61, 169, 0.2)',
-                color: 'rgba(255, 255, 255, 0.9)',
-                '& .MuiAlert-icon': {
-                  color: '#613da9'
-                }
-              }}
-            >
-              <Typography variant="body2">
-                <strong>📌 Important:</strong> Remote desktop will open in a new window. 
-                Please <strong>allow popups</strong> for this site if prompted by your browser.
-              </Typography>
-            </Alert>
-          )}
-
-          {loading && (
-            <Paper 
-              sx={{ 
-                p: 4, 
-                textAlign: 'center',
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '16px'
-              }}
-            >
-              <CircularProgress size={60} sx={{ mb: 2, color: '#fff' }} />
-              <Typography variant="h5" gutterBottom sx={{ color: '#fff' }}>
-                Connecting to SuperDesk Server...
-              </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                Server: {config.server}
-              </Typography>
-            </Paper>
-          )}
-          
-          {connectionError && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mb: 3,
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: 'rgba(255, 255, 255, 0.9)',
-                '& .MuiAlert-icon': {
-                  color: '#ef4444'
-                }
-              }}
-              action={
-                <Button 
-                  size="small" 
-                  onClick={() => window.location.reload()}
-                  startIcon={<PowerSettingsNew />}
+              <Box display="flex" alignItems="center" gap={1}>
+                <Button
+                  color="inherit"
+                  onClick={() => setCurrentPage('landing')}
                   sx={{
-                    color: '#ef4444',
-                    borderColor: 'rgba(239, 68, 68, 0.5)',
+                    textTransform: 'none',
+                    color: 'white',
+                    borderColor: 'rgba(139, 92, 246, 0.3)',
                     '&:hover': {
-                      background: 'rgba(239, 68, 68, 0.1)'
+                      background: 'rgba(139, 92, 246, 0.1)'
                     }
                   }}
                 >
-                  Retry
+                  ← Home
                 </Button>
-              }
-            >
-              <Typography variant="h6" gutterBottom>
-                Connection Failed
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                {connectionError}
-              </Typography>
-              <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                <li>Check if server is deployed and running</li>
-                <li>Verify server URL: {config.server}</li>
-                <li>Disable ad blockers (they can block Socket.io)</li>
-                <li>Try incognito/private browsing mode</li>
+                <Chip
+                  icon={connected ? <CheckCircle /> : <Cancel />}
+                  label={connected ? 'Connected' : 'Disconnected'}
+                  sx={{
+                    background: connected ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                    color: connected ? '#22c55e' : '#ef4444',
+                    border: `1px solid ${connected ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                  }}
+                />
               </Box>
-            </Alert>
-          )}
+            </Toolbar>
+          </AppBar>
 
-          {!connected && !loading && !connectionError && (
-            <Alert 
-              severity="warning" 
-              sx={{ 
-                mb: 3,
-                background: 'rgba(245, 158, 11, 0.1)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
-                color: 'rgba(255, 255, 255, 0.9)',
-                '& .MuiAlert-icon': {
-                  color: '#f59e0b'
-                }
-              }}
-            >
-              <Typography variant="h6" gutterBottom>
-                Connection Issue Detected
+          <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+            {/* Hero Section */}
+            <Paper sx={{
+              p: 4,
+              mb: 4,
+              background: 'rgba(255, 255, 255, 0.1)',
+              color: 'white',
+              textAlign: 'center',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+                Next-Generation Remote Desktop
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                If you see "ERR_BLOCKED_BY_CLIENT" errors:
+              <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
+                Experience ultra-responsive remote control with enterprise-grade security
               </Typography>
-              <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                <li>Disable ad blocker for this site</li>
-                <li>Try incognito/private browsing mode</li>
-                <li>Check browser console for errors</li>
+              <Box display="flex" justifyContent="center" gap={4} flexWrap="wrap">
+                <Box display="flex" alignItems="center">
+                  <DesktopWindows sx={{ mr: 1 }} />
+                  <Typography variant="body2">Real-time Screen Sharing</Typography>
+                </Box>
+                <Box display="flex" alignItems="center">
+                  <TouchApp sx={{ mr: 1 }} />
+                  <Typography variant="body2">Instant Remote Control</Typography>
+                </Box>
+                <Box display="flex" alignItems="center">
+                  <CloudUpload sx={{ mr: 1 }} />
+                  <Typography variant="body2">Secure File Transfer</Typography>
+                </Box>
               </Box>
-              <Button 
-                variant="outlined"
-                onClick={() => window.location.reload()}
-                startIcon={<PowerSettingsNew />}
-                sx={{ 
-                  mt: 2,
-                  color: '#f59e0b',
-                  borderColor: 'rgba(245, 158, 11, 0.5)',
-                  '&:hover': {
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    borderColor: '#f59e0b'
+            </Paper>
+
+            {/* Popup Permission Warning Banner */}
+            {!isHost && sessionId && (
+              <Alert
+                severity="info"
+                sx={{
+                  mb: 3,
+                  background: 'rgba(97, 61, 169, 0.08)',
+                  border: '1px solid rgba(97, 61, 169, 0.2)',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  '& .MuiAlert-icon': {
+                    color: '#613da9'
                   }
                 }}
               >
-                Retry Connection
-              </Button>
-            </Alert>
-          )}
+                <Typography variant="body2">
+                  <strong>📌 Important:</strong> Remote desktop will open in a new window.
+                  Please <strong>allow popups</strong> for this site if prompted by your browser.
+                </Typography>
+              </Alert>
+            )}
 
-          {sessionId && (
-            <Alert 
-              severity="success" 
-              sx={{ 
-                mb: 3,
-                background: 'rgba(34, 197, 94, 0.1)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                color: 'rgba(255, 255, 255, 0.9)',
-                '& .MuiAlert-icon': {
-                  color: '#22c55e'
+            {loading && (
+              <Paper
+                sx={{
+                  p: 4,
+                  textAlign: 'center',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '16px'
+                }}
+              >
+                <CircularProgress size={60} sx={{ mb: 2, color: '#fff' }} />
+                <Typography variant="h5" gutterBottom sx={{ color: '#fff' }}>
+                  Connecting to SuperDesk Server...
+                </Typography>
+                <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                  Server: {config.server}
+                </Typography>
+              </Paper>
+            )}
+
+            {connectionError && (
+              <Alert
+                severity="error"
+                sx={{
+                  mb: 3,
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  '& .MuiAlert-icon': {
+                    color: '#ef4444'
+                  }
+                }}
+                action={
+                  <Button
+                    size="small"
+                    onClick={() => window.location.reload()}
+                    startIcon={<PowerSettingsNew />}
+                    sx={{
+                      color: '#ef4444',
+                      borderColor: 'rgba(239, 68, 68, 0.5)',
+                      '&:hover': {
+                        background: 'rgba(239, 68, 68, 0.1)'
+                      }
+                    }}
+                  >
+                    Retry
+                  </Button>
                 }
-              }}
-            >
-              <Typography variant="h6" gutterBottom>
-                Session Active
-              </Typography>
-              <Typography variant="body1">
-                Session ID: <Chip 
-                  label={sessionId} 
-                  size="small" 
-                  sx={{ 
-                    mx: 1,
-                    background: 'rgba(139, 92, 246, 0.2)',
-                    color: '#8b5cf6',
-                    border: '1px solid rgba(139, 92, 246, 0.3)',
-                    fontFamily: 'monospace',
-                    fontWeight: 600
-                  }} 
-                />
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                Share this ID with others to join your session
-              </Typography>
-            </Alert>
-          )}
-
-          {/* Render-style Session Cards */}
-          <Box sx={{ maxWidth: '1000px', mx: 'auto', mt: 4 }}>
-            {/* Host Session Card */}
-            <Card sx={{
-              background: 'rgba(15, 15, 15, 0.8)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              mb: 3,
-              overflow: 'hidden',
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                borderColor: 'rgba(139, 92, 246, 0.3)',
-                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
-              }
-            }}>
-              <CardContent sx={{ p: 4 }}>
-                <Box display="flex" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap" gap={3}>
-                  <Box flex={1} minWidth="280px">
-                    <Box display="flex" alignItems="center" mb={1.5}>
-                      <Box sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '8px',
-                        background: 'rgba(139, 92, 246, 0.15)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mr: 2
-                      }}>
-                        <ScreenShare sx={{ color: '#613da9', fontSize: '1.5rem' }} />
-                      </Box>
-                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: '1.25rem' }}>
-                        Share Your Desktop
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6, mb: 2 }}>
-                      Start hosting a session to share your screen with others. They'll be able to view and optionally control your desktop remotely.
-                    </Typography>
-                    <Box display="flex" gap={1} flexWrap="wrap">
-                      <Chip 
-                        size="small" 
-                        label="Desktop Sharing" 
-                        sx={{ 
-                          background: 'rgba(139, 92, 246, 0.1)', 
-                          color: '#8b5cf6',
-                          border: '1px solid rgba(139, 92, 246, 0.2)',
-                          fontSize: '0.75rem'
-                        }} 
-                      />
-                      <Chip 
-                        size="small" 
-                        label="Audio Support" 
-                        sx={{ 
-                          background: 'rgba(97, 61, 169, 0.1)', 
-                          color: '#613da9',
-                          border: '1px solid rgba(97, 61, 169, 0.2)',
-                          fontSize: '0.75rem'
-                        }} 
-                      />
-                      <Chip 
-                        size="small" 
-                        label="File Transfer" 
-                        sx={{ 
-                          background: 'rgba(34, 197, 94, 0.1)', 
-                          color: '#22c55e',
-                          border: '1px solid rgba(34, 197, 94, 0.2)',
-                          fontSize: '0.75rem'
-                        }} 
-                      />
-                    </Box>
-                  </Box>
-                  <Box display="flex" alignItems="center" gap={2}>
-                    <Button 
-                      variant="contained"
-                      startIcon={<DesktopWindows />}
-                      onClick={startSession} 
-                      disabled={!connected}
-                        sx={{
-                        px: 3,
-                        py: 1.25,
-                        borderRadius: '8px',
-                        background: '#613da9',
-                        color: 'white',
-                        textTransform: 'none',
-                        fontSize: '0.95rem',
-                        fontWeight: 600,
-                        boxShadow: 'none',
-                        '&:hover': {
-                          background: '#4b2b86',
-                          boxShadow: '0 4px 12px rgba(97, 61, 169, 0.4)'
-                        },
-                        '&:disabled': {
-                          background: 'rgba(100, 100, 100, 0.2)',
-                          color: 'rgba(255, 255, 255, 0.3)'
-                        }
-                      }}
-                    >
-                      Start Hosting
-                    </Button>
-                  </Box>
+              >
+                <Typography variant="h6" gutterBottom>
+                  Connection Failed
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  {connectionError}
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                  <li>Check if server is deployed and running</li>
+                  <li>Verify server URL: {config.server}</li>
+                  <li>Disable ad blockers (they can block Socket.io)</li>
+                  <li>Try incognito/private browsing mode</li>
                 </Box>
-              </CardContent>
-            </Card>
+              </Alert>
+            )}
 
-            {/* Join Session Card */}
-            <Card sx={{
-              background: 'rgba(15, 15, 15, 0.8)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                borderColor: 'rgba(97, 61, 169, 0.3)',
-                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
-              }
-            }}>
-              <CardContent sx={{ p: 4 }}>
-                <Box display="flex" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap" gap={3}>
-                  <Box flex={1} minWidth="280px">
-                    <Box display="flex" alignItems="center" mb={1.5}>
-                      <Box sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '8px',
-                        background: 'rgba(97, 61, 169, 0.15)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mr: 2
-                      }}>
-                        <TouchApp sx={{ color: '#613da9', fontSize: '1.5rem' }} />
+            {!connected && !loading && !connectionError && (
+              <Alert
+                severity="warning"
+                sx={{
+                  mb: 3,
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  '& .MuiAlert-icon': {
+                    color: '#f59e0b'
+                  }
+                }}
+              >
+                <Typography variant="h6" gutterBottom>
+                  Connection Issue Detected
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  If you see "ERR_BLOCKED_BY_CLIENT" errors:
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                  <li>Disable ad blocker for this site</li>
+                  <li>Try incognito/private browsing mode</li>
+                  <li>Check browser console for errors</li>
+                </Box>
+                <Button
+                  variant="outlined"
+                  onClick={() => window.location.reload()}
+                  startIcon={<PowerSettingsNew />}
+                  sx={{
+                    mt: 2,
+                    color: '#f59e0b',
+                    borderColor: 'rgba(245, 158, 11, 0.5)',
+                    '&:hover': {
+                      background: 'rgba(245, 158, 11, 0.1)',
+                      borderColor: '#f59e0b'
+                    }
+                  }}
+                >
+                  Retry Connection
+                </Button>
+              </Alert>
+            )}
+
+            {sessionId && (
+              <Alert
+                severity="success"
+                sx={{
+                  mb: 3,
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  '& .MuiAlert-icon': {
+                    color: '#22c55e'
+                  }
+                }}
+              >
+                <Typography variant="h6" gutterBottom>
+                  Session Active
+                </Typography>
+                <Typography variant="body1">
+                  Session ID: <Chip
+                    label={sessionId}
+                    size="small"
+                    sx={{
+                      mx: 1,
+                      background: 'rgba(139, 92, 246, 0.2)',
+                      color: '#8b5cf6',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      fontFamily: 'monospace',
+                      fontWeight: 600
+                    }}
+                  />
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                  Share this ID with others to join your session
+                </Typography>
+              </Alert>
+            )}
+
+            {/* Render-style Session Cards */}
+            <Box sx={{ maxWidth: '1000px', mx: 'auto', mt: 4 }}>
+              {/* Host Session Card */}
+              <Card sx={{
+                background: 'rgba(15, 15, 15, 0.8)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                mb: 3,
+                overflow: 'hidden',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  borderColor: 'rgba(139, 92, 246, 0.3)',
+                  boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
+                }
+              }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Box display="flex" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap" gap={3}>
+                    <Box flex={1} minWidth="280px">
+                      <Box display="flex" alignItems="center" mb={1.5}>
+                        <Box sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '8px',
+                          background: 'rgba(139, 92, 246, 0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mr: 2
+                        }}>
+                          <ScreenShare sx={{ color: '#613da9', fontSize: '1.5rem' }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: '1.25rem' }}>
+                          Share Your Desktop
+                        </Typography>
                       </Box>
-                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: '1.25rem' }}>
-                        Join Remote Desktop
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6, mb: 2 }}>
+                        Start hosting a session to share your screen with others. They'll be able to view and optionally control your desktop remotely.
                       </Typography>
+                      <Box display="flex" gap={1} flexWrap="wrap">
+                        <Chip
+                          size="small"
+                          label="Desktop Sharing"
+                          sx={{
+                            background: 'rgba(139, 92, 246, 0.1)',
+                            color: '#8b5cf6',
+                            border: '1px solid rgba(139, 92, 246, 0.2)',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label="Audio Support"
+                          sx={{
+                            background: 'rgba(97, 61, 169, 0.1)',
+                            color: '#613da9',
+                            border: '1px solid rgba(97, 61, 169, 0.2)',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label="File Transfer"
+                          sx={{
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            color: '#22c55e',
+                            border: '1px solid rgba(34, 197, 94, 0.2)',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      </Box>
                     </Box>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6, mb: 3 }}>
-                      Connect to someone else's desktop session by entering their session ID below.
-                    </Typography>
-                    <Box display="flex" gap={2} alignItems="flex-end" flexWrap="wrap">
-                      <TextField
-                        label="Session ID"
-                        variant="outlined"
-                        value={joinSessionId}
-                        onChange={(e) => setJoinSessionId(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            handleJoinClick();
-                          }
-                        }}
-                        placeholder="e.g., abc-def-123"
+                    <Box display="flex" alignItems="center" gap={2}>
+                      <Button
+                        variant="contained"
+                        startIcon={<DesktopWindows />}
+                        onClick={startSession}
                         disabled={!connected}
                         sx={{
-                          flex: 1,
-                          minWidth: '250px',
-                          '& .MuiOutlinedInput-root': {
-                            color: '#fff',
-                            background: 'rgba(30, 30, 30, 0.6)',
-                            borderRadius: '8px',
-                            '& fieldset': {
-                              borderColor: 'rgba(255, 255, 255, 0.1)'
-                            },
-                            '&:hover fieldset': {
-                              borderColor: 'rgba(97, 61, 169, 0.4)'
-                            },
-                            '&.Mui-focused fieldset': {
-                              borderColor: '#613da9',
-                              borderWidth: '2px'
-                            }
-                          },
-                          '& .MuiInputLabel-root': {
-                            color: 'rgba(255, 255, 255, 0.5)',
-                            fontSize: '0.9rem'
-                          },
-                          '& .MuiInputLabel-root.Mui-focused': {
-                            color: '#613da9'
-                          }
-                        }}
-                      />
-                      <Button 
-                        variant="contained"
-                        startIcon={<Person />}
-                        onClick={handleJoinClick}
-                        disabled={!connected || !joinSessionId.trim()}
-                        sx={{
                           px: 3,
-                          py: 1.5,
+                          py: 1.25,
                           borderRadius: '8px',
                           background: '#613da9',
                           color: 'white',
@@ -2451,338 +2343,446 @@ function App() {
                           }
                         }}
                       >
-                        Connect
+                        Start Hosting
                       </Button>
                     </Box>
                   </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Box>
+                </CardContent>
+              </Card>
 
-          {/* Session Management Controls - Simplified */}
-          {sessionId && (
-            <Paper sx={{ 
-              mt: 3, 
-              p: 2.5,
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
-              borderRadius: '12px'
-            }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-                <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
-                  <Chip 
-                    icon={<Computer />} 
-                    label={`${sessionId.substring(0, 8)}...`} 
-                    size="small"
-                    sx={{
-                      background: 'rgba(139, 92, 246, 0.2)',
-                      color: '#8b5cf6',
-                      border: '1px solid rgba(139, 92, 246, 0.3)',
-                      fontFamily: 'monospace',
-                      fontWeight: 600
-                    }}
-                  />
-                    <Chip 
-                    icon={<Person />} 
-                    label={isHost ? 'Host' : 'Guest'} 
-                    size="small"
-                    sx={{
-                      background: isHost ? 'rgba(34, 197, 94, 0.2)' : 'rgba(97, 61, 169, 0.2)',
-                      color: isHost ? '#22c55e' : '#613da9',
-                      border: `1px solid ${isHost ? 'rgba(34, 197, 94, 0.3)' : 'rgba(97, 61, 169, 0.3)'}`
-                    }}
-                  />
-                  {!isHost && remoteControlEnabled && (
-                    <Chip 
-                      icon={<TouchApp />} 
-                      label="Control ON" 
+              {/* Join Session Card */}
+              <Card sx={{
+                background: 'rgba(15, 15, 15, 0.8)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  borderColor: 'rgba(97, 61, 169, 0.3)',
+                  boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
+                }
+              }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Box display="flex" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap" gap={3}>
+                    <Box flex={1} minWidth="280px">
+                      <Box display="flex" alignItems="center" mb={1.5}>
+                        <Box sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '8px',
+                          background: 'rgba(97, 61, 169, 0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mr: 2
+                        }}>
+                          <TouchApp sx={{ color: '#613da9', fontSize: '1.5rem' }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: '1.25rem' }}>
+                          Join Remote Desktop
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6, mb: 3 }}>
+                        Connect to someone else's desktop session by entering their session ID below.
+                      </Typography>
+                      <Box display="flex" gap={2} alignItems="flex-end" flexWrap="wrap">
+                        <TextField
+                          label="Session ID"
+                          variant="outlined"
+                          value={joinSessionId}
+                          onChange={(e) => setJoinSessionId(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleJoinClick();
+                            }
+                          }}
+                          placeholder="e.g., abc-def-123"
+                          disabled={!connected}
+                          sx={{
+                            flex: 1,
+                            minWidth: '250px',
+                            '& .MuiOutlinedInput-root': {
+                              color: '#fff',
+                              background: 'rgba(30, 30, 30, 0.6)',
+                              borderRadius: '8px',
+                              '& fieldset': {
+                                borderColor: 'rgba(255, 255, 255, 0.1)'
+                              },
+                              '&:hover fieldset': {
+                                borderColor: 'rgba(97, 61, 169, 0.4)'
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#613da9',
+                                borderWidth: '2px'
+                              }
+                            },
+                            '& .MuiInputLabel-root': {
+                              color: 'rgba(255, 255, 255, 0.5)',
+                              fontSize: '0.9rem'
+                            },
+                            '& .MuiInputLabel-root.Mui-focused': {
+                              color: '#613da9'
+                            }
+                          }}
+                        />
+                        <Button
+                          variant="contained"
+                          startIcon={<Person />}
+                          onClick={handleJoinClick}
+                          disabled={!connected || !joinSessionId.trim()}
+                          sx={{
+                            px: 3,
+                            py: 1.5,
+                            borderRadius: '8px',
+                            background: '#613da9',
+                            color: 'white',
+                            textTransform: 'none',
+                            fontSize: '0.95rem',
+                            fontWeight: 600,
+                            boxShadow: 'none',
+                            '&:hover': {
+                              background: '#4b2b86',
+                              boxShadow: '0 4px 12px rgba(97, 61, 169, 0.4)'
+                            },
+                            '&:disabled': {
+                              background: 'rgba(100, 100, 100, 0.2)',
+                              color: 'rgba(255, 255, 255, 0.3)'
+                            }
+                          }}
+                        >
+                          Connect
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Session Management Controls - Simplified */}
+            {sessionId && (
+              <Paper sx={{
+                mt: 3,
+                p: 2.5,
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
+                borderRadius: '12px'
+              }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+                  <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
+                    <Chip
+                      icon={<Computer />}
+                      label={`${sessionId.substring(0, 8)}...`}
                       size="small"
                       sx={{
-                        background: 'rgba(34, 197, 94, 0.2)',
-                        color: '#22c55e',
-                        border: '1px solid rgba(34, 197, 94, 0.3)'
+                        background: 'rgba(139, 92, 246, 0.2)',
+                        color: '#8b5cf6',
+                        border: '1px solid rgba(139, 92, 246, 0.3)',
+                        fontFamily: 'monospace',
+                        fontWeight: 600
                       }}
                     />
-                  )}
-                </Box>
-                <Box display="flex" gap={1}>
-                  {/* Force Relay Toggle (Guest) */}
-                  {!isHost && (
-                    <Button 
-                      onClick={() => { setForceRelay(v => !v); }}
-                      variant={forceRelay ? 'contained' : 'outlined'}
+                    <Chip
+                      icon={<Person />}
+                      label={isHost ? 'Host' : 'Guest'}
                       size="small"
-                      title="Route media via TURN relay for restrictive networks"
                       sx={{
-                        textTransform: 'none',
-                        borderRadius: '8px',
-                        ...(forceRelay ? {
-                          background: 'rgba(245, 158, 11, 0.2)',
-                          color: '#f59e0b',
-                          border: '1px solid rgba(245, 158, 11, 0.3)',
-                          '&:hover': {
-                            background: 'rgba(245, 158, 11, 0.3)'
-                          }
-                        } : {
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          borderColor: 'rgba(139, 92, 246, 0.3)',
-                          '&:hover': {
-                            borderColor: 'rgba(139, 92, 246, 0.5)',
-                            background: 'rgba(139, 92, 246, 0.1)'
-                          }
-                        })
+                        background: isHost ? 'rgba(34, 197, 94, 0.2)' : 'rgba(97, 61, 169, 0.2)',
+                        color: isHost ? '#22c55e' : '#613da9',
+                        border: `1px solid ${isHost ? 'rgba(34, 197, 94, 0.3)' : 'rgba(97, 61, 169, 0.3)'}`
                       }}
-                    >
-                      {forceRelay ? 'Relay ON' : 'Relay OFF'}
-                    </Button>
-                  )}
-                  {!isHost && (
-                    <Button 
-                      onClick={remoteControlEnabled ? disableRemoteControl : enableRemoteControl} 
+                    />
+                    {!isHost && remoteControlEnabled && (
+                      <Chip
+                        icon={<TouchApp />}
+                        label="Control ON"
+                        size="small"
+                        sx={{
+                          background: 'rgba(34, 197, 94, 0.2)',
+                          color: '#22c55e',
+                          border: '1px solid rgba(34, 197, 94, 0.3)'
+                        }}
+                      />
+                    )}
+                  </Box>
+                  <Box display="flex" gap={1}>
+                    {/* Force Relay Toggle (Guest) */}
+                    {!isHost && (
+                      <Button
+                        onClick={() => { setForceRelay(v => !v); }}
+                        variant={forceRelay ? 'contained' : 'outlined'}
+                        size="small"
+                        title="Route media via TURN relay for restrictive networks"
+                        sx={{
+                          textTransform: 'none',
+                          borderRadius: '8px',
+                          ...(forceRelay ? {
+                            background: 'rgba(245, 158, 11, 0.2)',
+                            color: '#f59e0b',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            '&:hover': {
+                              background: 'rgba(245, 158, 11, 0.3)'
+                            }
+                          } : {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            borderColor: 'rgba(139, 92, 246, 0.3)',
+                            '&:hover': {
+                              borderColor: 'rgba(139, 92, 246, 0.5)',
+                              background: 'rgba(139, 92, 246, 0.1)'
+                            }
+                          })
+                        }}
+                      >
+                        {forceRelay ? 'Relay ON' : 'Relay OFF'}
+                      </Button>
+                    )}
+                    {!isHost && (
+                      <Button
+                        onClick={remoteControlEnabled ? disableRemoteControl : enableRemoteControl}
+                        variant="outlined"
+                        startIcon={remoteControlEnabled ? <Cancel /> : <TouchApp />}
+                        size="small"
+                        sx={{
+                          textTransform: 'none',
+                          borderRadius: '8px',
+                          color: remoteControlEnabled ? '#ef4444' : 'white',
+                          borderColor: remoteControlEnabled ? 'rgba(239, 68, 68, 0.5)' : 'rgba(139, 92, 246, 0.5)',
+                          background: remoteControlEnabled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(139, 92, 246, 0.1)',
+                          '&:hover': {
+                            borderColor: remoteControlEnabled ? '#ef4444' : '#8b5cf6',
+                            background: remoteControlEnabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(139, 92, 246, 0.2)'
+                          }
+                        }}
+                      >
+                        {remoteControlEnabled ? 'Disable' : 'Enable'} Control
+                      </Button>
+                    )}
+                    <Button
+                      onClick={endSession}
                       variant="outlined"
-                      startIcon={remoteControlEnabled ? <Cancel /> : <TouchApp />}
+                      startIcon={<PowerSettingsNew />}
                       size="small"
                       sx={{
                         textTransform: 'none',
                         borderRadius: '8px',
-                        color: remoteControlEnabled ? '#ef4444' : 'white',
-                        borderColor: remoteControlEnabled ? 'rgba(239, 68, 68, 0.5)' : 'rgba(139, 92, 246, 0.5)',
-                        background: remoteControlEnabled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(139, 92, 246, 0.1)',
+                        color: '#ef4444',
+                        borderColor: 'rgba(239, 68, 68, 0.5)',
+                        background: 'rgba(239, 68, 68, 0.1)',
                         '&:hover': {
-                          borderColor: remoteControlEnabled ? '#ef4444' : '#8b5cf6',
-                          background: remoteControlEnabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(139, 92, 246, 0.2)'
+                          borderColor: '#ef4444',
+                          background: 'rgba(239, 68, 68, 0.2)'
                         }
                       }}
                     >
-                      {remoteControlEnabled ? 'Disable' : 'Enable'} Control
+                      End
                     </Button>
-                  )}
-                  <Button 
-                    onClick={endSession} 
+                  </Box>
+                </Box>
+              </Paper>
+            )}
+
+            {/* Remote Desktop Access - Guest */}
+            {sessionId && !isHost && (
+              <Paper sx={{ mt: 3, p: 3, textAlign: 'center' }}>
+                <Typography variant="h5" gutterBottom fontWeight="bold">
+                  {remoteStream ? '✅ Desktop Connected' : '🖥️ Remote Desktop'}
+                </Typography>
+
+                <Button
+                  onClick={openRemoteDesktop}
+                  variant="contained"
+                  color={remoteStream ? 'success' : 'primary'}
+                  startIcon={<ScreenShare />}
+                  disabled={!sessionId}
+                  size="large"
+                  sx={{
+                    mt: 2,
+                    mb: 2,
+                    py: 2,
+                    px: 4,
+                    fontSize: '1.1rem',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {remoteStream ? 'Open Desktop Viewer' : 'Waiting for Host...'}
+                </Button>
+
+                {remoteStream && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Inline Preview (muted)
+                    </Typography>
+                    <Box
+                      component="video"
+                      ref={videoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      controls
+                      sx={{
+                        width: '100%',
+                        maxWidth: 520,
+                        borderRadius: 2,
+                        border: '1px solid rgba(0,0,0,0.12)',
+                        backgroundColor: 'black'
+                      }}
+                    />
+                  </Box>
+                )}
+
+                <Box display="flex" justifyContent="center" gap={2} flexWrap="wrap">
+                  <Chip
+                    label={remoteStream ? 'Stream: Ready' : 'Stream: Waiting'}
+                    color={remoteStream ? 'success' : 'default'}
+                    size="small"
+                  />
+                  <Chip
+                    label={peerConnection ? 'WebRTC: Active' : 'WebRTC: None'}
+                    color={peerConnection ? 'success' : 'default'}
+                    size="small"
+                  />
+                </Box>
+
+                {!remoteStream && (
+                  <Button
+                    onClick={requestScreenShare}
                     variant="outlined"
-                    startIcon={<PowerSettingsNew />}
+                    startIcon={<VideoCall />}
+                    disabled={screenShareRequested}
+                    size="small"
+                    sx={{ mt: 2 }}
+                  >
+                    {screenShareRequested ? 'Request Sent' : 'Request Screen Share'}
+                  </Button>
+                )}
+              </Paper>
+            )}
+
+            {/* File Transfer - Simplified */}
+            {sessionId && (
+              <Paper sx={{
+                mt: 3,
+                p: 2.5,
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(97, 61, 169, 0.2)',
+                borderRadius: '12px'
+              }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CloudUpload sx={{ color: '#613da9' }} />
+                    <Typography variant="body1" fontWeight="bold" sx={{ color: 'white' }}>
+                      File Transfer
+                    </Typography>
+                    <Chip
+                      label={dataChannel && dataChannel.readyState === 'open' ? 'Ready' : 'Not Ready'}
+                      size="small"
+                      sx={{
+                        background: dataChannel && dataChannel.readyState === 'open'
+                          ? 'rgba(34, 197, 94, 0.2)'
+                          : 'rgba(100, 100, 100, 0.2)',
+                        color: dataChannel && dataChannel.readyState === 'open'
+                          ? '#22c55e'
+                          : 'rgba(255, 255, 255, 0.5)',
+                        border: `1px solid ${dataChannel && dataChannel.readyState === 'open'
+                          ? 'rgba(34, 197, 94, 0.3)'
+                          : 'rgba(100, 100, 100, 0.3)'}`
+                      }}
+                    />
+                  </Box>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                    aria-label="Select a file to transfer"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={!dataChannel || dataChannel.readyState !== 'open'}
+                    variant="outlined"
+                    startIcon={<CloudUpload />}
                     size="small"
                     sx={{
                       textTransform: 'none',
                       borderRadius: '8px',
-                      color: '#ef4444',
-                      borderColor: 'rgba(239, 68, 68, 0.5)',
-                      background: 'rgba(239, 68, 68, 0.1)',
+                      color: (!dataChannel || dataChannel.readyState !== 'open')
+                        ? 'rgba(255, 255, 255, 0.3)'
+                        : 'white',
+                      borderColor: (!dataChannel || dataChannel.readyState !== 'open')
+                        ? 'rgba(97, 61, 169, 0.2)'
+                        : 'rgba(97, 61, 169, 0.5)',
+                      background: 'rgba(97, 61, 169, 0.1)',
                       '&:hover': {
-                        borderColor: '#ef4444',
-                        background: 'rgba(239, 68, 68, 0.2)'
+                        borderColor: '#613da9',
+                        background: 'rgba(97, 61, 169, 0.2)'
+                      },
+                      '&.Mui-disabled': {
+                        color: 'rgba(255, 255, 255, 0.2)',
+                        borderColor: 'rgba(97, 61, 169, 0.1)'
                       }
                     }}
                   >
-                    End
+                    Send File (Recommended up to 5–20GB)
                   </Button>
                 </Box>
-              </Box>
-            </Paper>
-          )}
+                {fileTransfer.active && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" gutterBottom sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                      Uploading: {Math.round(fileTransfer.progress)}%
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={fileTransfer.progress}
+                      sx={{
+                        height: 8,
+                        borderRadius: '4px',
+                        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                        '& .MuiLinearProgress-bar': {
+                          background: 'linear-gradient(90deg, #8b5cf6, #613da9)',
+                          borderRadius: '4px'
+                        }
+                      }}
+                    />
+                  </Box>
+                )}
+              </Paper>
+            )}
 
-          {/* Remote Desktop Access - Guest */}
-          {sessionId && !isHost && (
-            <Paper sx={{ mt: 3, p: 3, textAlign: 'center' }}>
-              <Typography variant="h5" gutterBottom fontWeight="bold">
-                {remoteStream ? '✅ Desktop Connected' : '🖥️ Remote Desktop'}
-              </Typography>
-              
-              <Button 
-                onClick={openRemoteDesktop}
-                variant="contained"
-                color={remoteStream ? 'success' : 'primary'}
-                startIcon={<ScreenShare />}
-                disabled={!sessionId}
-                size="large"
-                sx={{ 
-                  mt: 2,
-                  mb: 2,
-                  py: 2, 
-                  px: 4,
-                  fontSize: '1.1rem',
-                  fontWeight: 'bold'
-                }}
-              >
-                {remoteStream ? 'Open Desktop Viewer' : 'Waiting for Host...'}
-              </Button>
-
-              {remoteStream && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Inline Preview (muted)
-                  </Typography>
-                  <Box
-                    component="video"
-                    ref={videoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    controls
-                    sx={{
-                      width: '100%',
-                      maxWidth: 520,
-                      borderRadius: 2,
-                      border: '1px solid rgba(0,0,0,0.12)',
-                      backgroundColor: 'black'
-                    }}
-                  />
-                </Box>
-              )}
-
-              <Box display="flex" justifyContent="center" gap={2} flexWrap="wrap">
-                <Chip 
-                  label={remoteStream ? 'Stream: Ready' : 'Stream: Waiting'} 
-                  color={remoteStream ? 'success' : 'default'}
-                  size="small"
-                />
-                <Chip 
-                  label={peerConnection ? 'WebRTC: Active' : 'WebRTC: None'} 
-                  color={peerConnection ? 'success' : 'default'}
-                  size="small"
-                />
-              </Box>
-              
-              {!remoteStream && (
-                <Button 
-                  onClick={requestScreenShare}
-                  variant="outlined"
-                  startIcon={<VideoCall />}
-                  disabled={screenShareRequested}
-                  size="small"
-                  sx={{ mt: 2 }}
-                >
-                  {screenShareRequested ? 'Request Sent' : 'Request Screen Share'}
-                </Button>
-              )}
-            </Paper>
-          )}
-
-          {/* File Transfer - Simplified */}
-          {sessionId && (
-            <Paper sx={{ 
-              mt: 3, 
-              p: 2.5,
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(97, 61, 169, 0.2)',
-              borderRadius: '12px'
-            }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+            {/* Host Status - Simplified */}
+            {isHost && sessionId && (
+              <Paper sx={{
+                mt: 3,
+                p: 2.5,
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
+                borderRadius: '12px'
+              }}>
                 <Box display="flex" alignItems="center" gap={1}>
-                  <CloudUpload sx={{ color: '#613da9' }} />
-                  <Typography variant="body1" fontWeight="bold" sx={{ color: 'white' }}>
-                    File Transfer
+                  <Computer sx={{ color: '#8b5cf6' }} />
+                  <Typography variant="body1" sx={{ color: 'white' }}>
+                    Sharing desktop - Session: {' '}
+                    <Chip
+                      label={sessionId.substring(0, 12) + '...'}
+                      size="small"
+                      sx={{
+                        background: 'rgba(139, 92, 246, 0.2)',
+                        color: '#8b5cf6',
+                        border: '1px solid rgba(139, 92, 246, 0.3)',
+                        fontFamily: 'monospace',
+                        fontWeight: 600
+                      }}
+                    />
                   </Typography>
-                  <Chip 
-                    label={dataChannel && dataChannel.readyState === 'open' ? 'Ready' : 'Not Ready'} 
-                    size="small"
-                    sx={{
-                      background: dataChannel && dataChannel.readyState === 'open' 
-                        ? 'rgba(34, 197, 94, 0.2)' 
-                        : 'rgba(100, 100, 100, 0.2)',
-                      color: dataChannel && dataChannel.readyState === 'open' 
-                        ? '#22c55e' 
-                        : 'rgba(255, 255, 255, 0.5)',
-                      border: `1px solid ${dataChannel && dataChannel.readyState === 'open' 
-                        ? 'rgba(34, 197, 94, 0.3)' 
-                        : 'rgba(100, 100, 100, 0.3)'}`
-                    }}
-                  />
                 </Box>
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                  aria-label="Select a file to transfer"
-                />
-                <Button 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={!dataChannel || dataChannel.readyState !== 'open'}
-                  variant="outlined"
-                  startIcon={<CloudUpload />}
-                  size="small"
-                  sx={{
-                    textTransform: 'none',
-                    borderRadius: '8px',
-                    color: (!dataChannel || dataChannel.readyState !== 'open') 
-                      ? 'rgba(255, 255, 255, 0.3)' 
-                      : 'white',
-                    borderColor: (!dataChannel || dataChannel.readyState !== 'open') 
-                      ? 'rgba(97, 61, 169, 0.2)' 
-                      : 'rgba(97, 61, 169, 0.5)',
-                    background: 'rgba(97, 61, 169, 0.1)',
-                    '&:hover': {
-                      borderColor: '#613da9',
-                      background: 'rgba(97, 61, 169, 0.2)'
-                    },
-                    '&.Mui-disabled': {
-                      color: 'rgba(255, 255, 255, 0.2)',
-                      borderColor: 'rgba(97, 61, 169, 0.1)'
-                    }
-                  }}
-                >
-                  Send File (Recommended up to 5–20GB)
-                </Button>
-              </Box>
-              {fileTransfer.active && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" gutterBottom sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                    Uploading: {Math.round(fileTransfer.progress)}%
-                  </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={fileTransfer.progress}
-                    sx={{
-                      height: 8,
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(139, 92, 246, 0.2)',
-                      '& .MuiLinearProgress-bar': {
-                        background: 'linear-gradient(90deg, #8b5cf6, #613da9)',
-                        borderRadius: '4px'
-                      }
-                    }}
-                  />
-                </Box>
-              )}
-            </Paper>
-          )}
-
-          {/* Host Status - Simplified */}
-          {isHost && sessionId && (
-            <Paper sx={{ 
-              mt: 3, 
-              p: 2.5,
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
-              borderRadius: '12px'
-            }}>
-              <Box display="flex" alignItems="center" gap={1}>
-                <Computer sx={{ color: '#8b5cf6' }} />
-                <Typography variant="body1" sx={{ color: 'white' }}>
-                  Sharing desktop - Session: {' '}
-                  <Chip 
-                    label={sessionId.substring(0, 12) + '...'} 
-                    size="small"
-                    sx={{
-                      background: 'rgba(139, 92, 246, 0.2)',
-                      color: '#8b5cf6',
-                      border: '1px solid rgba(139, 92, 246, 0.3)',
-                      fontFamily: 'monospace',
-                      fontWeight: 600
-                    }}
-                  />
-                </Typography>
-              </Box>
-            </Paper>
-          )}
-        {/* Vercel build fix */}
-        </Container>
-      </Box>
+              </Paper>
+            )}
+            {/* Vercel build fix */}
+          </Container>
+        </Box>
       )}
     </ThemeProvider>
   );

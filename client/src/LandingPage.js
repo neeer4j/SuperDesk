@@ -1451,12 +1451,7 @@ function LandingPage() {
     });
   };
 
-  const handleVideoQualityChange = (e) => {
-    setSettings(prev => ({
-      ...prev,
-      videoQuality: e.target.value
-    }));
-  };
+
 
   const openAccountModal = () => {
     setAccountModalOpen(true);
@@ -1525,6 +1520,85 @@ function LandingPage() {
       closeAccountModal();
     }, 1000);
   };
+
+  // Terms of Service and Privacy Policy modal functions
+  const openTermsOfService = () => {
+    const modalContent = document.createElement('div');
+    modalContent.innerHTML = `
+      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 10000; animation: fadeIn 0.2s ease;" onclick="this.remove()">
+        <div style="background: linear-gradient(145deg, ${darkMode ? '#1a1a2e 0%, #0d0d14 100%' : '#7c4dbd 0%, #5a3498 100%'}); border-radius: 16px; width: 90%; max-width: 700px; max-height: 85vh; padding: 32px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); color: white; position: relative; overflow-y: auto;" onclick="event.stopPropagation()">
+          <button onclick="this.closest('[style*=position].remove()" style="position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 8px; background: rgba(255, 255, 255, 0.1); border: none; color: white; font-size: 28px; cursor: pointer; line-height: 1;">×</button>
+          <h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Terms of Service</h2>
+          <div style="max-height: 60vh; overflow-y: auto; padding-right: 12px; line-height: 1.8;">
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">1. Acceptance of Terms</h3>
+            <p>By accessing and using SuperDesk, you accept and agree to be bound by the terms and provision of this agreement.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">2. Use License</h3>
+            <p>Permission is granted to temporarily access SuperDesk for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">3. Service Description</h3>
+            <p>SuperDesk provides secure remote desktop sharing capabilities. The service allows users to share and control screens remotely through encrypted peer-to-peer connections.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">4. User Responsibilities</h3>
+            <p>You are responsible for maintaining the confidentiality of your account and for all activities that occur under your account. You agree to:</p>
+            <ul style="margin-left: 24px; margin-top: 8px;">
+              <li>Provide accurate and complete registration information</li>
+              <li>Maintain the security of your account credentials</li>
+              <li>Use the service only for lawful purposes</li>
+              <li>Not share session IDs with unauthorized parties</li>
+            </ul>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">5. Privacy and Data</h3>
+            <p>We respect your privacy. Screen sharing sessions are peer-to-peer encrypted. We do not store or record your shared content. See our Privacy Policy for more details.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">6. Limitations of Liability</h3>
+            <p>SuperDesk is provided "as is" without warranties of any kind. We shall not be liable for any damages arising from the use or inability to use the service.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">7. Termination</h3>
+            <p>We may terminate or suspend access to our service immediately, without prior notice, for any reason whatsoever, including breach of the Terms.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">8. Changes to Terms</h3>
+            <p>We reserve the right to modify these terms at any time. Continued use of the service after changes constitutes acceptance of the modified terms.</p>
+            <p style="margin-top: 24px; font-size: 13px; opacity: 0.7;">Last updated: January 2026</p>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modalContent);
+  };
+
+  const openPrivacyPolicy = () => {
+    const modalContent = document.createElement('div');
+    modalContent.innerHTML = `
+      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); display: flex; align-items: center; justify-center; z-index: 10000; animation: fadeIn 0.2s ease;" onclick="this.remove()">
+        <div style="background: linear-gradient(145deg, ${darkMode ? '#1a1a2e 0%, #0d0d14 100%' : '#7c4dbd 0%, #5a3498 100%'}); border-radius: 16px; width: 90%; max-width: 700px; max-height: 85vh; padding: 32px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); color: white; position: relative; overflow-y: auto;" onclick="event.stopPropagation()">
+          <button onclick="this.closest('[style*=position]').remove()" style="position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 8px; background: rgba(255, 255, 255, 0.1); border: none; color: white; font-size: 28px; cursor: pointer; line-height: 1;">×</button>
+          <h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Privacy Policy</h2>
+          <div style="max-height: 60vh; overflow-y: auto; padding-right: 12px; line-height: 1.8;">
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">1. Information We Collect</h3>
+            <p>We collect minimal information necessary to provide our service:</p>
+            <ul style="margin-left: 24px; margin-top: 8px;">
+              <li><strong>Account Information:</strong> Email address for authentication</li>
+              <li><strong>Session Data:</strong> Temporary session IDs for connecting users (automatically deleted)</li>
+              <li><strong>Usage Data:</strong> Basic analytics to improve service quality</li>
+            </ul>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">2. Data Security</h3>
+            <p>We take security seriously:</p>
+            <ul style="margin-left: 24px; margin-top: 8px;">
+              <li><strong>End-to-End Encryption:</strong> All screen sharing sessions use WebRTC peer-to-peer encryption</li>
+              <li><strong>No Recording:</strong> We do not record, store, or have access to your shared screen content</li>
+              <li><strong>Secure Authentication:</strong> Email-based OTP authentication via Supabase</li>
+              <li><strong>Temporary Sessions:</strong> Session data is automatically deleted when sessions end</li>
+            </ul>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">3. Data Sharing</h3>
+            <p>We do not sell, trade, or rent your personal information to third parties. Your data is never shared except when required by law, to protect our rights and safety, or with your explicit consent.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">4. Your Rights</h3>
+            <p>You have the right to access your personal data, request data deletion, opt-out of non-essential communications, and export your data.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">5. Data Retention</h3>
+            <p>We retain your account information for as long as your account is active. Session data and connection logs are automatically deleted within 24 hours.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">6. Children's Privacy</h3>
+            <p>SuperDesk is not intended for users under 13 years of age. We do not knowingly collect personal information from children.</p>
+            <p style="margin-top: 24px; font-size: 13px; opacity: 0.7;">Last updated: January 2026</p>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modalContent);
+  };
+
 
   useEffect(() => {
     // Initialize theme from localStorage (default to dark mode)
@@ -1875,11 +1949,48 @@ function LandingPage() {
                 </button>
               </>
             )}
+
+            {/* Terms and Privacy Policy */}
+            <p style={{
+              fontSize: '12px',
+              color: 'rgba(255, 255, 255, 0.5)',
+              textAlign: 'center',
+              marginTop: '24px',
+              lineHeight: '1.6'
+            }}>
+              By continuing, you agree to our{' '}
+              <span
+                onClick={openTermsOfService}
+                style={{
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                }}
+                onMouseEnter={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.9)'}
+                onMouseLeave={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.7)'}
+              >
+                Terms of Service
+              </span>{' '}
+              and{' '}
+              <span
+                onClick={openPrivacyPolicy}
+                style={{
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                }}
+                onMouseEnter={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.9)'}
+                onMouseLeave={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.7)'}
+              >
+                Privacy Policy
+              </span>.
+            </p>
           </div>
         </div>
       </div>
     );
   }
+
 
   // Show remote desktop view when in session
   if (inSession && clientRef.current && sessionId) {

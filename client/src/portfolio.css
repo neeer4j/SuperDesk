@@ -465,20 +465,20 @@ html {
 }
 
 .portfolio-about-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 60px;
+  gap: 80px;
 }
 
 .portfolio-about-container h2 {
-  font-size: 36px !important;
+  font-size: 42px !important;
 }
 
 .portfolio-about-image {
   flex-shrink: 0;
-  width: 220px;
+  width: 300px;
   padding: 16px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -488,7 +488,7 @@ html {
 
 .portfolio-about-image img {
   width: 100%;
-  max-width: 180px;
+  max-width: 260px;
   height: auto;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
@@ -507,10 +507,10 @@ html {
 }
 
 .portfolio-about-text p {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.8);
   line-height: 1.8;
-  margin-bottom: 18px;
+  margin-bottom: 24px;
 }
 
 .portfolio-about-text p:last-child {
@@ -721,6 +721,57 @@ html {
   max-width: 900px;
   margin: 0 auto;
   justify-items: center;
+}
+
+/* Horizontal scrolling marquee */
+.tech-marquee-container {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  /* Increased padding to prevent tooltip clipping */
+  padding: 40px 0 60px;
+}
+
+.tech-marquee-container::before,
+.tech-marquee-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.tech-marquee-container::before {
+  left: 0;
+  background: linear-gradient(to right, #0d0d14, transparent);
+}
+
+.tech-marquee-container::after {
+  right: 0;
+  background: linear-gradient(to left, #0d0d14, transparent);
+}
+
+.tech-marquee-track {
+  display: flex;
+  gap: 4rem;
+  animation: marqueeScroll 30s linear infinite;
+  width: max-content;
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.tech-marquee-track .tech-item {
+  flex-shrink: 0;
 }
 
 .tech-item {

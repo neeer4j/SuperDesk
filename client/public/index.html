@@ -1,19 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="SuperDesk - Remote Desktop Access Software"
-    />
-    <meta name="build-version" content="2024-v2" />
-    <title>SuperDesk</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-  </body>
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+  <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0d0d14" />
+
+  <!-- SEO Meta Tags -->
+  <title>SuperDesk - Secure Remote Desktop Sharing for Modern Teams</title>
+  <meta name="description"
+    content="SuperDesk is a secure, peer-to-peer remote desktop sharing application. Share your screen, control remote computers, and transfer files with end-to-end encryption." />
+  <meta name="keywords"
+    content="remote desktop, screen sharing, remote control, file transfer, WebRTC, secure, peer-to-peer" />
+  <meta name="author" content="Neeraj Venu & Joniyal" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://superdesk.vercel.app" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://superdesk.vercel.app/" />
+  <meta property="og:title" content="SuperDesk - Secure Remote Desktop Sharing" />
+  <meta property="og:description"
+    content="Share your screen, control remote computers, and transfer files securely with end-to-end encryption." />
+  <meta property="og:image" content="%PUBLIC_URL%/logo-512x512.png" />
+  <meta property="og:site_name" content="SuperDesk" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://superdesk.vercel.app/" />
+  <meta name="twitter:title" content="SuperDesk - Secure Remote Desktop Sharing" />
+  <meta name="twitter:description"
+    content="Share your screen, control remote computers, and transfer files securely." />
+  <meta name="twitter:image" content="%PUBLIC_URL%/logo-512x512.png" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+  <!-- Preconnect to external resources -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Inline critical CSS for loading screen -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0d0d14;
+      /* Solid dark background */
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: white;
+    }
+
+    #root-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #0d0d14;
+      /* Solid background */
+      z-index: 9999;
+      transition: opacity 0.5s ease-out;
+    }
+
+    .loader-logo {
+      width: 80px;
+      /* Smaller, cleaner logo */
+      height: 80px;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    .loader-text {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.5);
+      /* Subtle text */
+      letter-spacing: 1px;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <noscript>
+    <div
+      style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0d0d14; color: white; font-family: sans-serif; text-align: center; padding: 20px;">
+      <h1 style="font-size: 24px; margin-bottom: 16px;">JavaScript Required</h1>
+      <p style="color: rgba(255,255,255,0.7); max-width: 400px; line-height: 1.6;">
+        SuperDesk requires JavaScript to run. Please enable JavaScript in your browser settings and reload the page.
+      </p>
+    </div>
+  </noscript>
+  <div id="root">
+    <!-- Loading screen visible until React hydrates -->
+    <div id="root-loader">
+      <img src="%PUBLIC_URL%/logo-192x192.png" alt="SuperDesk" class="loader-logo" />
+      <div class="loader-text">Loading SuperDesk...</div>
+    </div>
+  </div>
+</body>
+
 </html>

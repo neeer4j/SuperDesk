@@ -392,6 +392,8 @@ export default function Home() {
                                 <img
                                     src={supimage}
                                     alt="SuperDesk App"
+                                    loading="lazy"
+                                    decoding="async"
                                     style={{
                                         width: '100%',
                                         height: 'auto',
@@ -452,6 +454,8 @@ export default function Home() {
                                 <img
                                     src={superdeskScreenshot}
                                     alt="SuperDesk Agent"
+                                    loading="lazy"
+                                    decoding="async"
                                     style={{
                                         width: '100%',
                                         height: '100%',
@@ -461,6 +465,49 @@ export default function Home() {
                                     }}
                                 />
                             </div>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
+            {/* About Section */}
+            <section id="about" className="portfolio-about">
+                <div className="portfolio-about-container">
+                    {/* Left - Image/Visual */}
+                    <motion.div
+                        className="portfolio-about-image"
+                        initial={{ opacity: 0, y: 40 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
+                    >
+                        <img
+                            src={superdeskShowcase}
+                            alt="SuperDesk App"
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    </motion.div>
+
+                    {/* Right - Text Content */}
+                    <motion.div
+                        className="portfolio-about-text"
+                        initial={{ opacity: 0, y: 40 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
+                    >
+                        <h2>About SuperDesk</h2>
+                        <div>
+                            <p>
+                                SuperDesk is an indie remote desktop solution created out of a passion for building tools that make work easier, faster, and more secure. Developed under real-world limitations, it proves that thoughtful design and dedication can create powerful software.
+                            </p>
+                            <p>
+                                Built on WebRTC, all connections are peer to peer, meaning your data never passes through any server. Privacy, security, and speed are integral to every part of the platform.
+                            </p>
+                            <p>
+                                SuperDesk is truly cross platform available as a web app, with mobile apps for Android and a desktop version that offers full functionality and flexibility.
+                            </p>
                         </div>
                     </motion.div>
                 </div>
@@ -544,47 +591,6 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* About Section */}
-            <section id="about" className="portfolio-about">
-                <div className="portfolio-about-container">
-                    {/* Left - Image/Visual */}
-                    <motion.div
-                        className="portfolio-about-image"
-                        initial={{ opacity: 0, clipPath: 'inset(50% 50% 50% 50%)' }}
-                        whileInView={{ opacity: 1, clipPath: 'inset(0% 0% 0% 0%)' }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.6, ease: 'easeOut' }}
-                    >
-                        <img
-                            src={superdeskShowcase}
-                            alt="SuperDesk App"
-                        />
-                    </motion.div>
-
-                    {/* Right - Text Content */}
-                    <motion.div
-                        className="portfolio-about-text"
-                        initial={{ opacity: 0, clipPath: 'inset(50% 50% 50% 50%)' }}
-                        whileInView={{ opacity: 1, clipPath: 'inset(0% 0% 0% 0%)' }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
-                    >
-                        <h2>About SuperDesk</h2>
-                        <div>
-                            <p>
-                                SuperDesk is an indie remote desktop solution created out of a passion for building tools that make work easier, faster, and more secure. Developed under real-world limitations, it proves that thoughtful design and dedication can create powerful software.
-                            </p>
-                            <p>
-                                Built on WebRTC, all connections are peer to peer, meaning your data never passes through any server. Privacy, security, and speed are integral to every part of the platform.
-                            </p>
-                            <p>
-                                SuperDesk is truly cross platform available as a web app, with mobile apps for Android and a desktop version that offers full functionality and flexibility.
-                            </p>
-                        </div>
-                    </motion.div>
-                </div>
-            </section>
-
             {/* Note from the Developers Section */}
             <section id="developers-note" className="portfolio-developers-note">
                 <div className="portfolio-developers-note-container">
@@ -619,48 +625,44 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* Tech Stack Section */}
+            {/* Tech Stack Section - Scrolling Marquee */}
             <section className="tech-stack-section">
                 <div className="section-title-container">
                     <h2 className="section-title" style={{ color: '#ffffff' }}>Powered By</h2>
                 </div>
 
-                <div className="tech-grid">
-                    <div className="tech-item" title="React">
-                        <SiReact className="tech-icon react" />
-                    </div>
-                    <div className="tech-item" title="Node.js">
-                        <SiNodedotjs className="tech-icon node" />
-                    </div>
-                    <div className="tech-item" title="WebRTC">
-                        <SiWebrtc className="tech-icon webrtc" />
-                    </div>
-                    <div className="tech-item" title="Electron">
-                        <SiElectron className="tech-icon electron" />
-                    </div>
-                    <div className="tech-item" title="Socket.io">
-                        <SiSocketdotio className="tech-icon socket" />
-                    </div>
-                    <div className="tech-item" title="Express">
-                        <SiExpress className="tech-icon express" />
-                    </div>
-                    <div className="tech-item" title="GitHub">
-                        <SiGithub className="tech-icon github" />
-                    </div>
-                    <div className="tech-item" title="Tailwind CSS">
-                        <SiTailwindcss className="tech-icon tailwind" />
-                    </div>
-                    <div className="tech-item" title="Azure">
-                        <VscAzure className="tech-icon azure" />
-                    </div>
-                    <div className="tech-item" title="Supabase">
-                        <SiSupabase className="tech-icon supabase" />
-                    </div>
-                    <div className="tech-item" title="Framer Motion">
-                        <SiFramer className="tech-icon framer" />
-                    </div>
-                    <div className="tech-item" title="Vercel">
-                        <SiVercel className="tech-icon vercel" />
+                <div
+                    className="tech-marquee-container"
+                    onMouseEnter={(e) => e.currentTarget.querySelector('.tech-marquee-track').style.animationPlayState = 'paused'}
+                    onMouseLeave={(e) => e.currentTarget.querySelector('.tech-marquee-track').style.animationPlayState = 'running'}
+                >
+                    <div className="tech-marquee-track">
+                        {/* First set of icons */}
+                        <div className="tech-item" title="React"><SiReact className="tech-icon react" /></div>
+                        <div className="tech-item" title="Node.js"><SiNodedotjs className="tech-icon node" /></div>
+                        <div className="tech-item" title="WebRTC"><SiWebrtc className="tech-icon webrtc" /></div>
+                        <div className="tech-item" title="Electron"><SiElectron className="tech-icon electron" /></div>
+                        <div className="tech-item" title="Socket.io"><SiSocketdotio className="tech-icon socket" /></div>
+                        <div className="tech-item" title="Express"><SiExpress className="tech-icon express" /></div>
+                        <div className="tech-item" title="GitHub"><SiGithub className="tech-icon github" /></div>
+                        <div className="tech-item" title="Tailwind CSS"><SiTailwindcss className="tech-icon tailwind" /></div>
+                        <div className="tech-item" title="Azure"><VscAzure className="tech-icon azure" /></div>
+                        <div className="tech-item" title="Supabase"><SiSupabase className="tech-icon supabase" /></div>
+                        <div className="tech-item" title="Framer Motion"><SiFramer className="tech-icon framer" /></div>
+                        <div className="tech-item" title="Vercel"><SiVercel className="tech-icon vercel" /></div>
+                        {/* Duplicate set for seamless loop */}
+                        <div className="tech-item" title="React"><SiReact className="tech-icon react" /></div>
+                        <div className="tech-item" title="Node.js"><SiNodedotjs className="tech-icon node" /></div>
+                        <div className="tech-item" title="WebRTC"><SiWebrtc className="tech-icon webrtc" /></div>
+                        <div className="tech-item" title="Electron"><SiElectron className="tech-icon electron" /></div>
+                        <div className="tech-item" title="Socket.io"><SiSocketdotio className="tech-icon socket" /></div>
+                        <div className="tech-item" title="Express"><SiExpress className="tech-icon express" /></div>
+                        <div className="tech-item" title="GitHub"><SiGithub className="tech-icon github" /></div>
+                        <div className="tech-item" title="Tailwind CSS"><SiTailwindcss className="tech-icon tailwind" /></div>
+                        <div className="tech-item" title="Azure"><VscAzure className="tech-icon azure" /></div>
+                        <div className="tech-item" title="Supabase"><SiSupabase className="tech-icon supabase" /></div>
+                        <div className="tech-item" title="Framer Motion"><SiFramer className="tech-icon framer" /></div>
+                        <div className="tech-item" title="Vercel"><SiVercel className="tech-icon vercel" /></div>
                     </div>
                 </div>
             </section>

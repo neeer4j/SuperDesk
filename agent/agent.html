@@ -20,7 +20,7 @@
         // Custom storage adapter for Electron that ensures proper session persistence
         // This wraps localStorage with error handling and fallback mechanisms
         var customStorageAdapter = {
-            getItem: function(key) {
+            getItem: function (key) {
                 try {
                     var value = localStorage.getItem(key);
                     console.log('[Supabase Storage] getItem:', key, value ? 'found' : 'not found');
@@ -30,7 +30,7 @@
                     return null;
                 }
             },
-            setItem: function(key, value) {
+            setItem: function (key, value) {
                 try {
                     localStorage.setItem(key, value);
                     console.log('[Supabase Storage] setItem:', key, 'saved');
@@ -38,7 +38,7 @@
                     console.error('[Supabase Storage] setItem error:', e);
                 }
             },
-            removeItem: function(key) {
+            removeItem: function (key) {
                 try {
                     localStorage.removeItem(key);
                     console.log('[Supabase Storage] removeItem:', key);
@@ -68,9 +68,9 @@
         var supabase = window.supabaseClient;
 
         console.log('✅ Supabase client initialized with explicit persistence (window.supabaseClient)');
-        
+
         // Early error capture before other scripts load
-        window.onerror = function(msg, url, line, col, error) {
+        window.onerror = function (msg, url, line, col, error) {
             console.error('SCRIPT ERROR:', msg, 'at', url, 'line', line);
             return false;
         };
@@ -5285,8 +5285,10 @@
                     <button class="btn btn-text hidden" id="back-to-logged-in-btn">← Back to logged in account</button>
                     <p
                         style="font-size: 12px; color: rgba(255, 255, 255, 0.5); text-align: center; margin-top: 24px; line-height: 1.6;">
-                        By continuing, you agree to our <span style="text-decoration:underline;cursor:pointer;">Terms of
-                            Service</span> and <span style="text-decoration:underline;cursor:pointer;">Privacy
+                        By continuing, you agree to our <span id="terms-link"
+                            style="text-decoration:underline;cursor:pointer;" onclick="openTermsOfService()">Terms of
+                            Service</span> and <span id="privacy-link" style="text-decoration:underline;cursor:pointer;"
+                            onclick="openPrivacyPolicy()">Privacy
                             Policy</span>.
                     </p>
                 </div>
@@ -6188,21 +6190,21 @@
                 let session = null;
                 const MAX_RETRIES = 2;
                 const TIMEOUT_MS = 5000; // Increased timeout for slow networks/storage
-                
+
                 for (let attempt = 0; attempt <= MAX_RETRIES && !session; attempt++) {
                     try {
                         if (attempt > 0) {
                             console.log(`🔄 Auth session check retry ${attempt}/${MAX_RETRIES}...`);
                             await new Promise(r => setTimeout(r, 500)); // Small delay before retry
                         }
-                        
+
                         const sessionPromise = window.supabaseClient.auth.getSession();
                         const timeoutPromise = new Promise((_, reject) =>
                             setTimeout(() => reject(new Error('Auth timeout')), TIMEOUT_MS)
                         );
                         const result = await Promise.race([sessionPromise, timeoutPromise]);
                         session = result?.data?.session;
-                        
+
                         if (session) {
                             console.log('✅ Auth session found for user:', session.user?.email);
                         } else {
@@ -10946,6 +10948,227 @@
                 timestamp: new Date().toISOString(),
                 status: status || 'Connected' // Default
             });
+        }
+
+        // Terms of Service and Privacy Policy modal functions
+        function openTermsOfService() {
+            const content = `
+                <h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Terms of Service</h2>
+                <div style="max-height: 60vh; overflow-y: auto; padding-right: 12px; line-height: 1.8;">
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">1. Acceptance of Terms</h3>
+                    <p>By accessing and using SuperDesk, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">2. Use License</h3>
+                    <p>Permission is granted to temporarily access SuperDesk for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">3. Service Description</h3>
+                    <p>SuperDesk provides secure remote desktop sharing capabilities. The service allows users to share and control screens remotely through encrypted peer-to-peer connections.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">4. User Responsibilities</h3>
+                    <p>You are responsible for maintaining the confidentiality of your account and for all activities that occur under your account. You agree to:</p>
+                    <ul style="margin-left: 24px; margin-top: 8px;">
+                        <li>Provide accurate and complete registration information</li>
+                        <li>Maintain the security of your account credentials</li>
+                        <li>Use the service only for lawful purposes</li>
+                        <li>Not share session IDs with unauthorized parties</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">5. Privacy and Data</h3>
+                    <p>We respect your privacy. Screen sharing sessions are peer-to-peer encrypted. We do not store or record your shared content. See our Privacy Policy for more details.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">6. Limitations of Liability</h3>
+                    <p>SuperDesk is provided "as is" without warranties of any kind. We shall not be liable for any damages arising from the use or inability to use the service.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">7. Termination</h3>
+                    <p>We may terminate or suspend access to our service immediately, without prior notice, for any reason whatsoever, including breach of the Terms.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">8. Changes to Terms</h3>
+                    <p>We reserve the right to modify these terms at any time. Continued use of the service after changes constitutes acceptance of the modified terms.</p>
+                    
+                    <p style="margin-top: 24px; font-size: 13px; opacity: 0.7;">Last updated: January 2026</p>
+                </div>
+            `;
+            showPolicyModal('Terms of Service', content);
+        }
+
+        function openPrivacyPolicy() {
+            const content = `
+                <h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Privacy Policy</h2>
+                <div style="max-height: 60vh; overflow-y: auto; padding-right: 12px; line-height: 1.8;">
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">1. Information We Collect</h3>
+                    <p>We collect minimal information necessary to provide our service:</p>
+                    <ul style="margin-left: 24px; margin-top: 8px;">
+                        <li><strong>Account Information:</strong> Email address for authentication</li>
+                        <li><strong>Session Data:</strong> Temporary session IDs for connecting users (automatically deleted)</li>
+                        <li><strong>Usage Data:</strong> Basic analytics to improve service quality</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">2. How We Use Your Information</h3>
+                    <p>Your information is used solely to:</p>
+                    <ul style="margin-left: 24px; margin-top: 8px;">
+                        <li>Authenticate your account</li>
+                        <li>Facilitate remote desktop connections</li>
+                        <li>Improve service performance and reliability</li>
+                        <li>Send important service notifications</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">3. Data Security</h3>
+                    <p>We take security seriously:</p>
+                    <ul style="margin-left: 24px; margin-top: 8px;">
+                        <li><strong>End-to-End Encryption:</strong> All screen sharing sessions use WebRTC peer-to-peer encryption</li>
+                        <li><strong>No Recording:</strong> We do not record, store, or have access to your shared screen content</li>
+                        <li><strong>Secure Authentication:</strong> Email-based OTP authentication via Supabase</li>
+                        <li><strong>Temporary Sessions:</strong> Session data is automatically deleted when sessions end</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">4. Data Sharing</h3>
+                    <p>We do not sell, trade, or rent your personal information to third parties. Your data is never shared except:</p>
+                    <ul style="margin-left: 24px; margin-top: 8px;">
+                        <li>When required by law</li>
+                        <li>To protect our rights and safety</li>
+                        <li>With your explicit consent</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">5. Third-Party Services</h3>
+                    <p>We use the following trusted third-party services:</p>
+                    <ul style="margin-left: 24px; margin-top: 8px;">
+                        <li><strong>Supabase:</strong> Authentication and database (privacy-focused, GDPR compliant)</li>
+                        <li><strong>Azure/Custom Signaling:</strong> WebRTC connection establishment only</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">6. Your Rights</h3>
+                    <p>You have the right to:</p>
+                    <ul style="margin-left: 24px; margin-top: 8px;">
+                        <li>Access your personal data</li>
+                        <li>Request data deletion</li>
+                        <li>Opt-out of non-essential communications</li>
+                        <li>Export your data</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">7. Data Retention</h3>
+                    <p>We retain your account information for as long as your account is active. Session data and connection logs are automatically deleted within 24 hours.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">8. Cookies and Tracking</h3>
+                    <p>We use minimal local storage for authentication persistence only. No tracking cookies or analytics cookies are used.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">9. Children's Privacy</h3>
+                    <p>SuperDesk is not intended for users under 13 years of age. We do not knowingly collect personal information from children.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">10. Changes to Privacy Policy</h3>
+                    <p>We may update this privacy policy from time to time. We will notify you of significant changes via email or service notification.</p>
+                    
+                    <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">11. Contact Us</h3>
+                    <p>For privacy-related questions or concerns, please contact us through the app or via our support channels.</p>
+                    
+                    <p style="margin-top: 24px; font-size: 13px; opacity: 0.7;">Last updated: January 2026</p>
+                </div>
+            `;
+            showPolicyModal('Privacy Policy', content);
+        }
+
+        function showPolicyModal(title, content) {
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'policy-modal-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.75);
+                backdrop-filter: blur(4px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                animation: fadeIn 0.2s ease;
+            `;
+
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: var(--modal-bg);
+                border-radius: 16px;
+                width: 90%;
+                max-width: 700px;
+                max-height: 85vh;
+                padding: 32px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+                color: white;
+                position: relative;
+                overflow-y: auto;
+                animation: slideUp 0.3s ease;
+            `;
+
+            // Close button
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '×';
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: 16px;
+                right: 16px;
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.1);
+                border: none;
+                color: white;
+                font-size: 28px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.2s;
+                line-height: 1;
+            `;
+            closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+            closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+            closeBtn.onclick = () => document.body.removeChild(overlay);
+
+            modal.innerHTML = content;
+            modal.appendChild(closeBtn);
+            overlay.appendChild(modal);
+
+            // Close on overlay click
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            };
+
+            // Add CSS animations
+            if (!document.getElementById('policy-modal-styles')) {
+                const style = document.createElement('style');
+                style.id = 'policy-modal-styles';
+                style.textContent = `
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes slideUp {
+                        from { transform: translateY(30px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                    #policy-modal-overlay ::-webkit-scrollbar {
+                        width: 8px;
+                    }
+                    #policy-modal-overlay ::-webkit-scrollbar-track {
+                        background: rgba(255, 255, 255, 0.05);
+                        border-radius: 4px;
+                    }
+                    #policy-modal-overlay ::-webkit-scrollbar-thumb {
+                        background: rgba(255, 255, 255, 0.2);
+                        border-radius: 4px;
+                    }
+                    #policy-modal-overlay ::-webkit-scrollbar-thumb:hover {
+                        background: rgba(255, 255, 255, 0.3);
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            document.body.appendChild(overlay);
         }
     </script>
 </body>

@@ -113,7 +113,7 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
     // Camera overlay callbacks
     client.on('remoteCameraStream', (cameraStream) => {
       console.log('📹 WEBAPP: Remote camera stream received');
-      
+
       // Function to set up camera video with retry
       const setupCameraVideo = () => {
         if (!cameraVideoRef.current) {
@@ -121,9 +121,9 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
           setTimeout(setupCameraVideo, 100);
           return;
         }
-        
+
         cameraVideoRef.current.srcObject = cameraStream;
-        
+
         // Only show overlay when video actually has data
         cameraVideoRef.current.onloadeddata = () => {
           if (cameraVideoRef.current && cameraVideoRef.current.videoWidth > 0 && cameraVideoRef.current.videoHeight > 0) {
@@ -132,16 +132,16 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
             showToast('Host camera enabled', 'info', 2000);
           }
         };
-        
+
         // Also listen for loadedmetadata as fallback
         cameraVideoRef.current.onloadedmetadata = () => {
           console.log('📹 WEBAPP: Camera video metadata loaded');
           setShowCameraOverlay(true);
         };
-        
+
         cameraVideoRef.current.play().catch(e => console.warn('Camera play error:', e));
       };
-      
+
       setupCameraVideo();
     });
 
@@ -212,13 +212,12 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
   // No RAF delay - send on every mousemove event for true real-time responsiveness
   const lastPositionRef = useRef({ x: -1, y: -1 });
   const velocityRef = useRef({ vx: 0, vy: 0, time: 0 });
-  const lastSendTimeRef = useRef(0);
 
   const handleMouseMove = (e) => {
     if (!remoteControlEnabled || !videoRef.current) return;
 
     const rect = videoRef.current.getBoundingClientRect();
-    
+
     // Verify video element is visible and has valid dimensions
     if (rect.width <= 0 || rect.height <= 0) return;
 
@@ -232,7 +231,7 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
     // Calculate velocity BEFORE updating position (for accuracy)
     const now = performance.now();
     const lastPos = lastPositionRef.current;
-    
+
     if (lastPos.x >= 0 && lastPos.y >= 0 && velocityRef.current.time > 0) {
       const dt = (now - velocityRef.current.time) / 1000;
       if (dt > 0) {
