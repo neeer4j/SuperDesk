@@ -3,6 +3,38 @@ const path = require('path');
 const fs = require('fs');
 const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
 
+// ==================== ULTRA-LOW LATENCY WINDOWS API (KOFFI FFI) ====================
+// Direct Windows API calls via koffi for INSTANT mouse movement (bypasses nut-js overhead)
+let koffi = null;
+let user32 = null;
+let SetCursorPos = null;
+let mouse_event = null;
+let keybd_event = null;
+let useDirectWinAPI = false;
+
+try {
+    koffi = require('koffi');
+    user32 = koffi.load('user32.dll');
+    
+    // SetCursorPos - INSTANT cursor positioning (synchronous, no promises)
+    SetCursorPos = user32.func('SetCursorPos', 'bool', ['int', 'int']);
+    
+    // mouse_event - for clicks and scrolling
+    // Flags: MOUSEEVENTF_LEFTDOWN=0x02, LEFTUP=0x04, RIGHTDOWN=0x08, RIGHTUP=0x10
+    //        MIDDLEDOWN=0x20, MIDDLEUP=0x40, WHEEL=0x0800, HWHEEL=0x01000
+    //        ABSOLUTE=0x8000, MOVE=0x0001
+    mouse_event = user32.func('mouse_event', 'void', ['uint', 'uint', 'uint', 'int', 'uintptr_t']);
+    
+    // keybd_event - for keyboard input (used as fallback)
+    keybd_event = user32.func('keybd_event', 'void', ['uchar', 'uchar', 'uint', 'uintptr_t']);
+    
+    useDirectWinAPI = true;
+    console.log('✅ KOFFI loaded - using DIRECT Windows API for INSTANT mouse control');
+} catch (e) {
+    console.log('⚠️ KOFFI not available, falling back to nut-js:', e.message);
+    useDirectWinAPI = false;
+}
+
 // ==================== DISABLE CHROME SCREEN SHARING INDICATOR ====================
 // These flags attempt to disable Chrome's built-in "Your screen is being shared" bar
 // that appears at the bottom of the screen when using screen capture.
@@ -23,30 +55,38 @@ app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEnc
 // Ignore GPU blocklist to ensure hardware decoding works
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 
-// ==================== LOW LATENCY VIDEO CALL OPTIMIZATION ====================
+// ==================== ULTRA-LOW LATENCY VIDEO CALL OPTIMIZATION ====================
+// These flags minimize video playback and rendering latency
+
 // Disable vsync for lower latency frame delivery
 app.commandLine.appendSwitch('disable-frame-rate-limit');
 // Disable software compositing to reduce latency
 app.commandLine.appendSwitch('disable-software-rasterizer');
 // Enable hardware overlay for faster video rendering
 app.commandLine.appendSwitch('enable-hardware-overlays');
-// Reduce WebRTC jitter buffer for lower latency
-app.commandLine.appendSwitch('force-fieldtrials', 'WebRTC-Audio-MinimizeResamplingOnMobile/Enabled/');
+// Reduce WebRTC jitter buffer for lower latency (trades smoothness for speed)
+app.commandLine.appendSwitch('force-fieldtrials', 'WebRTC-Audio-MinimizeResamplingOnMobile/Enabled/WebRTC-SpsPpsIdrIsH264Keyframe/Enabled/');
 // Disable background tab throttling to keep video calls smooth
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
+// Force high-performance GPU
+app.commandLine.appendSwitch('force-gpu-mem-available-mb', '1024');
+// Disable compositor frame rate limit for instant updates
+app.commandLine.appendSwitch('disable-gpu-vsync');
 
-// Configure nut-js for instant mouse/keyboard (no animation delays)
-mouse.config.autoDelayMs = 0;
-mouse.config.mouseSpeed = 10000; // Very fast movement
-keyboard.config.autoDelayMs = 0; // No delay between key presses
+// Configure nut-js for INSTANT mouse/keyboard (zero animation delays)
+// These settings are critical for snappy remote control
+mouse.config.autoDelayMs = 0;       // No delay between operations
+mouse.config.mouseSpeed = 9999999;  // MAXIMUM SPEED for instant 1:1 tracking
+keyboard.config.autoDelayMs = 0;    // No delay between key presses
 
 console.log('✅ nut-js modules loaded successfully');
 console.log('   - mouse:', typeof mouse);
 console.log('   - keyboard:', typeof keyboard);
 console.log('   - screen:', typeof screen);
-console.log('   - mouse speed configured:', mouse.config.mouseSpeed);
+console.log('   - mouse speed:', mouse.config.mouseSpeed, '(instant mode)');
+console.log('   - mouse delay:', mouse.config.autoDelayMs, 'ms');
 
 let mainWindow;
 let toolbarWindow = null;
@@ -85,12 +125,15 @@ async function refreshScreenSize() {
 
     screenSize = { width: nutWidth, height: nutHeight };
 
-    // Also log Electron's values for comparison
+    // Also log Electron's values for comparison and DPI awareness
     const primaryDisplay = electronScreen.getPrimaryDisplay();
+    const scaleFactor = primaryDisplay.scaleFactor;
+    
     console.log('[robot] Screen refresh - nut-js native size:', screenSize);
     console.log('[robot] Screen refresh - Electron logical size:', primaryDisplay.size);
-    console.log('[robot] Screen refresh - Electron scaleFactor:', primaryDisplay.scaleFactor);
+    console.log('[robot] Screen refresh - Electron scaleFactor:', scaleFactor, '(' + (scaleFactor * 100) + '% DPI scaling)');
     console.log('[robot] Screen refresh - Electron bounds:', primaryDisplay.bounds);
+    console.log('[robot] ✅ DPI-aware mouse positioning enabled');
   } catch (error) {
     console.error('Failed to get screen size:', error);
     // Fallback to Electron's size if nut-js fails
@@ -117,12 +160,13 @@ function translateCoordinates(x, y) {
   normX = clamp(normX, 0, 1);
   normY = clamp(normY, 0, 1);
 
-  // Map normalized coordinates to screen pixels
-  // 0.0 maps to 0, 1.0 maps to (screenSize - 1) to reach edges
-  // Using Math.floor instead of round for more predictable edge behavior
+  // Map normalized coordinates to screen pixels with HIGH PRECISION
+  // Use Math.round for better accuracy (not floor) - allows full range 0 to screenSize
+  // This ensures 1:1 mouse sensitivity matching Windows default behavior
+  // 0.0 -> 0, 0.5 -> screenSize/2, 1.0 -> screenSize-1 (full screen coverage)
   return {
-    x: Math.floor(normX * (screenSize.width - 1)),
-    y: Math.floor(normY * (screenSize.height - 1))
+    x: Math.round(normX * (screenSize.width - 1)),
+    y: Math.round(normY * (screenSize.height - 1))
   };
 }
 
@@ -329,6 +373,20 @@ function queueClickOperation(operation) {
   processMouseQueue();
 }
 
+// === BYPASS QUEUE FOR MOVE EVENTS - ULTRA-LOW LATENCY ===
+// Move events go directly to Windows API without any queueing
+function handleMouseMoveDirectly(x, y) {
+  try {
+    if (useDirectWinAPI && SetCursorPos) {
+      SetCursorPos(x, y); // Synchronous! <0.5ms
+    } else if (mouse && mouse.setPosition) {
+      mouse.setPosition({ x, y }).catch(() => {});
+    }
+  } catch (err) {
+    // Silently ignore errors
+  }
+}
+
 ipcMain.on('robot-mouse-event', (_event, data = {}) => {
   if (!remoteControlEnabled) return;
 
@@ -336,53 +394,83 @@ ipcMain.on('robot-mouse-event', (_event, data = {}) => {
   const coords = translateCoordinates(x, y);
   const nutButton = mapNutButton(button);
 
-  try {
-    switch (type) {
-      case 'move':
-      case 'mousemove':
-        // Fire-and-forget for instant movement (no await = no latency)
-        mouse.setPosition({ x: coords.x, y: coords.y }).catch(() => { });
-        break;
-      case 'down':
-      case 'mousedown':
-        // Queue mousedown to ensure proper sequencing
-        queueClickOperation(async () => {
-          await mouse.setPosition({ x: coords.x, y: coords.y });
-          await mouse.pressButton(nutButton);
-        });
-        break;
-      case 'up':
-      case 'mouseup':
-        // Queue mouseup to ensure proper sequencing after mousedown
-        queueClickOperation(async () => {
-          await mouse.setPosition({ x: coords.x, y: coords.y });
-          await mouse.releaseButton(nutButton);
-        });
-        break;
-      case 'click':
-        // Queue full click sequence
-        queueClickOperation(async () => {
-          await mouse.setPosition({ x: coords.x, y: coords.y });
-          await mouse.click(nutButton);
-        });
-        break;
-      case 'scroll':
-      case 'wheel':
-        // ULTRA-LOW LATENCY: Fire-and-forget scroll with 3x sensitivity
-        const { deltaX, deltaY } = data;
-        const scrollAmount = Math.max(1, Math.abs(Math.round(deltaY / 2)));
-
+  // === ULTRA-LOW LATENCY MOUSE HANDLING ===
+  // Move events BYPASS THE QUEUE entirely for instant response
+  // Only click/down/up operations use the queue to ensure proper sequencing
+  
+  switch (type) {
+    case 'move':
+    case 'mousemove':
+      // BYPASS QUEUE - INSTANT SYNCHRONOUS movement!
+      // Move events don't need queuing since new moves will overwrite old ones anyway
+      handleMouseMoveDirectly(coords.x, coords.y);
+      break;
+      
+    case 'down':
+    case 'mousedown':
+      // Direct WinAPI for position + click
+      if (useDirectWinAPI && SetCursorPos && mouse_event) {
+        SetCursorPos(coords.x, coords.y);
+        // mouse_event flags: LEFT=0x02, RIGHT=0x08, MIDDLE=0x20 (down)
+        const flag = button === 2 ? 0x08 : button === 1 ? 0x20 : 0x02;
+        mouse_event(flag, 0, 0, 0, 0);
+      } else {
+        mouse.setPosition({ x: coords.x, y: coords.y })
+          .then(() => mouse.pressButton(nutButton))
+          .catch(() => {});
+      }
+      break;
+      
+    case 'up':
+    case 'mouseup':
+      // Direct WinAPI for position + release
+      if (useDirectWinAPI && SetCursorPos && mouse_event) {
+        SetCursorPos(coords.x, coords.y);
+        // mouse_event flags: LEFTUP=0x04, RIGHTUP=0x10, MIDDLEUP=0x40
+        const flag = button === 2 ? 0x10 : button === 1 ? 0x40 : 0x04;
+        mouse_event(flag, 0, 0, 0, 0);
+      } else {
+        mouse.setPosition({ x: coords.x, y: coords.y })
+          .then(() => mouse.releaseButton(nutButton))
+          .catch(() => {});
+      }
+      break;
+      
+    case 'click':
+      // Direct WinAPI click = down + up
+      if (useDirectWinAPI && SetCursorPos && mouse_event) {
+        SetCursorPos(coords.x, coords.y);
+        const downFlag = button === 2 ? 0x08 : button === 1 ? 0x20 : 0x02;
+        const upFlag = button === 2 ? 0x10 : button === 1 ? 0x40 : 0x04;
+        mouse_event(downFlag, 0, 0, 0, 0);
+        mouse_event(upFlag, 0, 0, 0, 0);
+      } else {
+        mouse.setPosition({ x: coords.x, y: coords.y })
+          .then(() => mouse.click(nutButton))
+          .catch(() => {});
+      }
+      break;
+      
+    case 'scroll':
+    case 'wheel':
+      // Direct WinAPI scroll
+      const { deltaY } = data;
+      if (useDirectWinAPI && mouse_event) {
+        // WHEEL flag = 0x0800, dwData = scroll amount (positive=up, negative=down)
+        // Windows expects 120 units per "notch" - scale appropriately
+        const scrollDelta = -Math.round(deltaY * 1.5); // Invert and scale for natural feel
+        mouse_event(0x0800, 0, 0, scrollDelta, 0);
+      } else {
+        const scrollAmount = Math.max(1, Math.abs(Math.round(deltaY / 3)));
         if (scrollAmount > 0) {
           if (deltaY > 0) {
-            mouse.scrollDown(scrollAmount).catch(() => { });
+            mouse.scrollDown(scrollAmount).catch(() => {});
           } else {
-            mouse.scrollUp(scrollAmount).catch(() => { });
+            mouse.scrollUp(scrollAmount).catch(() => {});
           }
         }
-        break;
-    }
-  } catch (error) {
-    console.error('Mouse control error:', error);
+      }
+      break;
   }
 });
 

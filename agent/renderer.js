@@ -220,8 +220,8 @@ async function startScreenShare() {
             maxWidth: 1920,
             minHeight: 720,
             maxHeight: 1080,
-            minFrameRate: 15,
-            maxFrameRate: 30
+            minFrameRate: 30,
+            maxFrameRate: 60  // 60fps for smooth cursor movement
           }
         }
       });
@@ -231,7 +231,7 @@ async function startScreenShare() {
         stream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             displaySurface: 'monitor',
-            frameRate: { ideal: 30 },
+            frameRate: { ideal: 60 },  // 60fps fallback
             width: { ideal: 1920 },
             height: { ideal: 1080 }
           },
@@ -281,26 +281,31 @@ async function startScreenShare() {
       if (track.kind === 'video') videoSender = sender;
     });
 
-    // Prefer VP8 for maximum compatibility and set reasonable bitrate/framerate
+    // Prefer H.264 for screen content (faster encoding, better compression) with VP8 fallback
     try {
       const transceivers = peerConnection.getTransceivers();
       const videoTransceiver = transceivers.find(t => t.sender && t.sender === videoSender);
       if (videoTransceiver && RTCRtpSender.getCapabilities) {
         const caps = RTCRtpSender.getCapabilities('video');
         if (caps && caps.codecs) {
+          // Prefer H.264 Constrained Baseline for fastest encoding, then VP8
+          const h264 = caps.codecs.find(c => /H264/i.test(c.mimeType) && /42e0/i.test(c.sdpFmtpLine || ''));
+          const h264Any = caps.codecs.find(c => /H264/i.test(c.mimeType));
           const vp8 = caps.codecs.find(c => /VP8/i.test(c.mimeType));
-          const others = caps.codecs.filter(c => !/VP8/i.test(c.mimeType));
-          if (vp8 && videoTransceiver.setCodecPreferences) {
-            videoTransceiver.setCodecPreferences([vp8, ...others]);
-            console.log('Set codec preference to VP8 first');
+          const others = caps.codecs.filter(c => !/H264|VP8/i.test(c.mimeType));
+          
+          const preferred = [h264, h264Any, vp8].filter(Boolean);
+          if (preferred.length > 0 && videoTransceiver.setCodecPreferences) {
+            videoTransceiver.setCodecPreferences([...preferred, ...others]);
+            console.log('Set codec preference: H.264 > VP8 > others (optimized for screen content)');
           }
         }
       }
       if (videoSender) {
-        // Use helper to set a robust max bitrate (2 Mbps)
+        // Use higher bitrate (8 Mbps) for crisp screen content at 60fps
         try {
-          await capSenderToMbps(videoSender, 2);
-          console.log('Applied video sender parameters (capped to 2 Mbps)');
+          await capSenderToMbps(videoSender, 8);
+          console.log('Applied video sender parameters (capped to 8 Mbps for 60fps)');
         } catch (e) {
           console.warn('Failed to apply cap to video sender:', e);
         }

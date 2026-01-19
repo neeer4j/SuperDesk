@@ -853,24 +853,24 @@
             };
         }
 
-        // Mouse event handlers - Route to data channel for Android, IPC for PC
-        let pendingMouseMove = null;
-        let rafScheduled = false;
+        // === ULTRA-LOW LATENCY MOUSE INPUT ===
+        // No RAF batching - send every event immediately for snappy cursor
 
-        // Send input via WebRTC data channel (for Android host)
+        // Send input via WebRTC data channel (for Android host) - fire and forget
         function sendInputViaDataChannel(eventData) {
             if (inputDataChannel && inputDataChannel.readyState === 'open') {
                 try {
                     inputDataChannel.send(JSON.stringify(eventData));
                     return true;
                 } catch (err) {
-                    console.warn('📡 Data channel send failed:', err);
+                    // Silently fail - don't log to avoid console spam
                 }
             }
             return false;
         }
 
         // Send input - uses data channel for Android, IPC for PC
+        // ZERO THROTTLING - every event sent immediately
         function sendMouseInput(type, coords, button = 0, deltaX = 0, deltaY = 0) {
             if (hostIsMobile) {
                 // Android host - send via WebRTC data channel
@@ -885,11 +885,9 @@
                         deltaY: deltaY
                     }
                 };
-                if (!sendInputViaDataChannel(payload)) {
-                    console.warn('📡 Could not send to Android - data channel not open');
-                }
+                sendInputViaDataChannel(payload);
             } else {
-                // PC host - send via IPC to nut-js
+                // PC host - send via IPC to nut-js (fire and forget)
                 ipcRenderer.send('robot-mouse-event', {
                     type: type,
                     x: coords.x,
@@ -923,12 +921,12 @@
             }
         }
 
+        // === ZERO-LATENCY MOUSE MOVE HANDLER ===
+        // No RAF batching, no throttling - send every event immediately
         function handleMouseMove(e) {
             if (!remoteControlEnabled) return;
 
-            // INSTANT FAKE CURSOR UPDATE (0ms latency)
-            // Update fake cursor position at guest's actual mouse position
-            // This provides instant visual feedback without waiting for host
+            // INSTANT FAKE CURSOR UPDATE (0ms latency visual feedback)
             if (fakeCursorVisible) {
                 const fakeCursor = document.getElementById('fake-cursor');
                 if (fakeCursor) {
@@ -937,20 +935,9 @@
                 }
             }
 
-            // Send normalized coords to host (existing logic)
+            // Send IMMEDIATELY - no batching for snappy cursor
             const coords = getNormalizedCoords(e);
-            pendingMouseMove = coords;
-
-            if (!rafScheduled) {
-                rafScheduled = true;
-                requestAnimationFrame(() => {
-                    rafScheduled = false;
-                    if (pendingMouseMove) {
-                        sendMouseInput('move', pendingMouseMove);
-                        pendingMouseMove = null;
-                    }
-                });
-            }
+            sendMouseInput('move', coords);
         }
 
         function handleMouseDown(e) {

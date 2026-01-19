@@ -607,13 +607,20 @@ app.get('/api/info', (req, res) => {
 });
 
 // WebRTC ICE servers configuration endpoint
+// === LATENCY OPTIMIZATION: STUN FIRST, TURN AS FALLBACK ===
+// STUN enables direct peer-to-peer (lowest latency)
+// TURN is relay fallback (higher latency, but works through strict NAT/firewalls)
+//
 // Configure via env:
 //   TURN_URLS: comma-separated list of TURN urls, e.g. "turn:turn1.example.com:3478,turns:turn1.example.com:5349"
 //   TURN_USERNAME, TURN_CREDENTIAL: credentials for the TURN server(s)
 app.get('/api/webrtc-config', (req, res) => {
+  // === STUN SERVERS FIRST (direct P2P, lowest latency) ===
   const defaultStun = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
   ];
   const requestLabel = `[TURN cfg ${new Date().toISOString()}]`;
 

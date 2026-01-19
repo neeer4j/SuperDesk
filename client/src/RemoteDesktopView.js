@@ -207,38 +207,49 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
     }
   };
 
-  // Throttle mouse move for performance (16ms = ~60fps max)
-  const lastMoveRef = useRef(0);
-  const pendingMoveRef = useRef(null);
-  const scheduledRef = useRef(false);
+  // === ULTRA-LOW LATENCY MOUSE MOVEMENT ===
+  // Instant immediate send for fastest possible response
+  // No RAF delay - send on every mousemove event for true real-time responsiveness
+  const lastPositionRef = useRef({ x: -1, y: -1 });
+  const velocityRef = useRef({ vx: 0, vy: 0, time: 0 });
+  const lastSendTimeRef = useRef(0);
 
   const handleMouseMove = (e) => {
     if (!remoteControlEnabled || !videoRef.current) return;
 
     const rect = videoRef.current.getBoundingClientRect();
+    
+    // Verify video element is visible and has valid dimensions
+    if (rect.width <= 0 || rect.height <= 0) return;
+
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
-    // Store latest position
-    pendingMoveRef.current = { x, y };
+    // Clamp to [0, 1] bounds
+    const clampedX = Math.max(0, Math.min(1, x));
+    const clampedY = Math.max(0, Math.min(1, y));
 
-    // Throttle: only send every 16ms
-    const now = Date.now();
-    if (now - lastMoveRef.current >= 16) {
-      lastMoveRef.current = now;
-      client.sendMouseEvent('move', x, y);
-      pendingMoveRef.current = null;
-    } else if (!scheduledRef.current) {
-      // Schedule sending the final position
-      scheduledRef.current = true;
-      setTimeout(() => {
-        scheduledRef.current = false;
-        if (pendingMoveRef.current) {
-          client.sendMouseEvent('move', pendingMoveRef.current.x, pendingMoveRef.current.y);
-          pendingMoveRef.current = null;
-        }
-      }, 16);
+    // Calculate velocity BEFORE updating position (for accuracy)
+    const now = performance.now();
+    const lastPos = lastPositionRef.current;
+    
+    if (lastPos.x >= 0 && lastPos.y >= 0 && velocityRef.current.time > 0) {
+      const dt = (now - velocityRef.current.time) / 1000;
+      if (dt > 0) {
+        velocityRef.current.vx = (clampedX - lastPos.x) / dt;
+        velocityRef.current.vy = (clampedY - lastPos.y) / dt;
+      }
     }
+    velocityRef.current.time = now;
+
+    // Update position
+    lastPositionRef.current = { x: clampedX, y: clampedY };
+
+    // === INSTANT SEND - NO THROTTLING FOR 1:1 SENSITIVITY ===
+    // Send on EVERY mousemove event for perfect 1:1 mouse tracking
+    // No artificial throttling - let the browser's natural event rate (60-120Hz) control frequency
+    // This ensures cursor movement matches exactly with user's physical mouse movement
+    client.sendMouseEvent('move', clampedX, clampedY);
   };
 
   const handleMouseDown = (e) => {
@@ -446,9 +457,20 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
         )}
 
         <video
-          ref={videoRef}
+          ref={(el) => {
+            videoRef.current = el;
+            // Enable ultra-low latency playback mode
+            if (el) {
+              el.disableRemotePlayback = true;
+              // Hint browser to prioritize low latency over smoothness
+              if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+                // Modern browsers: frame-by-frame rendering available
+              }
+            }
+          }}
           autoPlay
           playsInline
+          muted
           style={{
             maxWidth: '100%',
             maxHeight: '100%',

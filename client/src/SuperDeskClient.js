@@ -185,7 +185,16 @@ class SuperDeskClient {
       console.warn('Using default ICE servers:', error);
     }
 
-    this.peerConnection = new RTCPeerConnection({ iceServers });
+    // Create peer connection with low-latency optimized configuration
+    this.peerConnection = new RTCPeerConnection({ 
+      iceServers,
+      // Reduce ICE candidate gathering for faster connection
+      iceCandidatePoolSize: 10,
+      // Bundle all media over a single transport (reduces overhead)
+      bundlePolicy: 'max-bundle',
+      // Use single RTP/RTCP port (reduces NAT traversal complexity)
+      rtcpMuxPolicy: 'require'
+    });
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
@@ -296,6 +305,24 @@ class SuperDeskClient {
 
         // SCREEN SHARE video - this is the main stream
         console.log('📺 WEBAPP: ===== SCREEN SHARE VIDEO RECEIVED =====');
+        
+        // === ULTRA-LOW LATENCY: Configure receiver for minimal jitter buffer ===
+        try {
+          const receivers = this.peerConnection.getReceivers();
+          const videoReceiver = receivers.find(r => r.track === event.track);
+          if (videoReceiver) {
+            // Attempt to reduce jitter buffer (experimental - browser dependent)
+            const params = videoReceiver.getParameters ? videoReceiver.getParameters() : {};
+            console.log('📺 Video receiver parameters:', params);
+            // Some browsers support playoutDelayHint for reduced latency
+            if (typeof videoReceiver.playoutDelayHint !== 'undefined') {
+              videoReceiver.playoutDelayHint = 0; // Minimum delay
+              console.log('📺 Set playoutDelayHint = 0 for minimum latency');
+            }
+          }
+        } catch (e) {
+          console.log('Receiver optimization not available:', e.message);
+        }
       }
 
       // Get or create the stream for screen share
@@ -427,19 +454,33 @@ class SuperDeskClient {
   sendMouseEvent(type, x, y, button = 0, extra = {}) {
     if (!this.remoteControlEnabled) return;
 
+    // === ULTRA-LOW LATENCY APPROACH ===
+    // For MOVE events: Fire-and-forget via data channel (no ack needed)
+    // For other events: Include sequence number but don't wait for ack
+    
     const data = { action: type, x, y, button, ...extra };
 
     // Prefer DataChannel for lowest latency (direct P2P)
+    // DO NOT WAIT FOR CONFIRMATION - just send immediately!
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
       try {
-        this.dataChannel.send(JSON.stringify(data));
+        // For move events, send minimal data to reduce serialization overhead
+        if (type === 'move') {
+          // Ultra-compact format: "M:x,y" with HIGH PRECISION (6 decimals for 1:1 sensitivity)
+          // Higher precision = more accurate mouse positioning = better sensitivity match
+          this.dataChannel.send(`M:${x.toFixed(6)},${y.toFixed(6)}`);
+        } else {
+          // Other events use full format
+          this.dataChannel.send(JSON.stringify(data));
+        }
+        // DON'T wait for ACK - newer moves will overwrite old ones anyway
         return;
       } catch (e) {
-        // Fall through to Socket.IO
+        // Silently fall through to Socket.IO, don't log (too spammy)
       }
     }
 
-    // Fallback to Socket.IO
+    // Fallback to Socket.IO (lower priority, higher latency)
     this.socket.emit('mouse-event', {
       sessionId: this.sessionId,
       type,

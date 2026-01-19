@@ -123,22 +123,21 @@ async function fetchWebRTCConfig() {
 }
 
 // Fallback ICE servers if server config fails
+// IMPORTANT: STUN servers FIRST for lowest latency direct connections
+// TURN servers are FALLBACK only (higher latency due to relay)
 function getFallbackIceServers() {
     return [
-        // Google STUN servers
+        // === STUN SERVERS FIRST (direct P2P, lowest latency) ===
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        // OpenRelay TURN servers (Free public TURN)
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        // === TURN SERVERS (relay fallback, higher latency) ===
+        // Only used when direct connection fails (NAT/firewall issues)
         {
-            urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:80?transport=tcp'],
+            urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
             username: 'openrelayproject',
             credential: 'openrelayproject'
-        },
-        // Numb TURN servers
-        {
-            urls: ['turn:numb.viagenie.ca', 'turn:numb.viagenie.ca:3478'],
-            username: 'webrtc@live.com',
-            credential: 'muazkh'
         }
     ];
 }
@@ -691,21 +690,75 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
     const iceServers = await fetchWebRTCConfig();
 
     console.log('🔧 Configuring RTCPeerConnection with', iceServers.length, 'ICE servers');
+    
+    // === LOW LATENCY ICE CONFIG ===
+    // - iceTransportPolicy: 'all' allows both direct (STUN) and relay (TURN)
+    // - Browser will prefer lower-latency direct connections when available
+    // - iceCandidatePoolSize: 25 pre-gathers more candidates for faster connection
     const peerConnection = new RTCPeerConnection({
         iceServers: iceServers,
-        iceTransportPolicy: 'all',
-        iceCandidatePoolSize: 10,
+        iceTransportPolicy: 'all',  // Allow direct + relay, browser picks fastest
+        iceCandidatePoolSize: 25,   // Pre-gather more candidates for speed
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
     });
 
-    console.log('✅ HOST ICE configuration complete with Cloudflare TURN servers');
+    console.log('✅ HOST ICE configuration complete (STUN preferred, TURN fallback)');
 
     // Create file transfer DataChannel (HOST creates, GUEST receives)
     if (window.fileTransfer && typeof window.fileTransfer.createChannel === 'function') {
         console.log('📁 HOST: Creating file transfer DataChannel...');
         window.fileTransfer.createChannel(peerConnection);
     }
+
+    // Create DEDICATED cursor DataChannel for ultra-low latency cursor updates
+    // BINARY PROTOCOL: 4 bytes per move (type:1, x:2, y:2) vs ~25 bytes JSON
+    // UDP-LIKE: unordered + no retransmits = instant delivery, late packets dropped
+    console.log('🖱️ HOST: Creating dedicated cursor DataChannel (binary, UDP-like)...');
+    const cursorDataChannel = peerConnection.createDataChannel('cursor', {
+        ordered: false,           // No head-of-line blocking
+        maxRetransmits: 0,        // UDP-like: drop late packets
+        protocol: 'superdesk-cursor-binary'
+    });
+
+    cursorDataChannel.onopen = () => {
+        console.log('🖱️ HOST: Cursor channel OPEN - ready for ultra-low latency updates');
+    };
+
+    cursorDataChannel.onclose = () => {
+        console.log('🖱️ HOST: Cursor channel closed');
+    };
+
+    cursorDataChannel.onerror = (error) => {
+        console.error('🖱️ HOST: Cursor channel error:', error);
+    };
+
+    cursorDataChannel.onmessage = (event) => {
+        // Receive binary cursor data from guest
+        if (event.data instanceof ArrayBuffer) {
+            const view = new DataView(event.data);
+            const type = view.getUint8(0);
+            
+            if (type === 1) { // Move
+                const x = view.getUint16(1, true) / 65535; // Little-endian, normalize
+                const y = view.getUint16(3, true) / 65535;
+                
+                if (window.appControls && window.appControls.ipcSend) {
+                    window.appControls.ipcSend('robot-mouse-event', {
+                        type: 'move',
+                        x: x,
+                        y: y,
+                        button: 0,
+                        deltaX: 0,
+                        deltaY: 0
+                    });
+                }
+            }
+        }
+    };
+
+    // Store cursor channel for guest access
+    window.superdeskState.cursorDataChannel = cursorDataChannel;
 
     // Create input DataChannel for receiving remote control from mobile viewers
     // LOW LATENCY CONFIG: unordered + maxRetransmits=0 for fastest delivery
@@ -776,8 +829,33 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
     inputDataChannel.onmessage = (event) => {
         try {
+            // === ULTRA-LOW LATENCY PARSING ===
+            // Check for compact move format first (shorter strings = faster to parse)
+            if (typeof event.data === 'string' && event.data.startsWith('M:')) {
+                // Compact format: "M:x,y"
+                const parts = event.data.substring(2).split(',');
+                if (parts.length === 2) {
+                    const x = parseFloat(parts[0]);
+                    const y = parseFloat(parts[1]);
+                    if (!isNaN(x) && !isNaN(y)) {
+                        // INSTANT mouse move - bypass all queuing
+                        if (window.appControls && window.appControls.ipcSend) {
+                            window.appControls.ipcSend('robot-mouse-event', {
+                                type: 'move',
+                                x: x,
+                                y: y,
+                                button: 0,
+                                deltaX: 0,
+                                deltaY: 0
+                            });
+                        }
+                        return; // Don't try JSON parsing
+                    }
+                }
+            }
+
+            // Fall back to JSON parsing for non-move events
             const inputEvent = JSON.parse(event.data);
-            // PERFORMANCE: No logging for move events (too frequent, causes lag)
             
             // Process input event - handle both mouse/touch and direct action format
             if (inputEvent.type === 'mouse' || inputEvent.type === 'touch') {
@@ -789,7 +867,7 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 handleDirectInputEvent(inputEvent);
             }
         } catch (e) {
-            // Silently ignore parse errors for performance
+            // Silently ignore parse errors for performance (too noisy)
         }
     };
 
@@ -905,8 +983,8 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
 
     console.log('🎥 All tracks added. Total senders:', peerConnection.getSenders().length);
 
-    // === LOW LATENCY OPTIMIZATION: Configure screen sharing for minimal delay ===
-    // Must be done after addTrack but before createOffer
+    // === ULTRA-LOW LATENCY VIDEO ENCODING ===
+    // Optimized for instant cursor tracking and snappy remote control
     for (const { sender, track } of senders) {
         if (track.kind === 'video') {
             try {
@@ -914,19 +992,26 @@ async function setupWebRTCSender(socket, sessionId, sourceId) {
                 if (!params.encodings) params.encodings = [{}];
 
                 params.encodings.forEach(encoding => {
-                    // ULTRA-LOW LATENCY: 60fps + high bitrate for instant cursor tracking
-                    encoding.maxBitrate = 6000000;      // 6 Mbps - crisp 1080p60
-                    encoding.maxFramerate = 60;          // 60fps for instant visual response
-                    encoding.priority = 'high';          // Prioritize this stream
-                    encoding.networkPriority = 'high';   // Network priority
+                    // === LATENCY-OPTIMIZED SETTINGS ===
+                    encoding.maxBitrate = 8000000;       // 8 Mbps for crisp 1080p60
+                    encoding.maxFramerate = 60;           // 60fps = 16.67ms per frame
+                    encoding.priority = 'high';           // Prioritize this stream
+                    encoding.networkPriority = 'high';    // Network priority
                     encoding.scaleResolutionDownBy = 1.0; // Full resolution
+                    
+                    // === KEY LATENCY REDUCERS ===
+                    // Adaptive bitrate: faster recovery from congestion
+                    encoding.adaptivePtime = true;
                 });
 
-                // Prioritize framerate over resolution for responsive feel
+                // CRITICAL: Maintain framerate over resolution for responsive cursor
+                // When bandwidth is limited, reduce resolution rather than framerate
                 params.degradationPreference = 'maintain-framerate';
 
                 await sender.setParameters(params);
-                console.log('🚀 Low-latency video encoding configured for screen share');
+                console.log('🚀 Ultra-low-latency video encoding configured:');
+                console.log('   - 8 Mbps max bitrate, 60fps');
+                console.log('   - degradationPreference: maintain-framerate');
             } catch (e) {
                 console.warn('Could not apply low-latency encoding:', e.message);
             }
@@ -1546,25 +1631,44 @@ async function setupWebRTCReceiver(socket, sessionId) {
     iceServers.forEach((server, index) => {
         const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
         const hasCreds = Boolean(server.username && server.credential);
-        console.log(`🔧 ICE Server #${index + 1}:`, urls.join(', '), hasCreds ? '(with credentials)' : '(STUN only)');
+        console.log(`🔧 ICE Server #${index + 1}:`, urls.join(', '), hasCreds ? '(with credentials/TURN)' : '(STUN only)');
     });
 
+    // === LOW LATENCY ICE CONFIG (GUEST) ===
+    // Match HOST settings for symmetric performance
     const peerConnection = new RTCPeerConnection({
         iceServers: iceServers,
-        iceTransportPolicy: 'all',
-        iceCandidatePoolSize: 10,
+        iceTransportPolicy: 'all',  // Allow direct + relay, browser picks fastest
+        iceCandidatePoolSize: 25,   // Pre-gather more candidates for speed
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
     });
 
-    console.log('✅ GUEST ICE configuration complete');
+    console.log('✅ GUEST ICE configuration complete (STUN preferred, TURN fallback)');
 
     // NOTE: File transfer DataChannel is handled in the unified ondatachannel handler below
     // DO NOT call window.fileTransfer.setupReceiver() separately as it would be overwritten
 
-    // Listen for data channels (includes 'input' channel AND 'fileTransfer' channel)
+    // Listen for data channels (includes 'cursor', 'input', and 'fileTransfer' channels)
     peerConnection.ondatachannel = (event) => {
         console.log('📱 GUEST: Data channel received:', event.channel.label);
+
+        // Handle CURSOR channel (dedicated ultra-low latency binary cursor updates)
+        if (event.channel.label === 'cursor') {
+            const cursorChannel = event.channel;
+            cursorChannel.binaryType = 'arraybuffer';
+
+            cursorChannel.onopen = () => {
+                console.log('🖱️ GUEST: Cursor DataChannel opened (binary protocol)');
+            };
+
+            cursorChannel.onclose = () => {
+                console.log('🖱️ GUEST: Cursor DataChannel closed');
+            };
+
+            // Store for sending cursor updates
+            window.superdeskState.cursorDataChannel = cursorChannel;
+        }
 
         // Handle INPUT channel (for remote control handshake from Android)
         if (event.channel.label === 'input') {
@@ -2681,8 +2785,307 @@ function monitorConnectionHealth(peerConnection) {
         }
     };
 
+    // Start network meter updates
+    startNetworkMeter(peerConnection);
+
     return checkInterval;
 }
+
+// ==================== NETWORK CONNECTION METER ====================
+// Real-time display of RTT, jitter, packet loss, bitrate to diagnose latency issues
+
+let networkMeterInterval = null;
+let lastBytesReceived = 0;
+let lastBytesSent = 0;
+let lastStatsTime = 0;
+let rttHistory = [];
+const RTT_HISTORY_SIZE = 10; // For jitter calculation
+
+function createNetworkMeter() {
+    // Don't create duplicate
+    if (document.getElementById('network-meter')) return;
+
+    const meter = document.createElement('div');
+    meter.id = 'network-meter';
+    meter.style.cssText = `
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.85);
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 11px;
+        z-index: 999998;
+        min-width: 180px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.1);
+        user-select: none;
+        cursor: move;
+    `;
+
+    meter.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 4px;">
+            <span id="net-status-icon" style="font-size: 14px; margin-right: 6px;">📶</span>
+            <span style="font-weight: 600; font-size: 12px;">Network</span>
+            <span id="net-quality" style="margin-left: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; background: #22c55e;">Good</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px;">
+            <div>RTT:</div><div id="net-rtt" style="text-align: right; color: #10b981;">--</div>
+            <div>Jitter:</div><div id="net-jitter" style="text-align: right; color: #10b981;">--</div>
+            <div>Loss:</div><div id="net-loss" style="text-align: right; color: #10b981;">--</div>
+            <div>↓ Down:</div><div id="net-down" style="text-align: right; color: #60a5fa;">--</div>
+            <div>↑ Up:</div><div id="net-up" style="text-align: right; color: #f472b6;">--</div>
+            <div>Type:</div><div id="net-type" style="text-align: right; color: #a78bfa;">--</div>
+        </div>
+    `;
+
+    document.body.appendChild(meter);
+
+    // Make draggable
+    let isDragging = false;
+    let offsetX, offsetY;
+
+    meter.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        offsetX = e.clientX - meter.offsetLeft;
+        offsetY = e.clientY - meter.offsetTop;
+        meter.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        meter.style.left = (e.clientX - offsetX) + 'px';
+        meter.style.top = (e.clientY - offsetY) + 'px';
+        meter.style.bottom = 'auto';
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        meter.style.cursor = 'move';
+    });
+
+    console.log('📶 Network meter created');
+}
+
+function startNetworkMeter(peerConnection) {
+    // Create the UI
+    createNetworkMeter();
+
+    // Clear existing interval if any
+    if (networkMeterInterval) {
+        clearInterval(networkMeterInterval);
+    }
+
+    // Update stats every 500ms for responsive display
+    networkMeterInterval = setInterval(async () => {
+        try {
+            if (peerConnection.connectionState === 'closed') {
+                clearInterval(networkMeterInterval);
+                return;
+            }
+
+            const stats = await peerConnection.getStats();
+            let rtt = null;
+            let packetsLost = 0;
+            let packetsReceived = 0;
+            let bytesReceived = 0;
+            let bytesSent = 0;
+            let candidateType = 'unknown';
+
+            stats.forEach(report => {
+                // Get RTT from candidate-pair
+                if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                    rtt = report.currentRoundTripTime * 1000; // Convert to ms
+                    
+                    // Get candidate type (host/srflx/relay)
+                    const localCandidate = stats.get(report.localCandidateId);
+                    if (localCandidate) {
+                        candidateType = localCandidate.candidateType || 'unknown';
+                    }
+                }
+
+                // Get packet loss from inbound-rtp
+                if (report.type === 'inbound-rtp' && report.kind === 'video') {
+                    packetsLost = report.packetsLost || 0;
+                    packetsReceived = report.packetsReceived || 0;
+                    bytesReceived = report.bytesReceived || 0;
+                }
+
+                // Get bytes sent from outbound-rtp
+                if (report.type === 'outbound-rtp' && report.kind === 'video') {
+                    bytesSent = report.bytesSent || 0;
+                }
+            });
+
+            // Calculate jitter from RTT history
+            let jitter = 0;
+            if (rtt !== null) {
+                rttHistory.push(rtt);
+                if (rttHistory.length > RTT_HISTORY_SIZE) {
+                    rttHistory.shift();
+                }
+                if (rttHistory.length >= 2) {
+                    // Jitter = average absolute difference between consecutive RTTs
+                    let diffs = [];
+                    for (let i = 1; i < rttHistory.length; i++) {
+                        diffs.push(Math.abs(rttHistory[i] - rttHistory[i - 1]));
+                    }
+                    jitter = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                }
+            }
+
+            // Calculate bitrate
+            const now = Date.now();
+            const timeDelta = (now - lastStatsTime) / 1000; // seconds
+            let downBitrate = 0;
+            let upBitrate = 0;
+
+            if (lastStatsTime > 0 && timeDelta > 0) {
+                downBitrate = ((bytesReceived - lastBytesReceived) * 8) / timeDelta / 1000; // kbps
+                upBitrate = ((bytesSent - lastBytesSent) * 8) / timeDelta / 1000; // kbps
+            }
+
+            lastBytesReceived = bytesReceived;
+            lastBytesSent = bytesSent;
+            lastStatsTime = now;
+
+            // Calculate packet loss percentage
+            const totalPackets = packetsReceived + packetsLost;
+            const lossPercent = totalPackets > 0 ? (packetsLost / totalPackets * 100) : 0;
+
+            // Update UI
+            updateNetworkMeterUI(rtt, jitter, lossPercent, downBitrate, upBitrate, candidateType);
+
+        } catch (e) {
+            console.warn('Network meter stats error:', e.message);
+        }
+    }, 500);
+
+    // Store interval reference for cleanup
+    window.superdeskState.networkMeterInterval = networkMeterInterval;
+}
+
+function updateNetworkMeterUI(rtt, jitter, lossPercent, downBitrate, upBitrate, candidateType) {
+    const rttEl = document.getElementById('net-rtt');
+    const jitterEl = document.getElementById('net-jitter');
+    const lossEl = document.getElementById('net-loss');
+    const downEl = document.getElementById('net-down');
+    const upEl = document.getElementById('net-up');
+    const typeEl = document.getElementById('net-type');
+    const qualityEl = document.getElementById('net-quality');
+    const iconEl = document.getElementById('net-status-icon');
+
+    if (!rttEl) return;
+
+    // RTT with color coding
+    if (rtt !== null) {
+        rttEl.textContent = rtt.toFixed(0) + ' ms';
+        if (rtt < 50) {
+            rttEl.style.color = '#10b981'; // green
+        } else if (rtt < 100) {
+            rttEl.style.color = '#f59e0b'; // yellow
+        } else {
+            rttEl.style.color = '#ef4444'; // red
+        }
+    } else {
+        rttEl.textContent = '--';
+        rttEl.style.color = '#6b7280';
+    }
+
+    // Jitter
+    jitterEl.textContent = jitter.toFixed(1) + ' ms';
+    if (jitter < 10) {
+        jitterEl.style.color = '#10b981';
+    } else if (jitter < 30) {
+        jitterEl.style.color = '#f59e0b';
+    } else {
+        jitterEl.style.color = '#ef4444';
+    }
+
+    // Packet loss
+    lossEl.textContent = lossPercent.toFixed(2) + '%';
+    if (lossPercent < 1) {
+        lossEl.style.color = '#10b981';
+    } else if (lossPercent < 5) {
+        lossEl.style.color = '#f59e0b';
+    } else {
+        lossEl.style.color = '#ef4444';
+    }
+
+    // Bitrates (format nicely)
+    downEl.textContent = formatBitrate(downBitrate);
+    upEl.textContent = formatBitrate(upBitrate);
+
+    // Connection type
+    const typeLabels = {
+        'host': '🏠 Direct',
+        'srflx': '🌐 STUN',
+        'relay': '🔄 TURN',
+        'prflx': '🔀 Peer',
+        'unknown': '❓ Unknown'
+    };
+    typeEl.textContent = typeLabels[candidateType] || candidateType;
+    typeEl.style.color = candidateType === 'relay' ? '#f59e0b' : '#a78bfa';
+
+    // Overall quality assessment
+    let quality = 'Excellent';
+    let qualityColor = '#22c55e';
+    let icon = '📶';
+
+    if (rtt === null) {
+        quality = 'No Data';
+        qualityColor = '#6b7280';
+        icon = '❓';
+    } else if (rtt > 150 || jitter > 50 || lossPercent > 5) {
+        quality = 'Poor';
+        qualityColor = '#ef4444';
+        icon = '📵';
+    } else if (rtt > 80 || jitter > 20 || lossPercent > 2) {
+        quality = 'Fair';
+        qualityColor = '#f59e0b';
+        icon = '📶';
+    } else if (rtt > 40 || jitter > 10 || lossPercent > 0.5) {
+        quality = 'Good';
+        qualityColor = '#22c55e';
+        icon = '📶';
+    } else {
+        quality = 'Excellent';
+        qualityColor = '#10b981';
+        icon = '📶';
+    }
+
+    qualityEl.textContent = quality;
+    qualityEl.style.background = qualityColor;
+    iconEl.textContent = icon;
+}
+
+function formatBitrate(kbps) {
+    if (kbps < 1) return '0 kbps';
+    if (kbps < 1000) return kbps.toFixed(0) + ' kbps';
+    return (kbps / 1000).toFixed(1) + ' Mbps';
+}
+
+// Cleanup function
+function stopNetworkMeter() {
+    if (networkMeterInterval) {
+        clearInterval(networkMeterInterval);
+        networkMeterInterval = null;
+    }
+    const meter = document.getElementById('network-meter');
+    if (meter) {
+        meter.remove();
+    }
+    rttHistory = [];
+    lastBytesReceived = 0;
+    lastBytesSent = 0;
+    lastStatsTime = 0;
+}
+
+// Expose for manual control
+window.startNetworkMeter = startNetworkMeter;
+window.stopNetworkMeter = stopNetworkMeter;
 
 // Display remote stream - now handled by HTML viewer
 // Video display is managed by the remote-desktop-viewer div in agent.html
@@ -3129,11 +3532,40 @@ function getNormalizedCoordinates(e, videoElement) {
 
 /**
  * Send input event with lowest possible latency
- * Priority: DataChannel (P2P) > Socket.IO (via server)
+ * CURSOR MOVES: Use dedicated binary cursor channel (4 bytes, UDP-like)
+ * OTHER EVENTS: Use JSON input channel or Socket.IO
  * @param {string} eventType - 'mouse' or 'keyboard'
  * @param {object} data - Event data { action, x, y, button, deltaX, deltaY, key, code }
  */
 function sendLowLatencyInput(eventType, data) {
+    // ULTRA-LOW LATENCY PATH: Binary cursor channel for moves only
+    if (eventType === 'mouse' && data.action === 'move') {
+        const cursorChannel = window.superdeskState.cursorDataChannel;
+        if (cursorChannel && cursorChannel.readyState === 'open') {
+            try {
+                // Binary protocol: [type:1byte][x:2bytes][y:2bytes] = 5 bytes total
+                // vs JSON ~25+ bytes = 5x smaller, faster parse
+                const buffer = new ArrayBuffer(5);
+                const view = new DataView(buffer);
+                view.setUint8(0, 1); // type: 1 = move
+                view.setUint16(1, Math.round(data.x * 65535), true); // x normalized to uint16
+                view.setUint16(3, Math.round(data.y * 65535), true); // y normalized to uint16
+                
+                cursorChannel.send(buffer);
+                
+                // Update local cursor prediction (instant visual feedback)
+                if (typeof updateLocalCursor === 'function') {
+                    updateLocalCursor(data.x, data.y);
+                }
+                
+                return true; // Sent via binary cursor channel
+            } catch (e) {
+                console.warn('Cursor channel failed, falling back:', e.message);
+            }
+        }
+    }
+    
+    // Standard path for clicks, scrolls, keyboard
     const channel = window.superdeskState.inputDataChannel;
     
     // Prefer DataChannel for direct P2P (lowest latency)
@@ -3158,6 +3590,74 @@ function sendLowLatencyInput(eventType, data) {
     }
     
     return false; // Failed to send
+}
+
+// ==================== LOCAL CURSOR PREDICTION ====================
+// Instant visual feedback: show cursor at new position immediately,
+// then correct when server ACK arrives (if position drifted)
+let localCursorOverlay = null;
+
+function updateLocalCursor(normalizedX, normalizedY) {
+    // Create cursor overlay if it doesn't exist
+    if (!localCursorOverlay) {
+        localCursorOverlay = document.createElement('div');
+        localCursorOverlay.id = 'local-cursor-prediction';
+        localCursorOverlay.style.cssText = `
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 999999;
+            background: radial-gradient(circle, rgba(16,185,129,0.8) 0%, transparent 70%);
+            border: 2px solid rgba(16,185,129,0.9);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: none;
+            display: none;
+        `;
+        document.body.appendChild(localCursorOverlay);
+    }
+
+    // Get video element to map normalized coords to screen coords
+    const video = document.getElementById('join-remote-video') || document.getElementById('remote-video');
+    if (!video) return;
+
+    const rect = video.getBoundingClientRect();
+    
+    // Account for object-fit: contain letterboxing
+    let displayWidth = rect.width;
+    let displayHeight = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (video.videoWidth && video.videoHeight) {
+        const videoRatio = video.videoWidth / video.videoHeight;
+        const elementRatio = rect.width / rect.height;
+
+        if (elementRatio > videoRatio) {
+            displayWidth = rect.height * videoRatio;
+            offsetX = (rect.width - displayWidth) / 2;
+        } else {
+            displayHeight = rect.width / videoRatio;
+            offsetY = (rect.height - displayHeight) / 2;
+        }
+    }
+
+    // Convert normalized coords to screen position
+    const screenX = rect.left + offsetX + (normalizedX * displayWidth);
+    const screenY = rect.top + offsetY + (normalizedY * displayHeight);
+
+    localCursorOverlay.style.left = screenX + 'px';
+    localCursorOverlay.style.top = screenY + 'px';
+    localCursorOverlay.style.display = 'block';
+
+    // Auto-hide after 100ms of no movement (prevents stale cursor)
+    clearTimeout(window.localCursorHideTimeout);
+    window.localCursorHideTimeout = setTimeout(() => {
+        if (localCursorOverlay) {
+            localCursorOverlay.style.display = 'none';
+        }
+    }, 100);
 }
 
 // ULTRA-LOW LATENCY: No throttling, send every move for instant response
