@@ -266,7 +266,7 @@ export default function Home() {
                     </a>
 
                     {/* Get Desktop App Button */}
-                    <a href="https://github.com/neeer4j/SuperDesk/releases/download/v1.2.0-alpha/SuperDesk.Agent.Setup.1.2.0.exe" download>
+                    <a href="https://github.com/neeer4j/SuperDesk/releases/download/v1.0.0/SuperDesk.Agent.Setup.1.0.0.exe" download>
                         <span>Get Desktop App</span>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
