@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '../context/ThemeContext';
 import '../portfolio.css';
 import superdeskLogoText from '../assets/superdeskmm.png';
-import superdeskLogoWhite from '../assets/superdeskw.png';
 import superdeskShowcase from '../assets/suppm.png';
-import superdeskHeroMockup from '../assets/supipad.png';
 import superdeskScreenshot from '../assets/sup.png';
 import supimage from '../assets/supimage.png';
 import {
@@ -192,7 +189,6 @@ const features = [
 ];
 
 export default function Home() {
-    const { darkMode, toggleDarkMode } = useTheme();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [navHidden, setNavHidden] = useState(false);
