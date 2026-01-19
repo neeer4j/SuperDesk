@@ -351,7 +351,8 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 120px 48px 80px;
+  padding: 120px 48px 40px;
+  /* Reduced bottom padding */
   position: relative;
   overflow: hidden;
 }
@@ -460,12 +461,14 @@ html {
 
 /* About Section */
 .portfolio-about {
-  padding: 100px 48px;
+  padding: 40px 48px 100px;
+  /* Reduced top padding */
   background-color: #0d0d14;
 }
 
 .portfolio-about-container {
-  max-width: 1200px;
+  max-width: 1100px;
+  /* Reduced width */
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -473,12 +476,14 @@ html {
 }
 
 .portfolio-about-container h2 {
-  font-size: 42px !important;
+  font-size: 36px !important;
+  /* Reduced font size */
 }
 
 .portfolio-about-image {
   flex-shrink: 0;
-  width: 300px;
+  width: 260px;
+  /* Reduced width */
   padding: 16px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -488,7 +493,8 @@ html {
 
 .portfolio-about-image img {
   width: 100%;
-  max-width: 260px;
+  max-width: 220px;
+  /* Reduced width */
   height: auto;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
@@ -500,14 +506,16 @@ html {
 }
 
 .portfolio-about-text h2 {
-  font-size: 36px;
+  font-size: 32px;
+  /* Reduced font size */
   font-weight: 700;
   margin-bottom: 24px;
   letter-spacing: -1px;
 }
 
 .portfolio-about-text p {
-  font-size: 18px;
+  font-size: 16px;
+  /* Reduced font size */
   color: rgba(255, 255, 255, 0.8);
   line-height: 1.8;
   margin-bottom: 24px;
