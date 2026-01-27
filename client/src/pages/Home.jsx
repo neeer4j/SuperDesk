@@ -680,12 +680,31 @@ export default function Home() {
             {/* CTA Section */}
 
             {/* Footer */}
-            <footer className="portfolio-footer">
+            <footer className="portfolio-footer" style={{ position: 'relative' }}>
+                {/* Global Bottom Grid Pattern */}
+                <div style={{
+                    position: 'absolute',
+                    top: 'auto',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: '600px',
+                    backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)`,
+                    backgroundSize: '40px 40px',
+                    maskImage: 'linear-gradient(to top, black 20%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to top, black 20%, transparent 100%)',
+                    zIndex: 0,
+                    pointerEvents: 'none',
+                }} />
+
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '16px',
+                    position: 'relative',
+                    zIndex: 1
                 }}>
                     <img src={superdeskLogoText} alt="SuperDesk" style={{ height: '40px', width: 'auto' }} />
                 </div>

@@ -64,43 +64,50 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 24px;
       background-color: #0d0d14;
-      /* Solid background */
       z-index: 9999;
-      transition: opacity 0.5s ease-out;
+      transition: opacity 0.3s ease-out;
     }
 
     .loader-logo {
-      width: 80px;
-      /* Smaller, cleaner logo */
-      height: 80px;
-      margin-bottom: 20px;
-      animation: pulse 2s infinite ease-in-out;
+      width: 100px;
+      height: auto;
+      opacity: 0.95;
     }
 
-    .loader-text {
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.5);
-      /* Subtle text */
-      letter-spacing: 1px;
-      font-weight: 500;
-      text-transform: uppercase;
+    .loader-dots {
+      display: flex;
+      gap: 6px;
     }
 
-    @keyframes pulse {
-      0% {
+    .loader-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.4);
+      animation: dotPulse 1s ease-in-out infinite;
+    }
+
+    .loader-dots span:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .loader-dots span:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes dotPulse {
+
+      0%,
+      100% {
+        opacity: 0.3;
         transform: scale(1);
-        opacity: 1;
       }
 
       50% {
-        transform: scale(1.05);
-        opacity: 0.8;
-      }
-
-      100% {
-        transform: scale(1);
         opacity: 1;
+        transform: scale(1.1);
       }
     }
   </style>
@@ -119,8 +126,12 @@
   <div id="root">
     <!-- Loading screen visible until React hydrates -->
     <div id="root-loader">
-      <img src="%PUBLIC_URL%/logo-192x192.png" alt="SuperDesk" class="loader-logo" />
-      <div class="loader-text">Loading SuperDesk...</div>
+      <img src="%PUBLIC_URL%/superdeskmm.png" alt="SuperDesk" class="loader-logo" />
+      <div class="loader-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
     </div>
   </div>
 </body>

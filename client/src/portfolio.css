@@ -129,13 +129,6 @@ html {
   display: flex !important;
   align-items: center !important;
   gap: 4px !important;
-  transition: all 0.2s ease !important;
-}
-
-.portfolio-nav-buttons a:hover {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%) !important;
-  color: #fff !important;
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
 }
 
 /* Mobile navbar - Override inline styles with !important */
