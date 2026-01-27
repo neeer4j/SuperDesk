@@ -13,7 +13,7 @@ import {
 } from 'react-icons/si';
 import { VscAzure } from 'react-icons/vsc';
 
-// Loading Overlay Component - Simple and clean
+// Loading Overlay Component - Ultra-minimal and professional
 const LoadingOverlay = React.memo(() => (
     <motion.div
         initial={{ opacity: 0 }}
@@ -32,25 +32,39 @@ const LoadingOverlay = React.memo(() => (
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '24px',
+            gap: '28px',
         }}
     >
-        <img
+        {/* Logo */}
+        <motion.img
             src={superdeskLogoText}
             alt="SuperDesk"
-            style={{ height: '40px', width: 'auto' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            style={{ height: '36px', width: 'auto' }}
         />
-        <div style={{
-            width: '24px',
-            height: '24px',
-            border: '2px solid rgba(139, 92, 246, 0.2)',
-            borderTopColor: '#8b5cf6',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-        }} />
+
+        {/* Minimal three-dot loader */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+            {[0, 1, 2].map((i) => (
+                <div
+                    key={i}
+                    style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                        animation: `dotPulse 1s ease-in-out ${i * 0.15}s infinite`,
+                    }}
+                />
+            ))}
+        </div>
+
         <style>{`
-            @keyframes spin {
-                to { transform: rotate(360deg); }
+            @keyframes dotPulse {
+                0%, 100% { opacity: 0.3; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.1); }
             }
         `}</style>
     </motion.div>
