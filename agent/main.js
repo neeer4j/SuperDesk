@@ -13,26 +13,26 @@ let keybd_event = null;
 let useDirectWinAPI = false;
 
 try {
-    koffi = require('koffi');
-    user32 = koffi.load('user32.dll');
-    
-    // SetCursorPos - INSTANT cursor positioning (synchronous, no promises)
-    SetCursorPos = user32.func('SetCursorPos', 'bool', ['int', 'int']);
-    
-    // mouse_event - for clicks and scrolling
-    // Flags: MOUSEEVENTF_LEFTDOWN=0x02, LEFTUP=0x04, RIGHTDOWN=0x08, RIGHTUP=0x10
-    //        MIDDLEDOWN=0x20, MIDDLEUP=0x40, WHEEL=0x0800, HWHEEL=0x01000
-    //        ABSOLUTE=0x8000, MOVE=0x0001
-    mouse_event = user32.func('mouse_event', 'void', ['uint', 'uint', 'uint', 'int', 'uintptr_t']);
-    
-    // keybd_event - for keyboard input (used as fallback)
-    keybd_event = user32.func('keybd_event', 'void', ['uchar', 'uchar', 'uint', 'uintptr_t']);
-    
-    useDirectWinAPI = true;
-    console.log('✅ KOFFI loaded - using DIRECT Windows API for INSTANT mouse control');
+  koffi = require('koffi');
+  user32 = koffi.load('user32.dll');
+
+  // SetCursorPos - INSTANT cursor positioning (synchronous, no promises)
+  SetCursorPos = user32.func('SetCursorPos', 'bool', ['int', 'int']);
+
+  // mouse_event - for clicks and scrolling
+  // Flags: MOUSEEVENTF_LEFTDOWN=0x02, LEFTUP=0x04, RIGHTDOWN=0x08, RIGHTUP=0x10
+  //        MIDDLEDOWN=0x20, MIDDLEUP=0x40, WHEEL=0x0800, HWHEEL=0x01000
+  //        ABSOLUTE=0x8000, MOVE=0x0001
+  mouse_event = user32.func('mouse_event', 'void', ['uint', 'uint', 'uint', 'int', 'uintptr_t']);
+
+  // keybd_event - for keyboard input (used as fallback)
+  keybd_event = user32.func('keybd_event', 'void', ['uchar', 'uchar', 'uint', 'uintptr_t']);
+
+  useDirectWinAPI = true;
+  console.log('✅ KOFFI loaded - using DIRECT Windows API for INSTANT mouse control');
 } catch (e) {
-    console.log('⚠️ KOFFI not available, falling back to nut-js:', e.message);
-    useDirectWinAPI = false;
+  console.log('⚠️ KOFFI not available, falling back to nut-js:', e.message);
+  useDirectWinAPI = false;
 }
 
 // ==================== DISABLE CHROME SCREEN SHARING INDICATOR ====================
@@ -128,7 +128,7 @@ async function refreshScreenSize() {
     // Also log Electron's values for comparison and DPI awareness
     const primaryDisplay = electronScreen.getPrimaryDisplay();
     const scaleFactor = primaryDisplay.scaleFactor;
-    
+
     console.log('[robot] Screen refresh - nut-js native size:', screenSize);
     console.log('[robot] Screen refresh - Electron logical size:', primaryDisplay.size);
     console.log('[robot] Screen refresh - Electron scaleFactor:', scaleFactor, '(' + (scaleFactor * 100) + '% DPI scaling)');
@@ -380,7 +380,7 @@ function handleMouseMoveDirectly(x, y) {
     if (useDirectWinAPI && SetCursorPos) {
       SetCursorPos(x, y); // Synchronous! <0.5ms
     } else if (mouse && mouse.setPosition) {
-      mouse.setPosition({ x, y }).catch(() => {});
+      mouse.setPosition({ x, y }).catch(() => { });
     }
   } catch (err) {
     // Silently ignore errors
@@ -397,7 +397,7 @@ ipcMain.on('robot-mouse-event', (_event, data = {}) => {
   // === ULTRA-LOW LATENCY MOUSE HANDLING ===
   // Move events BYPASS THE QUEUE entirely for instant response
   // Only click/down/up operations use the queue to ensure proper sequencing
-  
+
   switch (type) {
     case 'move':
     case 'mousemove':
@@ -405,7 +405,7 @@ ipcMain.on('robot-mouse-event', (_event, data = {}) => {
       // Move events don't need queuing since new moves will overwrite old ones anyway
       handleMouseMoveDirectly(coords.x, coords.y);
       break;
-      
+
     case 'down':
     case 'mousedown':
       // Direct WinAPI for position + click
@@ -417,10 +417,10 @@ ipcMain.on('robot-mouse-event', (_event, data = {}) => {
       } else {
         mouse.setPosition({ x: coords.x, y: coords.y })
           .then(() => mouse.pressButton(nutButton))
-          .catch(() => {});
+          .catch(() => { });
       }
       break;
-      
+
     case 'up':
     case 'mouseup':
       // Direct WinAPI for position + release
@@ -432,10 +432,10 @@ ipcMain.on('robot-mouse-event', (_event, data = {}) => {
       } else {
         mouse.setPosition({ x: coords.x, y: coords.y })
           .then(() => mouse.releaseButton(nutButton))
-          .catch(() => {});
+          .catch(() => { });
       }
       break;
-      
+
     case 'click':
       // Direct WinAPI click = down + up
       if (useDirectWinAPI && SetCursorPos && mouse_event) {
@@ -447,10 +447,10 @@ ipcMain.on('robot-mouse-event', (_event, data = {}) => {
       } else {
         mouse.setPosition({ x: coords.x, y: coords.y })
           .then(() => mouse.click(nutButton))
-          .catch(() => {});
+          .catch(() => { });
       }
       break;
-      
+
     case 'scroll':
     case 'wheel':
       // Direct WinAPI scroll
@@ -464,9 +464,9 @@ ipcMain.on('robot-mouse-event', (_event, data = {}) => {
         const scrollAmount = Math.max(1, Math.abs(Math.round(deltaY / 3)));
         if (scrollAmount > 0) {
           if (deltaY > 0) {
-            mouse.scrollDown(scrollAmount).catch(() => {});
+            mouse.scrollDown(scrollAmount).catch(() => { });
           } else {
-            mouse.scrollUp(scrollAmount).catch(() => {});
+            mouse.scrollUp(scrollAmount).catch(() => { });
           }
         }
       }
@@ -527,6 +527,7 @@ function createToolbarWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      devTools: !app.isPackaged
     },
   });
 
@@ -720,7 +721,8 @@ function createViewerWindow(sessionData = {}) {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      devTools: !app.isPackaged
     }
   });
 
@@ -783,7 +785,8 @@ function createWindow() {
       enableRemoteModule: true,
       // Preload provides a safe bridge for packaged apps where
       // require()/remote may not be available. It exposes `window.appControls`.
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      devTools: !app.isPackaged
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
     title: 'SuperDesk Agent'
@@ -1100,7 +1103,8 @@ app.whenReady().then(() => {
       title: 'Remote Desktop Viewer',
       webPreferences: {
         nodeIntegration: true,
-        contextIsolation: false
+        contextIsolation: false,
+        devTools: !app.isPackaged
       }
     });
 
@@ -1310,7 +1314,8 @@ function showLocalCameraOverlay() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      backgroundThrottling: false  // Keep video playing when not focused
+      backgroundThrottling: false,  // Keep video playing when not focused
+      devTools: !app.isPackaged
     }
   });
 
@@ -1389,7 +1394,8 @@ function showRemoteCameraOverlay() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      backgroundThrottling: false
+      backgroundThrottling: false,
+      devTools: !app.isPackaged
     }
   });
 

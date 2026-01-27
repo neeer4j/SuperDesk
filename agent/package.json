@@ -22,7 +22,7 @@
   "build": {
     "appId": "com.superdesk.agent",
     "productName": "SuperDesk Agent",
-    "copyright": "Copyright © 2024-2026 Neeraj Venu & Joniyal",
+    "copyright": "Copyright © 2024-2026 SuperDesk",
     "directories": {
       "output": "dist"
     },
@@ -61,6 +61,6 @@
     "screen-capture",
     "windows"
   ],
-  "author": "Neeraj Venu & Joniyal",
+  "author": "SuperDesk",
   "license": "Apache-2.0"
 }

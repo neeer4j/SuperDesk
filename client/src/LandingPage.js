@@ -2679,7 +2679,7 @@ function LandingPage() {
 
         <div style={styles.settingsFooter}>
           <div style={styles.settingsVersion}>SuperDesk v1.0.0</div>
-          <div style={styles.settingsCopyright}>© 2025 SuperDesk. All rights reserved.</div>
+          <div style={styles.settingsCopyright}>© {new Date().getFullYear()} SuperDesk. All rights reserved.</div>
         </div>
       </div>
 
