@@ -1127,7 +1127,10 @@ const getStyles = (darkTheme) => ({
     transition: 'all 0.3s ease'
   },
   filesDropIcon: {
-    marginBottom: '16px'
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   filesDropText: {
     fontSize: '18px',
