@@ -43,7 +43,9 @@
       "assets/**/*",
       "package.json"
     ],
-    "asarUnpack": [],
+    "asarUnpack": [
+      "**/node_modules/clipboardy/**/*"
+    ],
     "extraFiles": [],
     "win": {
       "target": "nsis",
