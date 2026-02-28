@@ -2,6 +2,10 @@ const { app, BrowserWindow, ipcMain, desktopCapturer, screen: electronScreen, di
 const path = require('path');
 const fs = require('fs');
 const { mouse, keyboard, screen, Button, Key } = require('@nut-tree-fork/nut-js');
+const { printVersion } = require('./version');
+
+// Print version information on startup
+printVersion();
 
 // ==================== ULTRA-LOW LATENCY WINDOWS API (KOFFI FFI) ====================
 // Direct Windows API calls via koffi for INSTANT mouse movement (bypasses nut-js overhead)

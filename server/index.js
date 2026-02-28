@@ -292,6 +292,22 @@ io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
   socket.on('create-session', (payload) => {
+    // Rate limiting check
+    const clientIp = socket.handshake.address;
+    const now = Date.now();
+    const attempts = sessionCreationAttempts.get(clientIp) || [];
+    const recentAttempts = attempts.filter(time => now - time < RATE_LIMIT_WINDOW_MS);
+    
+    if (recentAttempts.length >= MAX_SESSIONS_PER_MINUTE) {
+      console.warn(`Rate limit exceeded for ${clientIp}`);
+      socket.emit('session-error', 'Too many session creation attempts. Please wait a moment.');
+      return;
+    }
+    
+    // Update rate limit tracking
+    recentAttempts.push(now);
+    sessionCreationAttempts.set(clientIp, recentAttempts);
+    
     // Generate a short, readable session ID
     let sessionId;
     do {
@@ -305,6 +321,9 @@ io.on('connection', (socket) => {
       created: new Date(),
       type: payload?.type || 'unknown'
     });
+    
+    // Track activity for timeout
+    sessionLastActivity.set(sessionId, now);
 
     socket.join(sessionId);
     socket.emit('session-created', { sessionId });
@@ -370,6 +389,11 @@ io.on('connection', (socket) => {
   socket.on('ice-candidate', (payload) => {
     const { sessionId, targetId, candidate } = payload;
     const message = { candidate, from: socket.id, sessionId };
+    
+    // Update session activity
+    if (sessionId && sessionLastActivity.has(sessionId)) {
+      sessionLastActivity.set(sessionId, Date.now());
+    }
 
     if (targetId) {
       socket.to(targetId).emit('ice-candidate', message);
@@ -439,12 +463,18 @@ io.on('connection', (socket) => {
 
   // Remote control events
   socket.on('mouse-event', (data) => {
-    console.log('Mouse event:', data);
+    // Update session activity on interaction
+    if (data.sessionId && sessionLastActivity.has(data.sessionId)) {
+      sessionLastActivity.set(data.sessionId, Date.now());
+    }
     socket.to(data.sessionId).emit('mouse-event', data);
   });
 
   socket.on('keyboard-event', (data) => {
-    console.log('Keyboard event:', data);
+    // Update session activity on interaction
+    if (data.sessionId && sessionLastActivity.has(data.sessionId)) {
+      sessionLastActivity.set(data.sessionId, Date.now());
+    }
     socket.to(data.sessionId).emit('keyboard-event', data);
   });
 
@@ -535,6 +565,7 @@ io.on('connection', (socket) => {
         // Host disconnected, notify clients and remove session
         socket.to(sessionId).emit('host-disconnected');
         sessions.delete(sessionId);
+        sessionLastActivity.delete(sessionId);
         console.log(`Session ${sessionId} closed - host disconnected`);
       } else {
         // Remove client from session
@@ -547,6 +578,43 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+// ==================== SESSION TIMEOUT CLEANUP ====================
+// Clean up inactive sessions every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  let cleanedCount = 0;
+  
+  for (const [sessionId, lastActivity] of sessionLastActivity.entries()) {
+    if (now - lastActivity > SESSION_TIMEOUT_MS) {
+      const session = sessions.get(sessionId);
+      if (session) {
+        console.log(`Cleaning up inactive session: ${sessionId} (inactive for ${Math.round((now - lastActivity) / 60000)} minutes)`);
+        io.to(sessionId).emit('session-timeout');
+        sessions.delete(sessionId);
+        sessionLastActivity.delete(sessionId);
+        cleanedCount++;
+      }
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    console.log(`Cleaned up ${cleanedCount} inactive sessions`);
+  }
+}, 5 * 60 * 1000); // Run every 5 minutes
+
+// Clean up old rate limit data every minute
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, attempts] of sessionCreationAttempts.entries()) {
+    const recentAttempts = attempts.filter(time => now - time < RATE_LIMIT_WINDOW_MS);
+    if (recentAttempts.length === 0) {
+      sessionCreationAttempts.delete(ip);
+    } else {
+      sessionCreationAttempts.set(ip, recentAttempts);
+    }
+  }
+}, 60 * 1000);
 
 // File upload endpoint
 app.post('/upload', upload.single('file'), (req, res) => {
