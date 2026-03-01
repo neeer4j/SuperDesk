@@ -1,15 +1,13 @@
-// SuperDesk Signaling Server - Deployed to Azure App Service
-// Trigger: SCM_DO_BUILD_DURING_DEPLOYMENT=true
+// SuperDesk Signaling Server - Deployed to Render
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const { useAzureSocketIO } = require('@azure/web-pubsub-socket.io');
 const cors = require('cors');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 // Shared constants
-// Shared constants - handle both local and Azure paths
+// Shared constants
 let shared;
 try {
   shared = require('../shared');
@@ -190,10 +188,10 @@ const corsOptions = {
 // Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Explicit handling for preflight OPTIONS requests (important for Azure App Service)
+// Explicit handling for preflight OPTIONS requests
 app.options('*', cors(corsOptions));
 
-// Additional CORS headers middleware to ensure they're always set (Azure sometimes strips them)
+// Additional CORS headers middleware to ensure they're always set
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   // Set CORS headers explicitly for all requests
@@ -209,7 +207,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize Socket.IO with Azure Web PubSub
+// Initialize Socket.IO
 const io = new Server(server, {
   cors: {
     origin: corsOriginValidator,
@@ -221,34 +219,15 @@ const io = new Server(server, {
   transports: ['websocket', 'polling'],
   upgrade: true,
   allowUpgrades: true,
-  // Azure-specific settings for improved compatibility
+  // Production settings for improved compatibility
   pingTimeout: 60000,
   pingInterval: 25000,
   cookie: false,
   maxHttpBufferSize: 1e6, // 1MB for signaling messages
-  perMessageDeflate: false // Disable compression for Azure proxy compatibility
+  perMessageDeflate: false // Disable compression for proxy compatibility
 });
 
-// Azure Web PubSub for Socket.IO - DISABLED
-// The Web PubSub service causes 403 errors when not properly configured.
-// For single-instance Azure App Service, standard Socket.IO works fine.
-// To re-enable, uncomment below and ensure AZURE_WEBPUBSUB_CONNECTION_STRING is valid.
-/*
-if (process.env.AZURE_WEBPUBSUB_CONNECTION_STRING) {
-  try {
-    useAzureSocketIO(io, {
-      hub: "superdesk_hub",
-      connectionString: process.env.AZURE_WEBPUBSUB_CONNECTION_STRING
-    });
-    console.log('[Socket.IO] Azure Web PubSub integration enabled');
-  } catch (e) {
-    console.warn('[Socket.IO] Azure Web PubSub failed, using standard Socket.IO:', e.message);
-  }
-} else {
-  console.log('[Socket.IO] Running without Azure Web PubSub (standard mode)');
-}
-*/
-console.log('[Socket.IO] Running in standard mode (Azure Web PubSub disabled)');
+console.log('[Socket.IO] Running in standard mode');
 
 app.use(express.json());
 app.use(express.static('public'));

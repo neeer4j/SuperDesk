@@ -19,7 +19,7 @@ window.superdeskState = {
     sharingActive: false,
     remoteControlEnabled: false,
     hostIsMobile: false, // Track if the host device is mobile (detected via video aspect ratio)
-    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net'
+    serverUrl: window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://superdesk-7m7f.onrender.com'
 };
 
 // Test TURN connectivity - can be called from console for debugging
@@ -160,7 +160,7 @@ async function initializeSocket() {
         console.log('🔌 Connecting to server:', window.superdeskState.serverUrl);
         
         const socket = io(window.superdeskState.serverUrl, {
-            transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
+            transports: ['websocket', 'polling'], // WebSocket first, polling fallback
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,

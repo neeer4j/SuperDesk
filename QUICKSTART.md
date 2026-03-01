@@ -17,18 +17,17 @@ npm start
 
 ### **Option 2: Cloud Deployment (Global Access)**
 
-#### **🌐 Deploy Backend (Railway - Recommended)**
+#### **🌐 Deploy Backend (Render - Recommended)**
 ```bash
-# Install Railway CLI
-npm install -g @railway/cli
+# Render deploys automatically from GitHub
+# 1. Go to https://dashboard.render.com/
+# 2. Click 'New +' -> 'Web Service'
+# 3. Connect your GitHub repo
+# 4. Set Root Directory: server
+# 5. Build Command: npm install
+# 6. Start Command: npm start
 
-# Deploy server
-cd server
-railway login
-railway init
-railway up
-
-# Copy your server URL (e.g., https://xxx.railway.app)
+# Your server URL: https://superdesk-7m7f.onrender.com
 ```
 
 #### **📱 Deploy Frontend (Vercel)**
@@ -38,7 +37,7 @@ npm install -g vercel
 
 # Set your server URL
 cd client
-echo "REACT_APP_SERVER_URL=https://your-railway-url.railway.app" > .env
+echo "REACT_APP_SERVER_URL=https://superdesk-7m7f.onrender.com" > .env
 
 # Deploy
 npm run build
@@ -112,13 +111,13 @@ Verify URLs are correct in config
 
 ### **Free Tier (Perfect for Testing):**
 - **Vercel**: Free (hobby projects)
-- **Railway**: $5/month after free credits
-- **Total**: ~$5/month
+- **Render**: Free tier available
+- **Total**: $0/month
 
 ### **Production Ready:**
 - **Vercel Pro**: $20/month (optional)
-- **Railway**: $5-20/month (based on usage)
-- **Total**: $5-40/month
+- **Render**: $7/month (for always-on)
+- **Total**: $7-27/month
 
 ## **📊 Performance Expectations**
 

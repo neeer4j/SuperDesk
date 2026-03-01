@@ -10,8 +10,8 @@ let isSharing = false;
 let pendingIceCandidates = []; // Buffer for early ICE candidates
 let remoteControlEnabled = false;
 
-// Server URL - use Render deployment
-const SERVER_URL = 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net';
+// Server URL - Render deployment
+const SERVER_URL = 'https://superdesk-7m7f.onrender.com';
 
 // ICE servers configuration (dynamic fetch from server)
 let iceServers = { iceServers: [] };
@@ -67,7 +67,7 @@ async function capSenderToMbps(sender, mbps) {
 function connectToServer() {
   console.log('Connecting to server:', SERVER_URL);
   socket = io(SERVER_URL, {
-    transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
+    transports: ['websocket', 'polling'], // WebSocket first, polling fallback
     upgrade: true, // Allow transport upgrades
     reconnection: true,
     reconnectionAttempts: 5,

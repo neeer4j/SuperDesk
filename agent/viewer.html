@@ -520,7 +520,7 @@
         function initializeSocket(serverUrl) {
             console.log('🔌 Connecting to server:', serverUrl);
             socket = io(serverUrl, {
-                transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
+                transports: ['websocket', 'polling'], // WebSocket first, polling fallback
                 upgrade: true, // Allow transport upgrades
                 reconnection: true,
                 reconnectionAttempts: 5,

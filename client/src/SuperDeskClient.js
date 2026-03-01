@@ -12,7 +12,7 @@ class SuperDeskClient {
     this.remoteControlEnabled = false;
     this.serverUrl = window.location.hostname === 'localhost'
       ? 'http://localhost:3001'
-      : 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net';
+      : 'https://superdesk-7m7f.onrender.com';
 
     // Camera/mic state tracking
     this.remoteCameraTrackId = null;
@@ -44,7 +44,7 @@ class SuperDeskClient {
   async initialize() {
     return new Promise((resolve, reject) => {
       this.socket = io(this.serverUrl, {
-        transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
+        transports: ['websocket', 'polling'], // WebSocket first, polling fallback
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,

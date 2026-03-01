@@ -824,8 +824,20 @@ html {
 
 .tech-icon {
   font-size: 3.5rem;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
   /* Increased opacity for visibility */
   transition: all 0.3s ease;
+}
+
+/* Ensure <img> used as a tech icon is the same size as SVG icons */
+img.tech-icon {
+  width: 3.5rem !important;
+  height: 3.5rem !important;
+  max-width: 3.5rem !important;
+  object-fit: contain;
+  display: inline-block !important;
 }
 
 /* Icon Colors - Default */
@@ -864,8 +876,8 @@ html {
   color: #06B6D4;
 }
 
-.tech-icon.azure {
-  color: #0078D4;
+.tech-icon.render {
+  color: #46E3B7;
 }
 
 .tech-icon.vercel {
@@ -878,6 +890,10 @@ html {
 
 .tech-icon.framer {
   color: #0055FF;
+}
+
+.tech-icon.kotlin {
+  color: #7F52FF;
 }
 
 /* Hover Effects */
@@ -913,8 +929,12 @@ html {
   filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.5));
 }
 
-.tech-item:hover .tech-icon.azure {
-  filter: drop-shadow(0 0 10px rgba(0, 120, 212, 0.5));
+.tech-item:hover .tech-icon.render {
+  filter: drop-shadow(0 0 10px rgba(70, 227, 183, 0.5));
+}
+
+.tech-item:hover .tech-icon.kotlin {
+  filter: drop-shadow(0 0 10px rgba(127, 82, 255, 0.5));
 }
 
 .tech-item:hover .tech-icon.vercel {

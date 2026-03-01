@@ -7164,11 +7164,11 @@
                 } else if (!window.socket || !window.socket.connected) {
                     const serverUrl = window.location.hostname === 'localhost'
                         ? 'http://localhost:3001'
-                        : 'https://supderdesk-fgasbfdze6bwbbav.centralindia-01.azurewebsites.net';
+                        : 'https://superdesk-7m7f.onrender.com';
 
                     console.log('🔌 Connecting to server:', serverUrl);
                     window.socket = io(serverUrl, {
-                        transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
+                        transports: ['websocket', 'polling'], // WebSocket first, polling fallback
                         upgrade: true, // Allow transport upgrades
                         reconnection: true,
                         reconnectionAttempts: 5,
@@ -11033,7 +11033,7 @@
                     <p>We use the following trusted third-party services:</p>
                     <ul style="margin-left: 24px; margin-top: 8px;">
                         <li><strong>Supabase:</strong> Authentication and database (privacy-focused, GDPR compliant)</li>
-                        <li><strong>Azure/Custom Signaling:</strong> WebRTC connection establishment only</li>
+                        <li><strong>Render Signaling:</strong> WebRTC connection establishment only</li>
                     </ul>
                     
                     <h3 style="margin-top: 20px; margin-bottom: 12px; font-size: 18px; font-weight: 600;">6. Your Rights</h3>

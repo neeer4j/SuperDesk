@@ -6,12 +6,17 @@ import superdeskLogoText from '../assets/superdeskmm.png';
 import superdeskShowcase from '../assets/suppm.png';
 import superdeskScreenshot from '../assets/sup.png';
 import supimage from '../assets/supimage.png';
+import renderLogo from '../assets/render.png';
 import {
     SiReact, SiNodedotjs, SiElectron,
     SiSocketdotio, SiWebrtc, SiTailwindcss, SiGithub,
-    SiVercel, SiExpress, SiSupabase, SiFramer
+    SiVercel, SiExpress, SiSupabase, SiFramer, SiKotlin
 } from 'react-icons/si';
-import { VscAzure } from 'react-icons/vsc';
+
+// Render icon (image component)
+const RenderIcon = (props) => (
+    <img src={renderLogo} alt="Render" className="tech-icon render" {...props} />
+);
 
 // Loading Overlay Component - Ultra-minimal and professional
 const LoadingOverlay = React.memo(() => (
@@ -656,10 +661,11 @@ export default function Home() {
                         <div className="tech-item" title="Express"><SiExpress className="tech-icon express" /></div>
                         <div className="tech-item" title="GitHub"><SiGithub className="tech-icon github" /></div>
                         <div className="tech-item" title="Tailwind CSS"><SiTailwindcss className="tech-icon tailwind" /></div>
-                        <div className="tech-item" title="Azure"><VscAzure className="tech-icon azure" /></div>
+                        <div className="tech-item" title="Render"><RenderIcon className="tech-icon render" /></div>
                         <div className="tech-item" title="Supabase"><SiSupabase className="tech-icon supabase" /></div>
                         <div className="tech-item" title="Framer Motion"><SiFramer className="tech-icon framer" /></div>
                         <div className="tech-item" title="Vercel"><SiVercel className="tech-icon vercel" /></div>
+                        <div className="tech-item" title="Kotlin"><SiKotlin className="tech-icon kotlin" /></div>
                         {/* Duplicate set for seamless loop */}
                         <div className="tech-item" title="React"><SiReact className="tech-icon react" /></div>
                         <div className="tech-item" title="Node.js"><SiNodedotjs className="tech-icon node" /></div>
@@ -669,10 +675,11 @@ export default function Home() {
                         <div className="tech-item" title="Express"><SiExpress className="tech-icon express" /></div>
                         <div className="tech-item" title="GitHub"><SiGithub className="tech-icon github" /></div>
                         <div className="tech-item" title="Tailwind CSS"><SiTailwindcss className="tech-icon tailwind" /></div>
-                        <div className="tech-item" title="Azure"><VscAzure className="tech-icon azure" /></div>
+                        <div className="tech-item" title="Render"><RenderIcon className="tech-icon render" /></div>
                         <div className="tech-item" title="Supabase"><SiSupabase className="tech-icon supabase" /></div>
                         <div className="tech-item" title="Framer Motion"><SiFramer className="tech-icon framer" /></div>
                         <div className="tech-item" title="Vercel"><SiVercel className="tech-icon vercel" /></div>
+                        <div className="tech-item" title="Kotlin"><SiKotlin className="tech-icon kotlin" /></div>
                     </div>
                 </div>
             </section>

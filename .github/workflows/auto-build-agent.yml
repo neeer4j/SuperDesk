@@ -4,13 +4,12 @@ on:
   push:
     branches:
       - test
+    tags:
+      - 'v*'
   create:
     tags:
       - 'v*'
-  # Also build on push tags (for release creation)
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-windows-installer:

@@ -4,13 +4,13 @@
 
 ### Modern Remote Desktop Access for the Web Era
 
-[![Azure](https://img.shields.io/badge/Server-Azure%20App%20Service-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com)
+[![Render](https://img.shields.io/badge/Server-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://render.com)
 [![Vercel](https://img.shields.io/badge/Client-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
 
 <p>
-  <img src="https://skillicons.dev/icons?i=react,nodejs,electron,js,azure,vercel,supabase,tailwind" alt="Tech stack" />
+  <img src="https://skillicons.dev/icons?i=react,nodejs,electron,js,cloudflare,vercel,supabase,tailwind" alt="Tech stack" />
 </p>
 
 **Real-time screen sharing • Remote control • P2P file transfer • Cross-platform**
@@ -75,7 +75,7 @@ flowchart TB
     subgraph Cloud["Cloud Services"]
         direction LR
         Client["Web Client<br/>(React + Vercel)"]
-        Server["Signaling Server<br/>(Node.js + Azure)"]
+        Server["Signaling Server<br/>(Node.js + Render)"]
         Auth["Auth<br/>(Supabase)"]
     end
     
@@ -97,7 +97,7 @@ flowchart TB
     Agent1 <-.->|WebRTC P2P| Mobile
 
     style Client fill:#000,stroke:#3291FF,color:#fff,stroke-width:2px
-    style Server fill:#0078D4,stroke:#fff,color:#fff,stroke-width:2px
+    style Server fill:#46E3B7,stroke:#fff,color:#fff,stroke-width:2px
     style Auth fill:#3ECF8E,stroke:#fff,color:#fff,stroke-width:2px
     style Agent1 fill:#6B5B95,stroke:#fff,color:#fff,stroke-width:2px
     style Agent2 fill:#6B5B95,stroke:#fff,color:#fff,stroke-width:2px
@@ -107,7 +107,7 @@ flowchart TB
 | Component | Description | Hosted On |
 |:----------|:------------|:---------:|
 | **Web Client** | React app for browser-based session joining | ![Vercel](https://img.shields.io/badge/-Vercel-000?logo=vercel&logoColor=white) |
-| **Signaling Server** | Node.js backend for WebRTC signaling & sessions | ![Azure](https://img.shields.io/badge/-Azure-0078D4?logo=microsoftazure&logoColor=white) |
+| **Signaling Server** | Node.js backend for WebRTC signaling & sessions | ![Render](https://img.shields.io/badge/-Render-46E3B7?logo=render&logoColor=white) |
 | **Auth (Supabase)** | Email OTP authentication and user management | ![Supabase](https://img.shields.io/badge/-Supabase-3ECF8E?logo=supabase&logoColor=white) |
 | **Desktop Agent** | Electron app for Windows (host or join) | 💻 Local |
 | **Mobile App** | React Native app for Android/iOS | 📱 Local |
@@ -219,10 +219,43 @@ const FILE_TRANSFER = {
 
 | Component | Platform | Trigger |
 |-----------|----------|---------|
-| **Signaling Server** | Azure App Service | GitHub Actions on `server/**` changes |
-| **Web Client** | Vercel | Auto-deploy on `main` push |
+| **Signaling Server** | [Render](https://render.com) | Auto-deploy on `main` push |
+| **Web Client** | [Vercel](https://vercel.com) | Auto-deploy on `main` push |
 
-> **Important:** Set `SCM_DO_BUILD_DURING_DEPLOYMENT=true` in Azure App Service configuration.
+### Server → Render
+
+1. Go to [dashboard.render.com](https://dashboard.render.com) → **New → Web Service**
+2. Connect your GitHub repo
+3. Render auto-detects `render.yaml` — no manual config needed
+4. Add these environment variables in the Render dashboard:
+
+| Variable | Value |
+|----------|-------|
+| `NODE_ENV` | `production` |
+| `PORT` | `10000` |
+| `CLIENT_URL` | `https://your-app.vercel.app` |
+| `CLOUDFLARE_TURN_KEY_ID` | *(optional, for TURN)* |
+| `CLOUDFLARE_TURN_KEY_API_TOKEN` | *(optional, for TURN)* |
+
+> Live server: **https://superdesk-7m7f.onrender.com**  
+> Keep it awake for free with [UptimeRobot](https://uptimerobot.com) — ping `/health` every 5 min.
+
+### Client → Vercel
+
+1. Import the repo in [vercel.com](https://vercel.com), set **Root Directory** to `client`
+2. Add one environment variable:
+
+| Variable | Value |
+|----------|-------|
+| `REACT_APP_SERVER_URL` | `https://superdesk-7m7f.onrender.com` |
+
+> Also add `REACT_APP_SERVER_URL` as a **GitHub Actions secret** so CI builds succeed.
+
+### GitHub Actions secrets required
+
+| Secret | Used by |
+|--------|---------|
+| `REACT_APP_SERVER_URL` | `deploy.yml` client build |
 
 ---
 
@@ -231,7 +264,7 @@ const FILE_TRANSFER = {
 ```
 SuperDesk/
 ├── 📂 client/          # React web application (Vercel)
-├── 📂 server/          # Node.js signaling server (Azure)
+├── 📂 server/          # Node.js signaling server (Render)
 ├── 📂 agent/           # Electron desktop agent
 │   └── 📂 modules/     # Agent modules (file-transfer, webrtc)
 └── 📂 shared/          # Shared constants and utilities
@@ -259,7 +292,7 @@ SuperDesk/
 - Verify server is running and accessible
 - Check firewall allows WebRTC traffic (UDP ports)
 - Ensure both parties have stable network
-- Check Azure Log Stream for server errors
+- Check Render dashboard logs for server errors
 
 </details>
 

@@ -23,7 +23,7 @@ class SocketManager {
     return new Promise((resolve, reject) => {
       try {
         this.socket = io(this.serverUrl, {
-          transports: ['websocket', 'polling'], // WebSocket first, polling fallback for Azure
+          transports: ['websocket', 'polling'], // WebSocket first, polling fallback
           upgrade: true, // Allow transport upgrades
           reconnection: true,
           reconnectionAttempts: 5,
