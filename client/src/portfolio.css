@@ -896,6 +896,10 @@ img.tech-icon {
   color: #7F52FF;
 }
 
+.tech-icon.cloudflare {
+  color: #F6821F;
+}
+
 /* Hover Effects */
 .tech-item:hover .tech-icon.react {
   filter: drop-shadow(0 0 10px rgba(97, 218, 251, 0.5));
@@ -947,6 +951,10 @@ img.tech-icon {
 
 .tech-item:hover .tech-icon.framer {
   filter: drop-shadow(0 0 10px rgba(0, 85, 255, 0.5));
+}
+
+.tech-item:hover .tech-icon.cloudflare {
+  filter: drop-shadow(0 0 10px rgba(246, 130, 31, 0.5));
 }
 
 /* Custom Antigravity Icon */

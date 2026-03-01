@@ -10,7 +10,7 @@ import renderLogo from '../assets/render.png';
 import {
     SiReact, SiNodedotjs, SiElectron,
     SiSocketdotio, SiWebrtc, SiTailwindcss, SiGithub,
-    SiVercel, SiExpress, SiSupabase, SiFramer, SiKotlin
+    SiVercel, SiExpress, SiSupabase, SiFramer, SiKotlin, SiCloudflare
 } from 'react-icons/si';
 
 // Render icon (image component)
@@ -666,6 +666,7 @@ export default function Home() {
                         <div className="tech-item" title="Framer Motion"><SiFramer className="tech-icon framer" /></div>
                         <div className="tech-item" title="Vercel"><SiVercel className="tech-icon vercel" /></div>
                         <div className="tech-item" title="Kotlin"><SiKotlin className="tech-icon kotlin" /></div>
+                        <div className="tech-item" title="Cloudflare"><SiCloudflare className="tech-icon cloudflare" /></div>
                         {/* Duplicate set for seamless loop */}
                         <div className="tech-item" title="React"><SiReact className="tech-icon react" /></div>
                         <div className="tech-item" title="Node.js"><SiNodedotjs className="tech-icon node" /></div>
@@ -680,6 +681,7 @@ export default function Home() {
                         <div className="tech-item" title="Framer Motion"><SiFramer className="tech-icon framer" /></div>
                         <div className="tech-item" title="Vercel"><SiVercel className="tech-icon vercel" /></div>
                         <div className="tech-item" title="Kotlin"><SiKotlin className="tech-icon kotlin" /></div>
+                        <div className="tech-item" title="Cloudflare"><SiCloudflare className="tech-icon cloudflare" /></div>
                     </div>
                 </div>
             </section>
