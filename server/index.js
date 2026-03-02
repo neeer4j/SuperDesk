@@ -255,6 +255,13 @@ if (!fs.existsSync('uploads')) {
 
 // Store active sessions
 const sessions = new Map();
+const sessionLastActivity = new Map();
+const sessionCreationAttempts = new Map();
+
+// Rate limiting and timeout constants
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;       // 1 minute window for rate limiting
+const MAX_SESSIONS_PER_MINUTE = 5;             // Max 5 session creations per IP per minute
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;    // 30 minutes of inactivity before cleanup
 
 // Helper function to generate short session IDs
 function generateSessionId() {
