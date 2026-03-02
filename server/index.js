@@ -232,6 +232,39 @@ console.log('[Socket.IO] Running in standard mode');
 app.use(express.json());
 app.use(express.static('public'));
 
+// ==================== SUPABASE PROXY ====================
+// Forwards all /supabase-proxy/* requests to Supabase.
+// This lets clients whose ISP DNS blocks Supabase still reach it via this server.
+const SUPABASE_PROXY_TARGET = process.env.SUPABASE_URL || 'https://srwrsgkfkzstdsiqonzi.supabase.co';
+app.use('/supabase-proxy', async (req, res) => {
+  const targetUrl = `${SUPABASE_PROXY_TARGET}${req.url}`;
+  try {
+    const fetchImpl = getFetchImplementation();
+    if (!fetchImpl) {
+      return res.status(502).json({ error: 'Proxy unavailable: fetch not found' });
+    }
+    const headers = {};
+    // Forward only safe headers
+    const forwardHeaders = ['authorization', 'apikey', 'content-type', 'accept', 'x-client-info', 'x-supabase-api-version'];
+    for (const h of forwardHeaders) {
+      if (req.headers[h]) headers[h] = req.headers[h];
+    }
+    const fetchOptions = { method: req.method, headers };
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
+      fetchOptions.body = JSON.stringify(req.body);
+    }
+    const response = await fetchImpl(targetUrl, fetchOptions);
+    const text = await response.text();
+    // Forward response headers (skip hop-by-hop)
+    const skip = new Set(['content-encoding', 'transfer-encoding', 'connection', 'keep-alive']);
+    response.headers.forEach((value, key) => { if (!skip.has(key.toLowerCase())) res.setHeader(key, value); });
+    res.status(response.status).send(text);
+  } catch (err) {
+    console.error('[Supabase Proxy] Error forwarding to', targetUrl, err.message);
+    res.status(502).json({ error: 'Supabase proxy error', details: err.message });
+  }
+});
+
 // File upload configuration with configurable limit (default 20GB)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
