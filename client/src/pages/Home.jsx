@@ -134,7 +134,14 @@ const TypewriterText = React.memo(({ lines, typingSpeed = 80, delayBetweenLines 
                         lineHeight: 1.1,
                         marginBottom: index === displayedLines.length - 1 ? '24px' : '8px',
                         letterSpacing: line.letterSpacing || '-2px',
-                        color: line.color || 'white',
+                        color: line.gradient ? undefined : (line.color || 'white'),
+                        fontFamily: "'Space Grotesk', 'Inter', sans-serif",
+                        ...(line.gradient ? {
+                            background: line.gradient,
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                        } : {}),
                     }}
                 >
                     {line.text}
@@ -331,18 +338,41 @@ export default function Home() {
                         transition={{ duration: 0.6 }}
                         style={{ flex: 1, maxWidth: '500px' }}
                     >
+                        {/* Gradient Badge Pill */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: 0.1 }}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '6px 16px',
+                                borderRadius: '999px',
+                                background: 'rgba(139, 92, 246, 0.1)',
+                                border: '1px solid rgba(139, 92, 246, 0.2)',
+                                marginBottom: '24px',
+                                fontSize: '13px',
+                                fontWeight: 500,
+                                color: '#a78bfa',
+                                letterSpacing: '0.5px',
+                            }}
+                        >
+                            <span style={{ fontSize: '14px' }}>✦</span> Remote Desktop Solution
+                        </motion.div>
+
                         <TypewriterText
                             lines={[
                                 { text: 'Remote Desktop', fontSize: '64px', letterSpacing: '-2px', color: 'white' },
-                                { text: 'Made Simple.', fontSize: '48px', letterSpacing: '-1px', color: '#a78bfa' },
+                                { text: 'Made Simple.', fontSize: '48px', letterSpacing: '-1px', gradient: 'linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #6366f1 100%)' },
                             ]}
                             typingSpeed={70}
                             delayBetweenLines={200}
                         />
                         <p style={{
-                            fontSize: '18px',
-                            color: 'rgba(255,255,255,0.7)',
-                            lineHeight: 1.7,
+                            fontSize: '17px',
+                            color: 'rgba(255,255,255,0.6)',
+                            lineHeight: 1.85,
                             marginBottom: '40px',
                         }}>
                             Secure screen sharing, remote control, and file transfer for modern teams.
@@ -512,7 +542,15 @@ export default function Home() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
                     >
-                        <h2>About SuperDesk</h2>
+                        {/* Accent line */}
+                        <div style={{
+                            width: '48px',
+                            height: '3px',
+                            background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
+                            borderRadius: '2px',
+                            marginBottom: '20px',
+                        }} />
+                        <h2 style={{ fontFamily: "'Space Grotesk', 'Inter', sans-serif" }}>About SuperDesk</h2>
                         <div>
                             <p>
                                 SuperDesk is an indie remote desktop solution created out of a passion for building tools that make work easier, faster, and more secure. Developed under real-world limitations, it proves that thoughtful design and dedication can create powerful software.
@@ -535,21 +573,41 @@ export default function Home() {
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        style={{ textAlign: 'center', marginBottom: '64px' }}
+                        style={{ textAlign: 'center', marginBottom: '72px' }}
                     >
+                        {/* Section Badge */}
+                        <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '6px 16px',
+                            borderRadius: '999px',
+                            background: 'rgba(139, 92, 246, 0.08)',
+                            border: '1px solid rgba(139, 92, 246, 0.15)',
+                            marginBottom: '20px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: '#a78bfa',
+                            letterSpacing: '1.5px',
+                            textTransform: 'uppercase',
+                        }}>
+                            What We Offer
+                        </div>
                         <h2 style={{
                             fontSize: '42px',
                             fontWeight: 700,
                             marginBottom: '16px',
                             letterSpacing: '-1px',
+                            fontFamily: "'Space Grotesk', 'Inter', sans-serif",
                         }}>
                             Capabilities
                         </h2>
                         <p style={{
-                            fontSize: '18px',
-                            color: 'rgba(255,255,255,0.6)',
-                            maxWidth: '500px',
+                            fontSize: '17px',
+                            color: 'rgba(255,255,255,0.5)',
+                            maxWidth: '480px',
                             margin: '0 auto',
+                            lineHeight: 1.6,
                         }}>
                             Powerful features for seamless remote collaboration
                         </p>
@@ -560,43 +618,45 @@ export default function Home() {
                         {features.map((feature, index) => (
                             <motion.div
                                 key={feature.title}
+                                className="feature-card"
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
-                                transition={{ delay: index * 0.1 }}
+                                transition={{ delay: index * 0.1, duration: 0.4 }}
                                 style={{
-                                    backgroundColor: 'rgba(255,255,255,0.02)',
+                                    backgroundColor: 'rgba(255,255,255,0.025)',
                                     borderRadius: '16px',
-                                    padding: '32px 24px',
-                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    padding: '36px 24px 32px',
+                                    border: '1px solid rgba(255,255,255,0.06)',
                                     textAlign: 'center',
-                                    transition: 'all 0.3s',
                                 }}
                             >
-                                <div style={{
-                                    width: '64px',
-                                    height: '64px',
-                                    borderRadius: '16px',
+                                <div className="feature-icon-box" style={{
+                                    width: '56px',
+                                    height: '56px',
+                                    borderRadius: '14px',
                                     backgroundColor: 'rgba(139, 92, 246, 0.1)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     margin: '0 auto 20px',
                                     color: '#a78bfa',
+                                    transition: 'box-shadow 0.3s ease',
                                 }}>
                                     {FeatureIcons[feature.icon]}
                                 </div>
                                 <h3 style={{
-                                    fontSize: '18px',
+                                    fontSize: '17px',
                                     fontWeight: 600,
-                                    marginBottom: '12px',
+                                    marginBottom: '10px',
+                                    fontFamily: "'Space Grotesk', 'Inter', sans-serif",
                                 }}>
                                     {feature.title}
                                 </h3>
                                 <p style={{
                                     fontSize: '14px',
-                                    color: 'rgba(255,255,255,0.5)',
-                                    lineHeight: 1.6,
+                                    color: 'rgba(255,255,255,0.45)',
+                                    lineHeight: 1.65,
                                 }}>
                                     {feature.description}
                                 </p>
@@ -610,31 +670,31 @@ export default function Home() {
             <section id="developers-note" className="portfolio-developers-note">
                 <div className="portfolio-developers-note-container">
                     <motion.div
-                        initial={{ opacity: 0, y: 30 }}
+                        initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        transition={{ duration: 0.6 }}
+                        transition={{ duration: 0.5 }}
+                        style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'center' }}
                     >
-                        <h2>A Note from the Developers</h2>
+                        <h2 style={{
+                            fontFamily: "'Space Grotesk', 'Inter', sans-serif",
+                            fontSize: '28px',
+                            fontWeight: 700,
+                            marginBottom: '20px',
+                            letterSpacing: '-0.5px',
+                        }}>From the Developers</h2>
 
-                        <div className="developers-note-content">
-                            <p>
-                                SuperDesk basically started because we just wanted a simple way to connect to our stuff. We're just independent devs building this out of pure curiosity and because we really love coding.
+                        <div style={{
+                            fontSize: '15px',
+                            color: 'rgba(255,255,255,0.55)',
+                            lineHeight: 1.8,
+                        }}>
+                            <p style={{ marginBottom: '14px' }}>
+                                SuperDesk started as a side project born out of curiosity and a love for coding. We're independent devs — no big company, no investors — just late nights, trial and error, and a lot of coffee. Privacy matters to us, so every connection is peer-to-peer. Your data never touches our servers.
                             </p>
                             <p>
-                                We're not some big company with investors. This was built with a lot of trial and error, late nights, and plenty of coffee. We built features that we needed and hoped you'd like them too.
+                                It's not perfect, but we're improving it every day. If you're using SuperDesk, you're part of our journey — and we appreciate you being here.
                             </p>
-                            <p className="highlight-paragraph">
-                                We care a lot about privacy, which is why we use direct peer-to-peer connections. Your data stays yours, which is how it should be.
-                            </p>
-                            <p>
-                                To be real with you, SuperDesk isn't perfect. Software never really is, right? But we're trying our best every day to squash bugs and make it smoother. We're learning as we go.
-                            </p>
-                            <p>
-                                Our goal is just to make something simple and useful that feels human. If you're using it, you're already part of our journey. Thanks for hanging out with us!
-                            </p>
-
-
                         </div>
                     </motion.div>
                 </div>
@@ -643,7 +703,7 @@ export default function Home() {
             {/* Tech Stack Section - Scrolling Marquee */}
             <section className="tech-stack-section">
                 <div className="section-title-container">
-                    <h2 className="section-title" style={{ color: '#ffffff' }}>Powered By</h2>
+                    <h2 className="section-title" style={{ color: '#ffffff', fontFamily: "'Space Grotesk', 'Inter', sans-serif" }}>Powered By</h2>
                 </div>
 
                 <div
@@ -707,6 +767,16 @@ export default function Home() {
                     pointerEvents: 'none',
                 }} />
 
+                {/* Divider Line */}
+                <div style={{
+                    width: '120px',
+                    height: '1px',
+                    background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)',
+                    margin: '0 auto 40px',
+                    position: 'relative',
+                    zIndex: 1,
+                }} />
+
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -720,13 +790,52 @@ export default function Home() {
                 <p style={{
                     fontSize: '14px',
                     color: 'rgba(255,255,255,0.5)',
-                    marginBottom: '24px',
+                    marginBottom: '28px',
                 }}>
                     Secure remote desktop sharing for modern teams.
                 </p>
+
+                {/* Icon Links Row */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '20px',
+                    marginBottom: '28px',
+                    position: 'relative',
+                    zIndex: 1,
+                }}>
+                    <a href="https://github.com/neeer4j/SuperDesk" target="_blank" rel="noopener noreferrer" style={{
+                        color: 'rgba(255,255,255,0.4)',
+                        transition: 'color 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#a78bfa'} onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg>
+                    </a>
+                    <a href="https://github.com/neeer4j/SuperDesk/releases/download/v1.0.0/SuperDesk.Agent.Setup.1.0.0.exe" download style={{
+                        color: 'rgba(255,255,255,0.4)',
+                        transition: 'color 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#a78bfa'} onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    </a>
+                    <a href="https://github.com/neeer4j/SuperDesk-Mobile/releases/download/v1.1/SuperDesk.Android.v1.1.apk" download style={{
+                        color: 'rgba(255,255,255,0.4)',
+                        transition: 'color 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#a78bfa'} onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                    </a>
+                </div>
+
                 <p style={{
                     fontSize: '13px',
                     color: 'rgba(255,255,255,0.3)',
+                    position: 'relative',
+                    zIndex: 1,
                 }}>
                     © {new Date().getFullYear()} SuperDesk. All rights reserved.
                 </p>
