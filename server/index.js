@@ -181,7 +181,7 @@ const corsOptions = {
   origin: corsOriginValidator,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'apikey', 'x-client-info', 'x-supabase-api-version'],
   optionsSuccessStatus: 200
 };
 
@@ -198,7 +198,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', origin || '*');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, apikey, x-client-info, x-supabase-api-version');
 
   // Handle preflight immediately
   if (req.method === 'OPTIONS') {
@@ -212,7 +212,7 @@ const io = new Server(server, {
   cors: {
     origin: corsOriginValidator,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'apikey', 'x-client-info', 'x-supabase-api-version'],
     credentials: true
   },
   allowEIO3: true,
