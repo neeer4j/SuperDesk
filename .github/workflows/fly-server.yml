@@ -24,15 +24,14 @@ jobs:
       with:
         node-version: '20.x'
         cache: 'npm'
-        cache-dependency-path: server/package-lock.json
+        cache-dependency-path: package-lock.json
 
     - name: Install dependencies
-      run: cd server && npm ci
+      run: npm ci
 
     - name: Verify server starts
       run: |
-        cd server
-        npm start &
+        npm run start:server &
         sleep 5
         curl -f http://localhost:3001/health || exit 1
         echo "✅ Server health check passed - Render will auto-deploy from main branch"

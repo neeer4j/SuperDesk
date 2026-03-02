@@ -20,13 +20,13 @@ jobs:
       with:
         node-version: '20'
         cache: 'npm'
-        cache-dependency-path: client/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install client dependencies
-      run: cd client && npm ci
+      run: npm ci
     
     - name: Build client
-      run: cd client && npm run build
+      run: npm run build:client
       env:
         REACT_APP_SERVER_URL: ${{ secrets.REACT_APP_SERVER_URL }}
     
@@ -48,15 +48,14 @@ jobs:
       with:
         node-version: '20'
         cache: 'npm'
-        cache-dependency-path: server/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install server dependencies
-      run: cd server && npm ci
+      run: npm ci
     
     - name: Start server for testing
       run: |
-        cd server
-        npm start &
+        npm run start:server &
         sleep 5
         curl -f http://localhost:3001/health || exit 1
         curl -f http://localhost:3001/api/info || exit 1
