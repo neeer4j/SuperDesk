@@ -41,7 +41,8 @@
       "stream-registry.js",
       "modules/**/*",
       "assets/**/*",
-      "package.json"
+      "package.json",
+      "version.js"
     ],
     "asarUnpack": [
       "**/node_modules/clipboardy/**/*"

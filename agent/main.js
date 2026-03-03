@@ -787,6 +787,8 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true,
+      // Allow cross-origin fetch to Supabase/socket.io/CDN from the local file:// URL
+      webSecurity: false,
       // Preload provides a safe bridge for packaged apps where
       // require()/remote may not be available. It exposes `window.appControls`.
       preload: path.join(__dirname, 'preload.js'),
@@ -881,6 +883,25 @@ app.whenReady().then(() => {
     } else {
       callback(false);
     }
+  });
+
+  // Allow all external fetch/XHR requests (Supabase, socket.io, CDN fonts, etc.)
+  // This is critical for the packaged app where the renderer runs in file:// origin.
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Access-Control-Allow-Origin': ['*'],
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: file:" +
+          " https://*.supabase.co https://supabase.co" +
+          " https://superdesk-7m7f.onrender.com wss://superdesk-7m7f.onrender.com" +
+          " https://cdn.jsdelivr.net https://cdn.socket.io" +
+          " https://fonts.googleapis.com https://fonts.gstatic.com" +
+          " https://*.googleapis.com ws: wss: http: https:"
+        ]
+      }
+    });
   });
 
   console.log('🚀 [STARTUP] Calling createWindow()...');

@@ -19,6 +19,10 @@
         var SUPABASE_URL = 'https://srwrsgkfkzstdsiqonzi.supabase.co';
         var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyd3JzZ2tma3pzdGRzaXFvbnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyODM2MzUsImV4cCI6MjA3ODg1OTYzNX0.URa75VP24G6anG_9Pyo2PqNrgNZ20DmEalcLAKezkSM';
 
+        // Route Supabase API through the server proxy (same as web app) to bypass
+        // ISP/firewall DNS blocks and CORS issues in the packaged Electron app.
+        var SERVER_PROXY_URL = 'https://superdesk-7m7f.onrender.com/supabase-proxy';
+
         // Custom storage adapter for Electron that ensures proper session persistence
         // This wraps localStorage with error handling and fallback mechanisms
         var customStorageAdapter = {
@@ -50,16 +54,20 @@
             }
         };
 
-        // Create client instance with explicit persistence configuration
-        // This fixes issues with session not being retained in Electron apps
-        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        // Create Supabase client:
+        // - Route through server proxy (avoids DNS blocks, ensures CORS in file:// origin)
+        // - flowType: 'implicit' because PKCE requires an HTTP redirect callback URL
+        //   which doesn't exist in a packaged Electron app (file:// protocol).
+        //   The web app works because it runs on an HTTP origin; the agent must use
+        //   implicit so OTP token verification completes inline without a redirect.
+        window.supabaseClient = window.supabase.createClient(SERVER_PROXY_URL, SUPABASE_ANON_KEY, {
             auth: {
                 persistSession: true,
                 autoRefreshToken: true,
                 detectSessionInUrl: false, // Not needed for Electron
                 storage: customStorageAdapter,
                 storageKey: 'superdesk-auth-token', // Explicit key to avoid conflicts
-                flowType: 'pkce'
+                flowType: 'implicit'  // Must be implicit in Electron (PKCE needs HTTP redirect)
             }
         });
 
@@ -128,35 +136,35 @@
     <style>
         /* Theme Variables - Professional Sleek Design */
         :root {
-            /* Light Mode (Default - Purple Theme) */
-            --primary-bg: #613da9;
-            --primary-bg-rgb: 97, 61, 169;
-            --secondary-bg: #f8f7fc;
+            /* Light Mode (Default - Dark Violet + White) */
+            --primary-bg: #0d0d14;
+            --primary-bg-rgb: 13, 13, 20;
+            --secondary-bg: #12121a;
             --sidebar-bg: #ffffff;
             --sidebar-text: #613da9;
             --sidebar-border: rgba(97, 61, 169, 0.12);
-            --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.9);
-            --text-muted: rgba(255, 255, 255, 0.7);
-            --card-bg: rgba(80, 45, 140, 0.55);
-            --card-border: rgba(255, 255, 255, 0.18);
-            --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-            --input-bg: rgba(0, 0, 0, 0.2);
-            --input-border: rgba(255, 255, 255, 0.25);
-            --btn-primary-bg: #ffffff;
-            --btn-primary-text: #613da9;
-            --settings-bg: #5a3498;
-            --settings-item-bg: rgba(255, 255, 255, 0.12);
-            --modal-bg: linear-gradient(145deg, #7c4dbd 0%, #5a3498 100%);
-            --logo-image: url('assets/superdesk.png');
-            --glass-bg: rgba(80, 45, 140, 0.4);
-            --glass-border: rgba(255, 255, 255, 0.15);
-            --accent-glow: rgba(255, 255, 255, 0.25);
+            --text-primary: #f0f0f5;
+            --text-secondary: rgba(255, 255, 255, 0.75);
+            --text-muted: rgba(255, 255, 255, 0.45);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --card-shadow: 0 4px 32px rgba(0, 0, 0, 0.3);
+            --input-bg: rgba(255, 255, 255, 0.04);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --btn-primary-bg: #8b5cf6;
+            --btn-primary-text: #ffffff;
+            --settings-bg: #0d0d14;
+            --settings-item-bg: rgba(255, 255, 255, 0.04);
+            --modal-bg: linear-gradient(145deg, #1a1a2e 0%, #0d0d14 100%);
+            --logo-image: url('assets/superdeskw.png');
+            --glass-bg: rgba(255, 255, 255, 0.02);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --accent-glow: rgba(139, 92, 246, 0.1);
             /* Light mode specific depth colors */
-            --depth-1: rgba(0, 0, 0, 0.08);
-            --depth-2: rgba(0, 0, 0, 0.12);
-            --depth-3: rgba(0, 0, 0, 0.18);
-            --highlight: rgba(255, 255, 255, 0.25);
+            --depth-1: rgba(0, 0, 0, 0.2);
+            --depth-2: rgba(0, 0, 0, 0.3);
+            --depth-3: rgba(0, 0, 0, 0.4);
+            --highlight: rgba(255, 255, 255, 0.05);
         }
 
         /* Dark Mode */
@@ -164,7 +172,7 @@
             --primary-bg: #0d0d14;
             --primary-bg-rgb: 13, 13, 20;
             --secondary-bg: #12121a;
-            --sidebar-bg: #0a0a10;
+            --sidebar-bg: #16213e;
             --sidebar-text: #e0e0e0;
             --sidebar-border: rgba(255, 255, 255, 0.06);
             --text-primary: #f0f0f5;
@@ -190,7 +198,7 @@
             --highlight: rgba(255, 255, 255, 0.05);
         }
 
-        /* Landing page logo theme switching */
+        /* Landing page logo - light mode shows colored logo (on white bg), dark mode shows white logo */
         .landing-logo-light {
             display: block;
         }
@@ -386,17 +394,17 @@
         }
 
         .btn-primary {
-            background: white;
-            color: #613da9;
+            background: #8b5cf6;
+            color: #ffffff;
         }
 
         .btn-primary:hover:not(:disabled) {
-            background: #f5f5f5;
-            color: #4a2d82;
+            background: #7c3aed;
+            color: #ffffff;
         }
 
         .btn-primary:active:not(:disabled) {
-            background: #613da9;
+            background: #6d28d9;
             color: white;
         }
 
@@ -429,16 +437,16 @@
             animation: fadeInUp 0.7s ease-out;
         }
 
-        .brand-text {
-            font-size: 20px;
-            font-weight: 300;
-            color: var(--sidebar-text);
-            opacity: 0.88;
-            line-height: 1.5;
-            animation: fadeInUp 0.7s ease-out 0.15s both;
+        /* Auth-left: white in light mode, dark navy in dark mode */
+        .auth-left {
+            background: #ffffff;
         }
 
-        /* Dark mode specific adjustments for auth-left */
+        .brand-text {
+            color: #613da9;
+        }
+
+        /* Dark mode: dark auth panels */
         [data-theme="dark"] .auth-left {
             background: #16213e;
         }
@@ -447,7 +455,7 @@
             color: rgba(255, 255, 255, 0.8);
         }
 
-        /* Light mode specific depth improvements */
+        /* Light mode specific depth improvements - now uses dark backgrounds */
         :root .session-main-card,
         :root .join-main-card,
         :root .add-friend-card,
@@ -455,59 +463,59 @@
         :root .info-card,
         :root .debug-card,
         :root .waiting-card {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--card-shadow);
         }
 
         :root .content-header {
-            background: rgba(0, 0, 0, 0.1);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--glass-bg);
+            border-bottom: 1px solid var(--card-border);
         }
 
         :root .conversations-panel,
         :root .chat-panel {
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
         }
 
         :root .session-id-value {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
         }
 
         :root .session-action-btn,
         :root .join-paste-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
         }
 
         :root .session-action-btn:hover,
         :root .join-paste-btn:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         :root .session-status-bar {
-            background: rgba(0, 0, 0, 0.15);
+            background: var(--glass-bg);
         }
 
         :root .nav-item.active {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(139, 92, 246, 0.15);
         }
 
         :root .header-user-pill {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
         }
 
         :root .header-user-pill:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         /* Light mode sidebar - white background with purple icons */
         :root .dashboard-sidebar {
             background: #ffffff;
-            border-right: 1px solid rgba(97, 61, 169, 0.15);
+            border-right: none;
         }
 
         :root .nav-item {
@@ -548,56 +556,6 @@
 
         html:not([data-theme="dark"]) .back-nav-btn svg {
             stroke: #613da9;
-        }
-
-        /* Light mode - improve icon and text visibility on cards */
-        :root .info-card-icon {
-            color: #ffffff;
-        }
-
-        :root .info-card-icon svg {
-            stroke: #ffffff;
-        }
-
-        :root .info-card-title {
-            color: #ffffff;
-            font-weight: 700;
-        }
-
-        :root .info-card-text {
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        :root .session-visual-icon {
-            color: #ffffff;
-        }
-
-        :root .session-visual-icon svg {
-            stroke: #ffffff;
-        }
-
-        :root .session-id-label {
-            color: rgba(255, 255, 255, 0.85);
-        }
-
-        :root .session-status-item {
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        :root .start-sharing-btn .btn-hint {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        :root .join-visual-icon {
-            color: #ffffff;
-        }
-
-        :root .join-visual-icon svg {
-            stroke: #ffffff;
-        }
-
-        :root .join-label {
-            color: rgba(255, 255, 255, 0.85);
         }
 
         /* Dark mode override - reset to dark values */
@@ -660,7 +618,9 @@
         /* Dark mode sidebar overrides */
         [data-theme="dark"] .dashboard-sidebar {
             background: var(--sidebar-bg);
-            border-right: 1px solid var(--sidebar-border);
+            border-right: none;
+            border-radius: 0 24px 24px 0;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5), 2px 0 8px rgba(0, 0, 0, 0.35);
         }
 
         [data-theme="dark"] .nav-item {
@@ -767,25 +727,34 @@
             display: none;
             height: 100vh;
             padding-top: 36px;
+            padding-bottom: 12px;
+            padding-left: 0;
+            padding-right: 0;
             -webkit-app-region: no-drag;
             position: relative;
+            background: var(--primary-bg);
         }
 
         .dashboard-container.active {
             display: flex;
+            align-items: stretch;
         }
 
         /* Compact Icon Sidebar - Left Rail */
         .dashboard-sidebar {
             width: 72px;
             background: var(--sidebar-bg);
-            border-right: 1px solid var(--sidebar-border);
+            border-right: none;
+            border-radius: 0 24px 24px 0;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2), 2px 0 8px rgba(0, 0, 0, 0.12);
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 16px 0;
             gap: 8px;
             transition: background-color 0.3s ease;
+            margin-bottom: 0;
+            flex-shrink: 0;
         }
 
         .sidebar-header {
@@ -6622,12 +6591,14 @@
             const otp = otpInput.value.trim();
             const email = emailInput.value.trim();
 
+            // Guard: don't do anything if OTP field is empty
             if (!otp) {
-                window.superdeskModal.warning('Please enter the OTP code', 'OTP Required');
-                return;
+                window.superdeskModal.warning('Please enter the OTP code first', 'OTP Required');
+                return; // Button stays fully enabled — user can try again
             }
 
             const btn = document.getElementById('verify-otp-btn');
+            const originalText = btn.textContent;
             btn.disabled = true;
             btn.textContent = 'Verifying...';
 
@@ -6640,11 +6611,13 @@
 
                 if (error) throw error;
 
-                // User will be set via onAuthStateChange listener
+                // Success - user will be set via onAuthStateChange listener
+                // (button stays disabled as login completes)
             } catch (error) {
+                // Always re-enable on failure so user can retry with correct OTP
                 window.superdeskModal.error('Error: ' + error.message, 'Verification Failed');
                 btn.disabled = false;
-                btn.textContent = 'Verify OTP';
+                btn.textContent = originalText;
             }
         }
 

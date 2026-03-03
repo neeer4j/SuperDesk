@@ -117,7 +117,7 @@ const getTheme = (isDark) => {
     return {
       primaryBg: '#0d0d14',
       secondaryBg: '#12121a',
-      sidebarBg: '#0a0a10',
+      sidebarBg: '#16213e',
       sidebarText: '#e0e0e0',
       sidebarBorder: 'rgba(255, 255, 255, 0.06)',
       textPrimary: '#f0f0f5',
@@ -137,27 +137,27 @@ const getTheme = (isDark) => {
       authLeftTextColor: 'rgba(255, 255, 255, 0.8)'
     };
   } else {
-    // Light Mode (Purple Theme - Default)
+    // Light Mode - Dark Violet + White sidebar (matching agent desktop app)
     return {
-      primaryBg: '#613da9',
-      secondaryBg: '#f8f7fc',
+      primaryBg: '#0d0d14',
+      secondaryBg: '#12121a',
       sidebarBg: '#ffffff',
       sidebarText: '#613da9',
       sidebarBorder: 'rgba(97, 61, 169, 0.12)',
-      textPrimary: '#ffffff',
-      textSecondary: 'rgba(255, 255, 255, 0.9)',
-      textMuted: 'rgba(255, 255, 255, 0.7)',
-      cardBg: 'rgba(80, 45, 140, 0.55)',
-      cardBorder: 'rgba(255, 255, 255, 0.18)',
-      cardShadow: '0 4px 24px rgba(0, 0, 0, 0.2)',
-      inputBg: 'rgba(0, 0, 0, 0.2)',
-      inputBorder: 'rgba(255, 255, 255, 0.25)',
-      btnPrimaryBg: '#ffffff',
-      btnPrimaryText: '#613da9',
-      glassBg: 'rgba(80, 45, 140, 0.4)',
-      glassBorder: 'rgba(255, 255, 255, 0.15)',
-      accentGlow: 'rgba(255, 255, 255, 0.25)',
-      authLeftBg: '#f8f7fc',
+      textPrimary: '#f0f0f5',
+      textSecondary: 'rgba(255, 255, 255, 0.75)',
+      textMuted: 'rgba(255, 255, 255, 0.45)',
+      cardBg: 'rgba(255, 255, 255, 0.03)',
+      cardBorder: 'rgba(255, 255, 255, 0.06)',
+      cardShadow: '0 4px 32px rgba(0, 0, 0, 0.3)',
+      inputBg: 'rgba(255, 255, 255, 0.04)',
+      inputBorder: 'rgba(255, 255, 255, 0.1)',
+      btnPrimaryBg: '#8b5cf6',
+      btnPrimaryText: '#ffffff',
+      glassBg: 'rgba(255, 255, 255, 0.02)',
+      glassBorder: 'rgba(255, 255, 255, 0.05)',
+      accentGlow: 'rgba(139, 92, 246, 0.1)',
+      authLeftBg: '#ffffff',
       authLeftTextColor: '#613da9'
     };
   }
@@ -246,8 +246,8 @@ const getStyles = (darkTheme) => ({
     borderRadius: '8px',
     cursor: 'pointer',
     marginBottom: '12px',
-    background: '#ffffff',
-    color: '#613da9',
+    background: darkTheme.btnPrimaryBg,
+    color: darkTheme.btnPrimaryText,
     transition: 'all 0.2s',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
   },
@@ -268,18 +268,22 @@ const getStyles = (darkTheme) => ({
   dashboardContainer: {
     display: 'flex',
     height: '100vh',
+    paddingBottom: '12px',
     background: darkTheme.primaryBg
   },
   // Sidebar
   dashboardSidebar: {
     width: '72px',
     background: darkTheme.sidebarBg,
-    borderRight: `1px solid ${darkTheme.sidebarBorder}`,
+    borderRight: 'none',
+    borderRadius: '0 24px 24px 0',
+    boxShadow: `4px 0 24px rgba(0,0,0,0.2), 2px 0 8px rgba(0,0,0,0.12)`,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     padding: '16px 0',
     gap: '8px',
+    flexShrink: 0,
     animation: 'fade-in 0.5s ease-out'
   },
   sidebarLogo: {
