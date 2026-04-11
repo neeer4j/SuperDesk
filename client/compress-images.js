@@ -22,6 +22,8 @@ const filesToCompress = [
 
 async function compressImages() {
     console.log('🔧 Starting image compression...\n');
+    let totalOriginalSize = 0;
+    let totalNewSize = 0;
 
     for (const file of filesToCompress) {
         const inputPath = path.join(assetsDir, file.name);
@@ -33,6 +35,7 @@ async function compressImages() {
         }
 
         const originalSize = fs.statSync(inputPath).size;
+        totalOriginalSize += originalSize;
         console.log(`📦 Processing ${file.name} (${(originalSize / 1024 / 1024).toFixed(2)} MB)...`);
 
         try {
@@ -58,11 +61,18 @@ async function compressImages() {
                 .toFile(inputPath);
 
             const newSize = fs.statSync(inputPath).size;
-            const savings = ((1 - newSize / originalSize) * 100).toFixed(1);
 
-            console.log(`   ✅ Compressed: ${(newSize / 1024 / 1024).toFixed(2)} MB (${savings}% smaller)`);
+            if (newSize >= originalSize) {
+                fs.copyFileSync(backupPath, inputPath);
+                totalNewSize += originalSize;
+                console.log('   ℹ️  Kept original (compressed file was not smaller)');
+            } else {
+                totalNewSize += newSize;
+                const savings = ((1 - newSize / originalSize) * 100).toFixed(1);
+                console.log(`   ✅ Compressed: ${(newSize / 1024 / 1024).toFixed(2)} MB (${savings}% smaller)`);
+            }
 
-            // Remove backup after successful compression
+            // Remove backup after successful processing
             fs.unlinkSync(backupPath);
 
         } catch (error) {
@@ -72,9 +82,14 @@ async function compressImages() {
                 fs.copyFileSync(backupPath, inputPath);
                 fs.unlinkSync(backupPath);
             }
+            totalNewSize += originalSize;
         }
     }
 
+    if (totalOriginalSize > 0) {
+        const totalSavings = ((1 - totalNewSize / totalOriginalSize) * 100).toFixed(1);
+        console.log(`\n💾 Total space saved: ${((totalOriginalSize - totalNewSize) / 1024 / 1024).toFixed(2)} MB (${totalSavings}% smaller)`);
+    }
     console.log('\n✨ Done!');
 }
 
