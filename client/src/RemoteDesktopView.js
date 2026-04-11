@@ -110,6 +110,12 @@ function RemoteDesktopView({ client, sessionId, hostPlatform, onClose }) {
       onClose();
     });
 
+    client.on('hostStoppedSharing', () => {
+      console.log('Host stopped sharing');
+      setRemoteControlEnabled(false);
+      showToast('Host stopped sharing screen', 'info');
+    });
+
     // Camera overlay callbacks
     client.on('remoteCameraStream', (cameraStream) => {
       console.log('📹 WEBAPP: Remote camera stream received');

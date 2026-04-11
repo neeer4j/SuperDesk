@@ -28,6 +28,7 @@ class SuperDeskClient {
       onRemoteStream: null,
       onConnectionStateChange: null,
       onSessionEnded: null,
+      onHostStoppedSharing: null,
       onError: null,
       onHostInfo: null,
       onDataChannelOpen: null,
@@ -108,6 +109,22 @@ class SuperDeskClient {
       console.log('Session ended');
       this.cleanup();
       this.callbacks.onSessionEnded?.();
+    });
+
+    // Handle screen-share stop events from different server/client flows
+    const handleHostStoppedSharing = () => {
+      console.log('Host stopped sharing');
+      this.remoteControlEnabled = false;
+      this.callbacks.onHostStoppedSharing?.();
+    };
+    this.socket.on('host-stopped-sharing', handleHostStoppedSharing);
+    this.socket.on('screen-share-stopped', handleHostStoppedSharing);
+
+    this.socket.on('session-timeout', () => {
+      console.log('Session timed out');
+      this.cleanup();
+      this.callbacks.onSessionEnded?.();
+      this.callbacks.onError?.('Session timed out due to inactivity');
     });
 
     // Listen for remote camera state from host
