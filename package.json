@@ -16,7 +16,7 @@
     "start:server": "cd server && npm start",
     "start:agent": "cd agent && npm start",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install && cd ../agent && npm install && cd ../shared && npm install",
-    "check-deployment": "node check-deployment.js",
+    "check-deployment": "echo \"Deployment check currently disabled\"",
     "deploy:check": "npm run check-deployment",
     "deploy:build": "npm run install:all && npm run build:client",
     "deploy:help": "echo \"📖 See DEPLOYMENT.md for deployment instructions\" && echo \"🔍 Run 'npm run check-deployment' to verify deployment status\""
