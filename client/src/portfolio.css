@@ -556,8 +556,7 @@ html {
   }
 
   .portfolio-about-image {
-    width: 150px;
-    padding: 10px;
+    display: none !important;
   }
 
   .portfolio-about-container h2 {
