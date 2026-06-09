@@ -553,7 +553,7 @@ export default function Home() {
                         <h2 style={{ fontFamily: "'Space Grotesk', 'Inter', sans-serif" }}>About SuperDesk</h2>
                         <div>
                             <p>
-                                SuperDesk is an indie remote desktop solution created out of a passion for building tools that make work easier, faster, and more secure. Developed under real-world limitations, it proves that thoughtful design and dedication can create powerful software.
+                                SuperDesk is an indie unified workspace solution created out of a passion for building tools that make work easier, faster, and more secure. Developed under real-world limitations, it proves that thoughtful design and dedication can create powerful software.
                             </p>
                             <p>
                                 Built on WebRTC, all connections are peer to peer, meaning your data never passes through any server. Privacy, security, and speed are integral to every part of the platform.

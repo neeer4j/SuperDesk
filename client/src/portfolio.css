@@ -407,26 +407,8 @@ html {
     gap: 24px;
   }
 
-  /* Single image on mobile */
+  /* Hide both images on mobile */
   .portfolio-hero-content>div:last-child {
-    max-width: 100% !important;
-    min-height: auto !important;
-  }
-
-  .portfolio-hero-content>div:last-child>div {
-    position: relative !important;
-    width: 100% !important;
-    max-width: 90% !important;
-    margin: 0 auto !important;
-    transform: none !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-  }
-
-  /* Hide the second image on mobile */
-  .portfolio-hero-content>div:last-child>div:last-child {
     display: none !important;
   }
 }
