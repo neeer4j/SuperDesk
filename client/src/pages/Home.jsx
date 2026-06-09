@@ -358,12 +358,12 @@ export default function Home() {
                                 letterSpacing: '0.5px',
                             }}
                         >
-                            <span style={{ fontSize: '14px' }}>✦</span> Remote Desktop Solution
+                            <span style={{ fontSize: '14px' }}>✦</span> Unified Workspace Solution
                         </motion.div>
 
                         <TypewriterText
                             lines={[
-                                { text: 'Remote Desktop', fontSize: '64px', letterSpacing: '-2px', color: 'white' },
+                                { text: 'Unified Workspace', fontSize: '64px', letterSpacing: '-2px', color: 'white' },
                                 { text: 'Made Simple.', fontSize: '48px', letterSpacing: '-1px', gradient: 'linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #6366f1 100%)' },
                             ]}
                             typingSpeed={70}
@@ -375,7 +375,7 @@ export default function Home() {
                             lineHeight: 1.85,
                             marginBottom: '40px',
                         }}>
-                            Secure screen sharing, remote control, and file transfer for modern teams.
+                            Your all-in-one hub for secure screen sharing, remote control, and file transfer.
                             Built on WebRTC for peer-to-peer connections that never touch our servers.
                         </p>
                     </motion.div>
@@ -792,7 +792,7 @@ export default function Home() {
                     color: 'rgba(255,255,255,0.5)',
                     marginBottom: '28px',
                 }}>
-                    Secure remote desktop sharing for modern teams.
+                    A unified digital workspace for modern teams.
                 </p>
 
                 {/* Icon Links Row */}
