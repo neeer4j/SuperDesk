@@ -69,6 +69,15 @@ const SOCKET_EVENTS = {
   FILE_TRANSFER_COMPLETE: 'file-transfer-complete'
 };
 
+// Connection lifecycle states shared by web, desktop, and mobile clients.
+const CONNECTION_STATUS = {
+  CONNECTING: 'connecting',
+  CONNECTED: 'connected',
+  RECONNECTING: 'reconnecting',
+  DISCONNECTED: 'disconnected',
+  FAILED: 'failed'
+};
+
 // Data channel types
 const DATA_CHANNEL_TYPES = {
   FILE_CHUNK: 'file-chunk',
@@ -199,6 +208,7 @@ if (typeof module !== 'undefined' && module.exports) {
     FILE_TRANSFER,
     WEBRTC_CONFIG,
     SOCKET_EVENTS,
+    CONNECTION_STATUS,
     DATA_CHANNEL_TYPES,
     SCREEN_CAPTURE,
     AUDIO_CONFIG,
@@ -210,6 +220,7 @@ if (typeof module !== 'undefined' && module.exports) {
     FILE_TRANSFER,
     WEBRTC_CONFIG,
     SOCKET_EVENTS,
+    CONNECTION_STATUS,
     DATA_CHANNEL_TYPES,
     SCREEN_CAPTURE,
     AUDIO_CONFIG,

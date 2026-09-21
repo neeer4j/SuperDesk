@@ -11,6 +11,9 @@ class SocketManager {
     this.callbacks = {
       onConnect: null,
       onDisconnect: null,
+      onReconnect: null,
+      onConnectionStatus: null,
+      onConnectionError: null,
       onSessionCreated: null,
       onOffer: null,
       onAnswer: null,
@@ -20,31 +23,48 @@ class SocketManager {
   }
 
   connect() {
+    this.callbacks.onConnectionStatus?.('connecting');
     return new Promise((resolve, reject) => {
       try {
         this.socket = io(this.serverUrl, {
           transports: ['websocket', 'polling'], // WebSocket first, polling fallback
           upgrade: true, // Allow transport upgrades
           reconnection: true,
-          reconnectionAttempts: 5,
+          reconnectionAttempts: Infinity,
           reconnectionDelay: 1000,
+          reconnectionDelayMax: 10000,
+          randomizationFactor: 0.25,
           timeout: 20000,
           path: '/socket.io/'
         });
 
         this.socket.on('connect', () => {
           console.log('[Socket] Connected to signaling server');
+          this.callbacks.onConnectionStatus?.('connected');
           if (this.callbacks.onConnect) this.callbacks.onConnect();
           resolve();
         });
 
-        this.socket.on('disconnect', () => {
+        this.socket.on('disconnect', (reason) => {
           console.log('[Socket] Disconnected from signaling server');
+          this.callbacks.onConnectionStatus?.('disconnected');
           if (this.callbacks.onDisconnect) this.callbacks.onDisconnect();
+        });
+
+        this.socket.io.on('reconnect_attempt', (attempt) => {
+          this.callbacks.onConnectionStatus?.('reconnecting');
+          console.log('[Socket] Reconnection attempt:', attempt);
+        });
+
+        this.socket.io.on('reconnect', (attempt) => {
+          this.callbacks.onConnectionStatus?.('connected');
+          if (this.callbacks.onReconnect) this.callbacks.onReconnect(attempt);
         });
 
         this.socket.on('connect_error', (error) => {
           console.error('[Socket] Connection error:', error);
+          this.callbacks.onConnectionStatus?.('reconnecting');
+          if (this.callbacks.onConnectionError) this.callbacks.onConnectionError(error);
           reject(error);
         });
 

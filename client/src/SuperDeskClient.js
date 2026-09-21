@@ -27,6 +27,7 @@ class SuperDeskClient {
       onSessionJoined: null,
       onRemoteStream: null,
       onConnectionStateChange: null,
+      onConnectionStatus: null,
       onSessionEnded: null,
       onHostStoppedSharing: null,
       onError: null,
@@ -43,12 +44,15 @@ class SuperDeskClient {
   }
 
   async initialize() {
+    this.callbacks.onConnectionStatus?.('connecting');
     return new Promise((resolve, reject) => {
       this.socket = io(this.serverUrl, {
         transports: ['websocket', 'polling'], // WebSocket first, polling fallback
         reconnection: true,
-        reconnectionAttempts: 5,
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
+        reconnectionDelayMax: 10000,
+        randomizationFactor: 0.25,
         timeout: 20000,
         upgrade: true, // Allow transport upgrades
         forceNew: false,
@@ -57,11 +61,26 @@ class SuperDeskClient {
 
       this.socket.on('connect', () => {
         console.log('✅ Connected to SuperDesk server');
+        this.callbacks.onConnectionStatus?.('connected');
         resolve();
+      });
+
+      this.socket.on('disconnect', (reason) => {
+        console.warn('Disconnected from SuperDesk server:', reason);
+        this.callbacks.onConnectionStatus?.('disconnected');
+      });
+
+      this.socket.io.on('reconnect_attempt', () => {
+        this.callbacks.onConnectionStatus?.('reconnecting');
+      });
+
+      this.socket.io.on('reconnect', () => {
+        this.callbacks.onConnectionStatus?.('connected');
       });
 
       this.socket.on('connect_error', (error) => {
         console.error('❌ Connection error:', error);
+        this.callbacks.onConnectionStatus?.('reconnecting');
         reject(error);
       });
 
