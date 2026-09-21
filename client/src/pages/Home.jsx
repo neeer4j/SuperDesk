@@ -195,22 +195,22 @@ const features = [
     {
         icon: 'monitor',
         title: 'Screen Sharing',
-        description: 'Share your screen instantly with high-quality, low-latency streaming.',
+        description: 'Share your screen with a clear stream and responsive controls.',
     },
     {
         icon: 'zap',
-        title: 'Fast & Secure',
-        description: 'End-to-end encrypted peer-to-peer connections for maximum privacy.',
+        title: 'Secure Connections',
+        description: 'Encrypted WebRTC connections, with relay support when devices cannot connect directly.',
     },
     {
         icon: 'download',
         title: 'File Transfer',
-        description: 'Send files directly between devices. Fast, secure, no size limits.',
+        description: 'Send files directly between connected devices with progress updates.',
     },
     {
         icon: 'users',
         title: 'Cross-Platform',
-        description: 'Works on Windows, Android and Web browsers seamlessly.',
+        description: 'Use it on Windows, Android, and modern web browsers.',
     },
 ];
 
@@ -553,13 +553,13 @@ export default function Home() {
                         <h2 style={{ fontFamily: "'Space Grotesk', 'Inter', sans-serif" }}>About SuperDesk</h2>
                         <div>
                             <p>
-                                SuperDesk is an indie unified workspace solution created out of a passion for building tools that make work easier, faster, and more secure. Developed under real-world limitations, it proves that thoughtful design and dedication can create powerful software.
+                                SuperDesk is a small project built to make remote access simpler. It brings screen sharing, remote control, and file transfer into one place.
                             </p>
                             <p>
-                                Built on WebRTC, all connections are peer to peer, meaning your data never passes through any server. Privacy, security, and speed are integral to every part of the platform.
+                                SuperDesk uses WebRTC for live connections. Devices connect directly when they can, and a relay helps when the network requires one.
                             </p>
                             <p>
-                                SuperDesk is truly cross platform available as a web app, with mobile apps for Android and a desktop version that offers full functionality and flexibility.
+                                You can use SuperDesk from the web, Android, or the Windows desktop app, depending on what you need.
                             </p>
                         </div>
                     </motion.div>
@@ -609,7 +609,7 @@ export default function Home() {
                             margin: '0 auto',
                             lineHeight: 1.6,
                         }}>
-                            Powerful features for seamless remote collaboration
+                            The tools you need to work with another computer
                         </p>
                     </motion.div>
 

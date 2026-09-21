@@ -57,8 +57,8 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
   const features = [
     {
       icon: <DesktopWindows sx={{ fontSize: '3rem' }} />,
-      title: 'Real-Time Screen Sharing',
-      description: 'Experience ultra-low latency desktop streaming with crystal-clear quality. Share your entire screen seamlessly with WebRTC technology for real-time communication.',
+      title: 'Screen Sharing',
+      description: 'Share your screen with a clear, responsive stream. WebRTC keeps the connection direct when possible.',
       details: [
         'HD quality streaming up to 1080p',
         'Adaptive bitrate for smooth performance',
@@ -69,7 +69,7 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
     {
       icon: <TouchApp sx={{ fontSize: '3rem' }} />,
       title: 'Remote Control',
-      description: 'Take full control of remote desktops with mouse and keyboard support. Work as if you\'re sitting right there with instant input response.',
+      description: 'Use your mouse and keyboard on the remote computer as if you were sitting in front of it.',
       details: [
         'Full mouse control (click, drag, scroll)',
         'Complete keyboard support',
@@ -79,8 +79,8 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
     },
     {
       icon: <Security sx={{ fontSize: '3rem' }} />,
-      title: 'Enterprise Security',
-      description: 'End-to-end encrypted connections via WebRTC with TURN relay support for maximum privacy and security in all network conditions.',
+      title: 'Secure Connections',
+      description: 'WebRTC encrypts the connection, with TURN relay support to help devices connect across different networks.',
       details: [
         'End-to-end encryption',
         'DTLS-SRTP for media streams',
@@ -90,8 +90,8 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
     },
     {
       icon: <Speed sx={{ fontSize: '3rem' }} />,
-      title: 'Lightning Fast',
-      description: 'Peer-to-peer connections ensure minimal latency. Experience responsive remote desktop like never before with optimized performance.',
+      title: 'Low Latency',
+      description: 'Direct connections help keep remote control and screen sharing responsive. The app can fall back to a relay when needed.',
       details: [
         'Average latency < 50ms',
         'Direct P2P connections',
@@ -102,7 +102,7 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
     {
       icon: <CloudUpload sx={{ fontSize: '3rem' }} />,
       title: 'File Transfer',
-      description: 'Securely transfer files between sessions using P2P DataChannels. Recommended transfer sizes are 5–20GB depending on network conditions (configurable).',
+      description: 'Send files directly between connected devices using a WebRTC data channel. Transfer limits can be configured for your network.',
       details: [
         'Recommended 5–20GB depending on network capacity',
         'Real-time progress tracking',
@@ -192,7 +192,7 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
               backgroundClip: 'text'
             }}
           >
-            Powerful Features
+            Features
           </Typography>
           
           <Typography
@@ -204,8 +204,7 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
               mx: 'auto'
             }}
           >
-            Everything you need for professional remote desktop access, 
-            built with cutting-edge WebRTC technology
+            Screen sharing, remote control, and file transfer in one place.
           </Typography>
         </Container>
       </Box>
@@ -297,14 +296,14 @@ function FeaturesPage({ onBack, onGetStarted, darkMode }) {
               backgroundClip: 'text'
             }}
           >
-            Ready to Get Started?
+            Ready to try SuperDesk?
           </Typography>
           
           <Typography
             variant="h6"
             sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 4 }}
           >
-            Experience the power of SuperDesk remote desktop
+            Start a session and see how it fits your workflow.
           </Typography>
           
           <Button
